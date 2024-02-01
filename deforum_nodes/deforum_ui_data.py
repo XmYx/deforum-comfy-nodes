@@ -97,10 +97,10 @@ deforum_base_params = {
         "type": "lineedit",
         "default": ""
     },
-    "seed_internal": {
-        "type": "lineedit",
-        "default": "-1",
-    },
+    # "seed_internal": {
+    #     "type": "lineedit",
+    #     "default": "-1",
+    # },
 }
 
 
