@@ -13,6 +13,9 @@ import secrets
 import time
 from types import SimpleNamespace
 
+import numpy as np
+import torch
+
 from deforum import DeforumAnimationPipeline
 from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKeys
 from deforum.pipelines.deforum_animation.animation_params import RootArgs, DeforumArgs, DeforumAnimArgs, \
@@ -267,9 +270,11 @@ class DeforumSampleNode:
         #self.deforum.keys = DeforumAnimKeys(self.deforum.gen, self.deforum.gen.seed)
 
         animation = self.deforum(**deforum_data)
-
-
-        return (animation,)
+        result = []
+        for i in self.deforum.images:
+            result.append(torch.from_numpy(np.array(i).astype(np.float32) / 255.0).unsqueeze(0))
+            result = torch.stack(result, dim=0)
+        return (result,)
 
 NODE_CLASS_MAPPINGS = {
     "DeforumBaseData": DeforumBaseParamsNode,
