@@ -3,6 +3,10 @@ import torch
 import numpy as np
 from PIL import Image
 
+from deforum import ImageRNGNoise
+from deforum.utils.deforum_cond_utils import blend_tensors
+
+
 def common_ksampler_with_custom_noise(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
                                       denoise=1.0, disable_noise=False, start_step=None, last_step=None,
                                       force_full_denoise=False, noise=None):
@@ -231,13 +235,13 @@ def generate_latent(width, height, seed, subseed, subseed_strength, seed_resize_
     # noise = torch.zeros([1, 4, width // 8, height // 8])
     return {"samples": noise}
 
-def get_conds(self, clip, prompt):
+def get_conds(clip, prompt):
     with torch.inference_mode():
-        clip_skip = -1
-        if clip_skip != clip_skip or clip.layer_idx != clip_skip:
-            clip.layer_idx = clip_skip
-            clip.clip_layer(clip_skip)
-            self.clip_skip = clip_skip
+        # clip_skip = -1
+        # if clip_skip != clip_skip or clip.layer_idx != clip_skip:
+        #     clip.layer_idx = clip_skip
+        #     clip.clip_layer(clip_skip)
+        #     self.clip_skip = clip_skip
 
         tokens = clip.tokenize(prompt)
         cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
@@ -259,7 +263,7 @@ def apply_controlnet(conditioning, control_net, image, strength):
             c.append(n)
     return c
 
-def decode_sample(self, vae, sample):
+def decode_sample(vae, sample):
     # with torch.inference_mode():
     #     sample = sample.to(torch.float32)
     #     vae.first_stage_model.cuda()
