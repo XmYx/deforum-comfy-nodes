@@ -154,6 +154,7 @@ class DeforumSampleNode:
     OUTPUT_NODE = True
     CATEGORY = f"deforum_data"
 
+    @torch.inference_mode()
     def get(self, deforum_data, model, clip, vae, *args, **kwargs):
 
         root_dict = RootArgs()
@@ -268,12 +269,16 @@ class DeforumSampleNode:
         #     self.deforum.args.seed = int(self.deforum.args.seed)
 
         #self.deforum.keys = DeforumAnimKeys(self.deforum.gen, self.deforum.gen.seed)
-
         animation = self.deforum(**deforum_data)
-        result = []
+
+        results = []
         for i in self.deforum.images:
-            result.append(torch.from_numpy(np.array(i).astype(np.float32) / 255.0).unsqueeze(0))
-            result = torch.stack(result, dim=0)
+
+            tensor = torch.from_numpy(np.array(i).astype(np.float32) / 255.0)
+
+            results.append(tensor)
+            result = torch.stack(results, dim=0)
+
         return (result,)
 
 NODE_CLASS_MAPPINGS = {
