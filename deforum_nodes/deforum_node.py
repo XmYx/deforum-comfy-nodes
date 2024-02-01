@@ -8,6 +8,7 @@
 # from comfy.clip_vision import clip_preprocess
 # from comfy.ldm.modules.attention import optimized_attention
 # import folder_paths
+import json
 import os
 import secrets
 import time
@@ -60,7 +61,7 @@ class DeforumDataBase:
 
     RETURN_TYPES = (("deforum_data",))
     FUNCTION = "get"
-    OUTPUT_NODE = False
+    OUTPUT_NODE = True
     CATEGORY = f"deforum_data"
 
     def get(self, deforum_data=None, *args, **kwargs):
@@ -124,6 +125,46 @@ class DeforumDiffusionParamsNode(DeforumDataBase):
     def INPUT_TYPES(s):
         return s.params
 
+class DeforumPromptNode(DeforumDataBase):
+    def __init__(self):
+        super().__init__()
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompts": ("STRING", {"forceInput": False, "multiline": True, "default": "0:'Cat Sushi'"}),
+            },
+            "optional": {
+                "deforum_data": ("deforum_data",),
+            },
+        }
+    RETURN_TYPES = (("deforum_data",))
+    FUNCTION = "get"
+    OUTPUT_NODE = True
+    CATEGORY = f"deforum_data"
+
+    @torch.inference_mode()
+    def get(self, prompts, deforum_data=None):
+
+        # Splitting the data into rows
+        rows = prompts.split('\n')
+
+        # Creating an empty dictionary
+        prompts = {}
+
+        # Parsing each row
+        for row in rows:
+            key, value = row.split(':', 1)
+            key = int(key)
+            value = value.strip('"')
+            prompts[key] = value
+
+
+        if deforum_data:
+            deforum_data["prompts"] = prompts
+        else:
+            deforum_data = {"prompts":prompts}
+        return (deforum_data,)
 
 class DeforumSampleNode:
 
@@ -269,6 +310,9 @@ class DeforumSampleNode:
         #     self.deforum.args.seed = int(self.deforum.args.seed)
 
         #self.deforum.keys = DeforumAnimKeys(self.deforum.gen, self.deforum.gen.seed)
+
+        #deforum_data["prompts"] = {0:"Cat sushi"}
+
         animation = self.deforum(**deforum_data)
 
         results = []
@@ -289,6 +333,7 @@ NODE_CLASS_MAPPINGS = {
     "DeforumNoiseParamsData": DeforumNoiseParamsNode,
     "DeforumColorParamsData": DeforumColorParamsNode,
     "DeforumDiffusionParamsData": DeforumDiffusionParamsNode,
+    "DeforumPrompt": DeforumPromptNode,
     "DeforumSampler": DeforumSampleNode,
 }
 
@@ -299,5 +344,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DeforumDepthData": "Deforum Depth Data",
     "DeforumNoiseParamsData": "Deforum Noise Data",
     "DeforumColorParamsData": "Deforum Color Data",
+    "DeforumPrompt": "Deforum Prompts",
     "DeforumSampler": "Deforum Sampler",
 }
