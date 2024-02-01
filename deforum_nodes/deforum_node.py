@@ -195,6 +195,9 @@ class DeforumSampleNode:
     OUTPUT_NODE = True
     CATEGORY = f"deforum_data"
 
+
+
+
     @torch.inference_mode()
     def get(self, deforum_data, model, clip, vae, *args, **kwargs):
 
@@ -300,7 +303,16 @@ class DeforumSampleNode:
         self.deforum.config_dir = os.path.join(os.getcwd(),"output/_deforum_configs")
         os.makedirs(self.deforum.config_dir, exist_ok=True)
         # self.deforum.generate_inpaint = self.generate_inpaint
-        # self.deforum.datacallback = self.datacallback
+        import comfy
+        pbar = comfy.utils.ProgressBar(deforum_data["max_frames"])
+
+        def datacallback(data=None):
+            if data:
+                if "image" in data:
+                    print("DEFORUM DATACALLBACK")
+                    pbar.update_absolute(data["frame_idx"], deforum_data["max_frames"], ("JPEG", data["image"], 512))
+
+        self.deforum.datacallback = datacallback
 
         # if self.deforum.args.seed == -1 or self.deforum.args.seed == "-1":
         #     setattr(self.deforum.args, "seed", secrets.randbelow(999999999999999999))
