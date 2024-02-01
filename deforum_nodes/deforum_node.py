@@ -125,6 +125,14 @@ class DeforumDiffusionParamsNode(DeforumDataBase):
     def INPUT_TYPES(s):
         return s.params
 
+class DeforumCadenceParamsNode(DeforumDataBase):
+    params = get_node_params(deforum_cadence_params)
+    def __init__(self):
+        super().__init__()
+    @classmethod
+    def INPUT_TYPES(s):
+        return s.params
+
 class DeforumPromptNode(DeforumDataBase):
     def __init__(self):
         super().__init__()
@@ -324,7 +332,7 @@ class DeforumSampleNode:
         #self.deforum.keys = DeforumAnimKeys(self.deforum.gen, self.deforum.gen.seed)
 
         #deforum_data["prompts"] = {0:"Cat sushi"}
-
+        deforum_data["turbo_steps"] = deforum_data["diffusion_cadence"]
         animation = self.deforum(**deforum_data)
 
         results = []
@@ -345,6 +353,7 @@ NODE_CLASS_MAPPINGS = {
     "DeforumNoiseParamsData": DeforumNoiseParamsNode,
     "DeforumColorParamsData": DeforumColorParamsNode,
     "DeforumDiffusionParamsData": DeforumDiffusionParamsNode,
+    "DeforumCadenceParams": DeforumCadenceParamsNode,
     "DeforumPrompt": DeforumPromptNode,
     "DeforumSampler": DeforumSampleNode,
 }
@@ -356,6 +365,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DeforumDepthData": "Deforum Depth Data",
     "DeforumNoiseParamsData": "Deforum Noise Data",
     "DeforumColorParamsData": "Deforum Color Data",
+    "DeforumCadenceParams": "Deforum Cadence Data",
     "DeforumPrompt": "Deforum Prompts",
     "DeforumSampler": "Deforum Sampler",
 }
