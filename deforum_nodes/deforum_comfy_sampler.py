@@ -268,5 +268,4 @@ def decode_sample(vae, sample):
     #     sample = sample.to(torch.float32)
     #     vae.first_stage_model.cuda()
     decoded = vae.decode_tiled(sample).detach()
-
     return decoded

@@ -8,7 +8,16 @@
 # from comfy.clip_vision import clip_preprocess
 # from comfy.ldm.modules.attention import optimized_attention
 # import folder_paths
+import os
+import secrets
+import time
+from types import SimpleNamespace
 
+from deforum import DeforumAnimationPipeline
+from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKeys
+from deforum.pipelines.deforum_animation.animation_params import RootArgs, DeforumArgs, DeforumAnimArgs, \
+    DeforumOutputArgs, LoopArgs, ParseqArgs
+from deforum.utils.string_utils import substitute_placeholders
 from .deforum_ui_data import (deforum_base_params, deforum_anim_params, deforum_translation_params,
                               deforum_cadence_params, deforum_masking_params, deforum_depth_params,
                               deforum_noise_params, deforum_color_coherence_params, deforum_diffusion_schedule_params,
@@ -111,13 +120,157 @@ class DeforumDiffusionParamsNode(DeforumDataBase):
     @classmethod
     def INPUT_TYPES(s):
         return s.params
-class DeforumAnimParamsNode(DeforumDataBase):
-    params = get_node_params(deforum_anim_params)
-    def __init__(self):
-        super().__init__()
+
+
+class DeforumSampleNode:
+
     @classmethod
-    def INPUT_TYPES(s):
-        return s.params
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "deforum_data": ("DEFORUM_DATA",),
+                "model": ("MODEL",),
+                "clip": ("CLIP",),
+                "vae": ("VAE",)
+            },
+            # "optional": {
+            #     "text_c": ("STRING", {"forceInput": True, "multiline": True, "default": ""}),
+            #     "frame_c": ("INT", {"default": 24}),
+            #     "text_d": ("STRING", {"forceInput": True, "multiline": True, "default": ""}),
+            #     "frame_d": ("INT", {"default": 36}),
+            #     "text_e": ("STRING", {"forceInput": True, "multiline": True, "default": ""}),
+            #     "frame_e": ("INT", {"default": 48}),
+            #     "text_f": ("STRING", {"forceInput": True, "multiline": True, "default": ""}),
+            #     "frame_f": ("INT", {"default": 60}),
+            #     "text_g": ("STRING", {"forceInput": True, "multiline": True, "default": ""}),
+            #     "frame_g": ("INT", {"default": 72})
+            # }
+        }
+    RETURN_TYPES = (("IMAGE",))
+    FUNCTION = "get"
+    OUTPUT_NODE = False
+    CATEGORY = f"deforum_data"
+
+    def get(self, deforum_data, *args, **kwargs):
+
+        root_dict = RootArgs()
+        args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
+
+
+        anim_args_dict = {key: value["value"] for key, value in DeforumAnimArgs().items()}
+        output_args_dict = {key: value["value"] for key, value in DeforumOutputArgs().items()}
+        loop_args_dict = {key: value["value"] for key, value in LoopArgs().items()}
+        parseq_args_dict = {key: value["value"] for key, value in ParseqArgs().items()}
+        root = SimpleNamespace(**root_dict)
+        args = SimpleNamespace(**args_dict)
+        anim_args = SimpleNamespace(**anim_args_dict)
+        video_args = SimpleNamespace(**output_args_dict)
+        parseq_args = SimpleNamespace(**parseq_args_dict)
+
+        parseq_args.parseq_manifest = ""
+
+        # #parseq_args = None
+        loop_args = SimpleNamespace(**loop_args_dict)
+        controlnet_args = SimpleNamespace(**{"controlnet_args": "None"})
+
+        for key, value in args.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "":
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(args, key, val)
+
+        for key, value in anim_args.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "" and "schedule" not in key:
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(anim_args, key, val)
+
+        for key, value in video_args.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "" and "schedule" not in key:
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(anim_args, key, val)
+
+        for key, value in root.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "":
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(root, key, val)
+
+        for key, value in loop_args.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "":
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(loop_args, key, val)
+
+
+
+
+        success = None
+        root.timestring = time.strftime('%Y%m%d%H%M%S')
+        args.timestring = root.timestring
+        args.strength = max(0.0, min(1.0, args.strength))
+        #args.prompts = json.loads(args_dict_main['animation_prompts'])
+        #args.positive_prompts = args_dict_main['animation_prompts_positive']
+        #args.negative_prompts = args_dict_main['animation_prompts_negative']
+
+        if not args.use_init and not anim_args.hybrid_use_init_image:
+            args.init_image = None
+
+        elif anim_args.animation_mode == 'Video Input':
+            args.use_init = True
+
+        current_arg_list = [args, anim_args, video_args, parseq_args, root]
+        full_base_folder_path = os.path.join(os.getcwd(), "output/deforum")
+        #root.raw_batch_name = args.batch_name
+
+
+        args.batch_name = f"aiNodes_Deforum_{args.timestring}"
+        args.outdir = os.path.join(full_base_folder_path, args.batch_name)
+
+        root.raw_batch_name = args.batch_name
+        args.batch_name = substitute_placeholders(args.batch_name, current_arg_list, full_base_folder_path)
+
+        os.makedirs(args.outdir, exist_ok=True)
+
+        self.deforum = DeforumAnimationPipeline()
+
+        self.deforum.config_dir = os.path.join(os.getcwd(),"output/_deforum_configs")
+        os.makedirs(self.deforum.config_dir, exist_ok=True)
+
+        def generate(args, keys, anim_args, loop_args, controlnet_args, root, sampler_name):
+            image = generate_inner(self, args, keys, anim_args, loop_args, controlnet_args, root,
+                                   self.deforum.frame_idx, sampler_name)
+
+            return image
+
+        self.deforum.generate = generate
+        # self.deforum.generate_inpaint = self.generate_inpaint
+        # self.deforum.datacallback = self.datacallback
+
+        if self.deforum.args.seed == -1 or self.deforum.args.seed == "-1":
+            setattr(self.deforum.args, "seed", secrets.randbelow(999999999999999999))
+            setattr(self.deforum.root, "raw_seed", int(self.deforum.args.seed))
+            setattr(self.deforum.root, "seed_internal", 0)
+        else:
+            self.deforum.args.seed = int(self.deforum.args.seed)
+
+        self.deforum.keys = DeforumAnimKeys(self.deforum.anim_args, self.deforum.args.seed)
+
+        animation = self.deforum(**args, **anim_args, **video_args, **parseq_args, **loop_args, **controlnet_args, **root)
+
+
+        return (animation,)
 
 NODE_CLASS_MAPPINGS = {
     "DeforumBaseData": DeforumBaseParamsNode,
@@ -127,6 +280,7 @@ NODE_CLASS_MAPPINGS = {
     "DeforumNoiseParamsData": DeforumNoiseParamsNode,
     "DeforumColorParamsData": DeforumColorParamsNode,
     "DeforumDiffusionParamsData": DeforumDiffusionParamsNode,
+    "DeforumSampler": DeforumSampleNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -136,5 +290,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DeforumDepthData": "Deforum Depth Data",
     "DeforumNoiseParamsData": "Deforum Noise Data",
     "DeforumColorParamsData": "Deforum Color Data",
-    "DeforumDiffusionParamsData": "Deforum Diffusion Data",
+    "DeforumSampler": "Deforum Sampler",
 }
