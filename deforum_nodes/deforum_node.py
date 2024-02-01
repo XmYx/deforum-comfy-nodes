@@ -17,7 +17,7 @@ from deforum import DeforumAnimationPipeline
 from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKeys
 from deforum.pipelines.deforum_animation.animation_params import RootArgs, DeforumArgs, DeforumAnimArgs, \
     DeforumOutputArgs, LoopArgs, ParseqArgs
-from deforum.utils.string_utils import substitute_placeholders
+from deforum.utils.string_utils import substitute_placeholders, split_weighted_subprompts
 from .deforum_ui_data import (deforum_base_params, deforum_anim_params, deforum_translation_params,
                               deforum_cadence_params, deforum_masking_params, deforum_depth_params,
                               deforum_noise_params, deforum_color_coherence_params, deforum_diffusion_schedule_params,
@@ -60,10 +60,10 @@ class DeforumDataBase:
     OUTPUT_NODE = False
     CATEGORY = f"deforum_data"
 
-    def get(self, deforum_data, *args, **kwargs):
+    def get(self, deforum_data=None, *args, **kwargs):
 
         if deforum_data:
-            deforum_data.update(**kwargs.items())
+            deforum_data.update(**kwargs)
         else:
             deforum_data = kwargs
         print(deforum_data)
@@ -128,7 +128,7 @@ class DeforumSampleNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "deforum_data": ("DEFORUM_DATA",),
+                "deforum_data": ("deforum_data",),
                 "model": ("MODEL",),
                 "clip": ("CLIP",),
                 "vae": ("VAE",)
@@ -148,10 +148,10 @@ class DeforumSampleNode:
         }
     RETURN_TYPES = (("IMAGE",))
     FUNCTION = "get"
-    OUTPUT_NODE = False
+    OUTPUT_NODE = True
     CATEGORY = f"deforum_data"
 
-    def get(self, deforum_data, *args, **kwargs):
+    def get(self, deforum_data, model, clip, vae, *args, **kwargs):
 
         root_dict = RootArgs()
         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
@@ -243,31 +243,30 @@ class DeforumSampleNode:
 
         os.makedirs(args.outdir, exist_ok=True)
 
-        self.deforum = DeforumAnimationPipeline()
+
+
+        def generate(*args, **kwargs):
+            from .deforum_comfy_sampler import sample_deforum
+            image = sample_deforum(model, clip, vae, **kwargs)
+
+            return image
+        self.deforum = DeforumAnimationPipeline(generate)
 
         self.deforum.config_dir = os.path.join(os.getcwd(),"output/_deforum_configs")
         os.makedirs(self.deforum.config_dir, exist_ok=True)
-
-        def generate(args, keys, anim_args, loop_args, controlnet_args, root, sampler_name):
-            image = generate_inner(self, args, keys, anim_args, loop_args, controlnet_args, root,
-                                   self.deforum.frame_idx, sampler_name)
-
-            return image
-
-        self.deforum.generate = generate
         # self.deforum.generate_inpaint = self.generate_inpaint
         # self.deforum.datacallback = self.datacallback
 
-        if self.deforum.args.seed == -1 or self.deforum.args.seed == "-1":
-            setattr(self.deforum.args, "seed", secrets.randbelow(999999999999999999))
-            setattr(self.deforum.root, "raw_seed", int(self.deforum.args.seed))
-            setattr(self.deforum.root, "seed_internal", 0)
-        else:
-            self.deforum.args.seed = int(self.deforum.args.seed)
+        # if self.deforum.args.seed == -1 or self.deforum.args.seed == "-1":
+        #     setattr(self.deforum.args, "seed", secrets.randbelow(999999999999999999))
+        #     setattr(self.deforum.root, "raw_seed", int(self.deforum.args.seed))
+        #     setattr(self.deforum.root, "seed_internal", 0)
+        # else:
+        #     self.deforum.args.seed = int(self.deforum.args.seed)
 
-        self.deforum.keys = DeforumAnimKeys(self.deforum.anim_args, self.deforum.args.seed)
+        #self.deforum.keys = DeforumAnimKeys(self.deforum.gen, self.deforum.gen.seed)
 
-        animation = self.deforum(**args, **anim_args, **video_args, **parseq_args, **loop_args, **controlnet_args, **root)
+        animation = self.deforum(**deforum_data)
 
 
         return (animation,)

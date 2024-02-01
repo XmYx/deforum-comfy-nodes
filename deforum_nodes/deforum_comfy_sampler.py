@@ -6,7 +6,7 @@ from PIL import Image
 from deforum import ImageRNGNoise
 from deforum.utils.deforum_cond_utils import blend_tensors
 
-
+rng = None
 def common_ksampler_with_custom_noise(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
                                       denoise=1.0, disable_noise=False, start_step=None, last_step=None,
                                       force_full_denoise=False, noise=None):
@@ -45,6 +45,7 @@ def sample_deforum(
             model,
             clip,
             vae,
+            controlnet=None,
             prompt="",
             pooled_prompts=None,
             next_prompt=None,
@@ -154,7 +155,7 @@ def sample_deforum(
                 cond = blend_tensors(cond[0], next_cond[0], blend_value=prompt_blend)
 
     if cnet_image is not None:
-        cond = apply_controlnet(cond, self.controlnet, cnet_image, 1.0)
+        cond = apply_controlnet(cond, controlnet, cnet_image, 1.0)
 
     from nodes import common_ksampler as ksampler
 
