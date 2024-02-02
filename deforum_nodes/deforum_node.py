@@ -332,7 +332,8 @@ class DeforumSampleNode:
         #self.deforum.keys = DeforumAnimKeys(self.deforum.gen, self.deforum.gen.seed)
 
         #deforum_data["prompts"] = {0:"Cat sushi"}
-        deforum_data["turbo_steps"] = deforum_data["diffusion_cadence"]
+        deforum_data["turbo_steps"] = deforum_data.get("diffusion_cadence", 1)
+        deforum_data["store_frames_in_ram"] = True
         animation = self.deforum(**deforum_data)
 
         results = []
