@@ -17,16 +17,20 @@ import secrets
 import time
 from types import SimpleNamespace
 
+import cv2
 import numexpr
 import numpy as np
 import pandas as pd
 import torch
+from PIL import Image
 
 from deforum import DeforumAnimationPipeline, ImageRNGNoise
+from deforum.generators.deforum_noise_generator import add_noise
 from deforum.pipeline_utils import next_seed
 from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKeys
 from deforum.pipelines.deforum_animation.animation_params import RootArgs, DeforumArgs, DeforumAnimArgs, \
     DeforumOutputArgs, LoopArgs, ParseqArgs
+from deforum.utils.image_utils import maintain_colors, unsharp_mask, compose_mask_with_check
 from deforum.utils.string_utils import substitute_placeholders, split_weighted_subprompts
 from .deforum_ui_data import (deforum_base_params, deforum_anim_params, deforum_translation_params,
                               deforum_cadence_params, deforum_masking_params, deforum_depth_params,
@@ -581,7 +585,9 @@ class DeforumIteratorNode:
                 "steps": int(keys.steps_schedule_series[self.frame_index]),
                 "root": root,
                 "keys": keys,
-                "frame_idx": frame_idx}
+                "frame_idx": frame_idx,
+                "anim_args": anim_args,
+                "args": args}
 
 
 class DeforumKSampler:
@@ -617,6 +623,247 @@ class DeforumKSampler:
         denoise = deforum_frame_data.get("denoise", 1.0)
 
         return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=denoise)
+
+def tensor2pil(image):
+    if image is not None:
+        with torch.inference_mode():
+            return Image.fromarray(np.clip(255. * image.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
+    else:
+        return None
+
+
+# PIL to Tensor
+def pil2tensor(image):
+    return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
+def tensor2np(img):
+
+    np_img = np.array(tensor2pil(img))
+
+    return np_img
+
+class DeforumFrameWarpNode:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("IMAGE",),
+                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     }
+                }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "fn"
+    display_name = "Deforum Frame Warp"
+    CATEGORY = "sampling"
+
+    depth_model = None
+    algo = ""
+
+    def fn(self, image, deforum_frame_data):
+        from deforum.models import DepthModel
+        from deforum.utils.deforum_framewarp_utils import anim_frame_warp
+        np_image = None
+        data = deforum_frame_data
+        if image is not None:
+            if image.shape[0] > 1:
+                for img in image:
+                    np_image = tensor2np(img)
+            else:
+                np_image = tensor2np(image)
+
+            np_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+
+
+            args = data.get("args")
+            anim_args = data.get("anim_args")
+            keys = data.get("keys")
+            frame_idx = data.get("frame_idx")
+
+            predict_depths = (
+                                         anim_args.animation_mode == '3D' and anim_args.use_depth_warping) or anim_args.save_depth_maps
+            predict_depths = predict_depths or (
+                    anim_args.hybrid_composite and anim_args.hybrid_comp_mask_type in ['Depth', 'Video Depth'])
+
+
+            if self.depth_model == None or self.algo != anim_args.depth_algorithm:
+                self.vram_state = "high"
+                if self.depth_model is not None:
+                    self.depth_model.to("cpu")
+                    del self.depth_model
+                    #torch_gc()
+
+                self.algo = anim_args.depth_algorithm
+                if predict_depths:
+                    keep_in_vram = True if self.vram_state == 'high' else False
+                    # device = ('cpu' if cmd_opts.lowvram or cmd_opts.medvram else self.root.device)
+                    # TODO Set device in root in webui
+                    device = 'cuda'
+                    self.depth_model = DepthModel("models/other", device,
+                                             keep_in_vram=keep_in_vram,
+                                             depth_algorithm=anim_args.depth_algorithm, Width=args.width,
+                                             Height=args.height,
+                                             midas_weight=anim_args.midas_weight)
+
+                    # depth-based hybrid composite mask requires saved depth maps
+                    if anim_args.hybrid_composite != 'None' and anim_args.hybrid_comp_mask_type == 'Depth':
+                        anim_args.save_depth_maps = True
+                else:
+                    self.depth_model = None
+                    anim_args.save_depth_maps = False
+            if self.depth_model != None and not predict_depths:
+                self.depth_model = None
+            if self.depth_model is not None:
+                self.depth_model.to('cuda')
+
+            warped_np_img, self.depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx, depth_model=self.depth_model, depth=None, device='cuda',
+                            half_precision=True)
+            num_channels = len(self.depth.shape)
+
+            if num_channels <= 3:
+                depth_image = self.depth_model.to_image(self.depth.detach().cpu())
+            else:
+                depth_image = self.depth_model.to_image(self.depth[0].detach().cpu())
+
+            ret_depth = pil2tensor(depth_image).detach().cpu()
+            # if gs.vram_state in ["low", "medium"] and self.depth_model is not None:
+            #     self.depth_model.to('cpu')
+            image = Image.fromarray(cv2.cvtColor(warped_np_img, cv2.COLOR_BGR2RGB))
+
+            tensor = pil2tensor(image)
+
+            if mask is not None:
+                mask = mask.detach().cpu()
+                #mask = mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])).movedim(1, -1).expand(-1, -1, -1, 3)
+                mask = mask.mean(dim=0, keepdim=False)
+                mask[mask > 1e-05] = 1
+                mask[mask < 1e-05] = 0
+                mask = mask[0].unsqueeze(0)
+
+            # print(mask)
+            # print(mask.shape)
+
+
+            # from ai_nodes.ainodes_engine_base_nodes.ainodes_backend.resizeRight import resizeright
+            # from ai_nodes.ainodes_engine_base_nodes.ainodes_backend.resizeRight import interp_methods
+            # mask = resizeright.resize(mask, scale_factors=None,
+            #                                     out_shape=[mask.shape[0], int(mask.shape[1] // 8), int(mask.shape[2] // 8)
+            #                                             ],
+            #                                     interp_method=interp_methods.lanczos3, support_sz=None,
+            #                                     antialiasing=True, by_convs=True, scale_tolerance=None,
+            #                                     max_numerator=10, pad_mode='reflect')
+            # print(mask.shape)
+            return (tensor, ret_depth,)
+            #return [data, tensor, mask, ret_depth, self.depth_model]
+        else:
+            return (image, image,)
+
+
+class DeforumColorMatchNode:
+
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("IMAGE",),
+                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     }
+                }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "fn"
+    display_name = "Deforum Color Match"
+    CATEGORY = "sampling"
+
+    depth_model = None
+    algo = ""
+
+    color_match_sample = None
+
+    def fn(self, image, deforum_frame_data):
+        if image is not None:
+            anim_args = deforum_frame_data.get("anim_args")
+            image = np.array(tensor2pil(image))
+            # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+            if anim_args.color_coherence != 'None' and self.color_match_sample is not None:
+                image = maintain_colors(image, self.color_match_sample, anim_args.color_coherence)
+            print(f"[ Deforum Color Coherence: {anim_args.color_coherence} ]")
+            if self.color_match_sample is None:
+                self.color_match_sample = image.copy()
+            if anim_args.color_force_grayscale:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            image = pil2tensor(image)
+
+        return (image,)
+
+
+class DeforumAddNoiseNode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("IMAGE",),
+                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     }
+                }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "fn"
+    display_name = "Deforum Add Noise"
+    CATEGORY = "sampling"
+
+    def fn(self, image, deforum_frame_data):
+
+        if image is not None:
+            keys = deforum_frame_data.get("keys")
+            args = deforum_frame_data.get("args")
+            anim_args = deforum_frame_data.get("anim_args")
+            root = deforum_frame_data.get("root")
+            frame_idx = deforum_frame_data.get("frame_idx")
+            noise = keys.noise_schedule_series[frame_idx]
+            kernel = int(keys.kernel_schedule_series[frame_idx])
+            sigma = keys.sigma_schedule_series[frame_idx]
+            amount = keys.amount_schedule_series[frame_idx]
+            threshold = keys.threshold_schedule_series[frame_idx]
+            contrast = keys.contrast_schedule_series[frame_idx]
+            if anim_args.use_noise_mask and keys.noise_mask_schedule_series[frame_idx] is not None:
+                noise_mask_seq = keys.noise_mask_schedule_series[frame_idx]
+            else:
+                noise_mask_seq = None
+            mask_vals = {}
+            noise_mask_vals = {}
+
+            mask_vals['everywhere'] = Image.new('1', (args.width, args.height), 1)
+            noise_mask_vals['everywhere'] = Image.new('1', (args.width, args.height), 1)
+
+            #from ainodes_frontend.nodes.deforum_nodes.deforum_framewarp_node import tensor2np
+            prev_img = tensor2np(image)
+            mask_image = None
+            # apply scaling
+            contrast_image = (prev_img * contrast).round().astype(np.uint8)
+            # anti-blur
+            if amount > 0:
+                contrast_image = unsharp_mask(contrast_image, (kernel, kernel), sigma, amount, threshold,
+                                              mask_image if args.use_mask else None)
+            # apply frame noising
+            if args.use_mask or anim_args.use_noise_mask:
+                root.noise_mask = compose_mask_with_check(root, args, noise_mask_seq,
+                                                          noise_mask_vals,
+                                                          Image.fromarray(
+                                                              cv2.cvtColor(contrast_image, cv2.COLOR_BGR2RGB)))
+            noised_image = add_noise(contrast_image, noise, int(args.seed), anim_args.noise_type,
+                                     (anim_args.perlin_w, anim_args.perlin_h,
+                                      anim_args.perlin_octaves,
+                                      anim_args.perlin_persistence),
+                                     root.noise_mask, args.invert_mask)
+            # image = Image.fromarray(noised_image)
+            print(f"[ Deforum Adding Noise: {noise} {anim_args.noise_type}]")
+            image = pil2tensor(noised_image).detach().cpu()
+
+            return (image,)
 
 # NODE_CLASS_MAPPINGS = {
 #     "DeforumBaseData": DeforumBaseParamsNode,
