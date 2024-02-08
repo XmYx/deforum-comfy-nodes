@@ -2,6 +2,7 @@ opencv-contrib-python
 timm==0.6.5
 basicsr==1.3.5
 matplotlib
-pandas
+pandas==1.4.1
 numexpr
 rich
+imageio[ffmpeg]

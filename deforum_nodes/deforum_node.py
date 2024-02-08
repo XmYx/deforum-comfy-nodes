@@ -20,6 +20,7 @@ import time
 from types import SimpleNamespace
 
 import imageio
+from tqdm import tqdm
 
 import folder_paths
 import hashlib
@@ -1106,9 +1107,11 @@ class DeforumVideoSaveNode:
         if len(self.images) >= max_frames:  # frame_idx is 0-based
 
             output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
+            writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=10, pixelformat='yuv420p')
 
-            imageio.mimsave(output_path, self.images, 'mp4', fps=fps, codec='libx264')
-
+            for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
+                writer.append_data(frame)
+            writer.close()
 
             self.images = []  # Empty the list for next use
         return (image,)
