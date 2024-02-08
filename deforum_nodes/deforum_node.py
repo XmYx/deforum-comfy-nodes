@@ -8,6 +8,7 @@
 # from comfy.clip_vision import clip_preprocess
 # from comfy.ldm.modules.attention import optimized_attention
 # import folder_paths
+import copy
 import importlib
 import inspect
 import json
@@ -16,7 +17,8 @@ import os
 import secrets
 import time
 from types import SimpleNamespace
-
+import folder_paths
+import hashlib
 import cv2
 import numexpr
 import numpy as np
@@ -25,12 +27,15 @@ import torch
 from PIL import Image
 
 from deforum import DeforumAnimationPipeline, ImageRNGNoise
+from deforum.generators.deforum_flow_generator import get_flow_from_images
 from deforum.generators.deforum_noise_generator import add_noise
+from deforum.models import RAFT
 from deforum.pipeline_utils import next_seed
 from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKeys
 from deforum.pipelines.deforum_animation.animation_params import RootArgs, DeforumArgs, DeforumAnimArgs, \
     DeforumOutputArgs, LoopArgs, ParseqArgs
-from deforum.utils.image_utils import maintain_colors, unsharp_mask, compose_mask_with_check
+from deforum.utils.image_utils import maintain_colors, unsharp_mask, compose_mask_with_check, \
+    image_transform_optical_flow
 from deforum.utils.string_utils import substitute_placeholders, split_weighted_subprompts
 from .deforum_ui_data import (deforum_base_params, deforum_anim_params, deforum_translation_params,
                               deforum_cadence_params, deforum_masking_params, deforum_depth_params,
@@ -402,6 +407,7 @@ class DeforumIteratorNode:
             }
         }
     RETURN_TYPES = (("DEFORUM_FRAME_DATA", "LATENT", "STRING", "STRING"))
+    RETURN_NAMES = (("deforum_frame_data", "latent", "positive_prompt", "negative_prompt"))
     FUNCTION = "get"
     OUTPUT_NODE = True
     CATEGORY = f"deforum_data"
@@ -864,6 +870,137 @@ class DeforumAddNoiseNode:
             image = pil2tensor(noised_image).detach().cpu()
 
             return (image,)
+
+class DeforumHybridMotionNode:
+    raft_model = None
+    prev_image = None
+    flow = None
+    methods = ['RAFT', 'DIS Medium', 'DIS Fine', 'Farneback']
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("IMAGE",),
+                     "hybrid_image":("IMAGE",),
+                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     "hybrid_method":([s.methods]),
+                     }
+                }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "fn"
+    display_name = "Deforum Hybrid Motion"
+    CATEGORY = "sampling"
+
+    def fn(self, image, hybrid_image, deforum_frame_data, hybrid_method):
+        if self.raft_model is None:
+            self.raft_model = RAFT()
+        #
+        # data = self.getInputData(0)
+        # image = self.getInputData(1)
+        # image_2 = self.getInputData(2)
+
+        flow_factor = deforum_frame_data["keys"].hybrid_flow_factor_schedule_series[deforum_frame_data["frame_index"]]
+
+        pil_image = np.array(tensor2pil(image)).astype(np.uint8)
+        bgr_image = cv2.cvtColor(pil_image, cv2.COLOR_RGB2BGR)
+
+
+        if hybrid_image is None:
+            if self.prev_image is None:
+                self.prev_image = bgr_image
+                return [image]
+            else:
+                self.flow = get_flow_from_images(self.prev_image, bgr_image, hybrid_method, self.raft_model, self.flow)
+
+                self.prev_image = copy.deepcopy(bgr_image)
+
+                bgr_image = image_transform_optical_flow(bgr_image, self.flow, flow_factor)
+
+                rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+
+                return (pil2tensor(rgb_image),)
+        else:
+            pil_image_ref = np.array(tensor2pil(hybrid_image)).astype(np.uint8)
+            bgr_image_ref = cv2.cvtColor(pil_image_ref, cv2.COLOR_RGB2BGR)
+            bgr_image_ref = cv2.resize(bgr_image_ref, (bgr_image.shape[1], bgr_image.shape[0]))
+            if self.prev_image is None:
+                self.prev_image = bgr_image_ref
+                return (image,)
+            else:
+                self.flow = get_flow_from_images(self.prev_image, bgr_image_ref, hybrid_method, self.raft_model, self.flow)
+                bgr_image = image_transform_optical_flow(bgr_image, self.flow, flow_factor)
+                rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+                return (pil2tensor(rgb_image),)
+
+
+class LoadVideo:
+    # @classmethod
+    # def INPUT_TYPES(cls):
+    #     input_dir = folder_paths.get_input_directory()
+    #     files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
+    #     video_files = [f for f in files if f.endswith(('.mp4', '.avi', '.mov'))]  # Add more video formats as needed
+    #     return {"required":
+    #                 {"video": (sorted(video_files), {"file_upload": True})},
+    #             }
+    @classmethod
+    def INPUT_TYPES(s):
+        input_dir = folder_paths.get_input_directory()
+        files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
+        return {"required":
+                    {"image": (sorted(files), {"image_upload": True})},
+                }
+    CATEGORY = "video"
+    display_name = "Deforum Load Video"
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "load_video_frame"
+
+    def __init__(self):
+        self.cap = None
+        self.current_frame = None
+
+    def load_video_frame(self, image):
+        video_path = folder_paths.get_annotated_filepath(image)
+
+        # Initialize or reset video capture
+        if self.cap is None or self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
+            self.cap = cv2.VideoCapture(video_path)
+            self.current_frame = -1
+
+        success, frame = self.cap.read()
+        if success:
+            self.current_frame += 1
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = np.array(frame).astype(np.float32)
+            frame = pil2tensor(frame)  # Convert to torch tensor
+        else:
+            # Reset if reached the end of the video
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            success, frame = self.cap.read()
+            self.current_frame = 0
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = np.array(frame).astype(np.float32)
+            frame = pil2tensor(frame)  # Convert to torch tensor
+
+        return (frame,)
+    @classmethod
+    def IS_CHANGED(cls, text, autorefresh):
+        # Force re-evaluation of the node
+        if autorefresh == "Yes":
+            return float("NaN")
+    # @classmethod
+    # def IS_CHANGED(cls, video):
+    #     video_path = folder_paths.get_annotated_filepath(video)
+    #     m = hashlib.sha256()
+    #     with open(video_path, 'rb') as f:
+    #         m.update(f.read())
+    #     return m.digest().hex()
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, image):
+        if not folder_paths.exists_annotated_filepath(image):
+            return "Invalid video file: {}".format(image)
+        return True
 
 # NODE_CLASS_MAPPINGS = {
 #     "DeforumBaseData": DeforumBaseParamsNode,
