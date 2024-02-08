@@ -8,12 +8,15 @@ class DeforumDataBase:
     FUNCTION = "get"
     OUTPUT_NODE = True
     CATEGORY = f"deforum_data"
-
+    @classmethod
+    def IS_CHANGED(cls, text, autorefresh):
+        # Force re-evaluation of the node
+        if autorefresh == "Yes":
+            return float("NaN")
     def get(self, deforum_data=None, *args, **kwargs):
 
         if deforum_data:
             deforum_data.update(**kwargs)
         else:
             deforum_data = kwargs
-        print(deforum_data)
         return (deforum_data,)

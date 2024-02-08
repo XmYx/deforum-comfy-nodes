@@ -14,9 +14,13 @@ import inspect
 import json
 import math
 import os
+import re
 import secrets
 import time
 from types import SimpleNamespace
+
+import imageio
+
 import folder_paths
 import hashlib
 import cv2
@@ -298,7 +302,6 @@ class DeforumSampleNode:
 
         root.animation_prompts = deforum_data.get("prompts", {})
 
-        print("ROOT ANIM PROMPTS", root.animation_prompts)
 
         if not args.use_init and not anim_args.hybrid_use_init_image:
             args.init_image = None
@@ -334,7 +337,6 @@ class DeforumSampleNode:
         def datacallback(data=None):
             if data:
                 if "image" in data:
-                    print("DEFORUM DATACALLBACK")
                     pbar.update_absolute(data["frame_idx"], deforum_data["max_frames"], ("JPEG", data["image"], 512))
 
         self.deforum.datacallback = datacallback
@@ -423,8 +425,6 @@ class DeforumGetCachedLatentNode:
 
     def get_cached_latent(self):
         latent = deforum_cache.get("latent")
-        print("deforum cached latent", latent)
-
         return (latent,)
 
 
@@ -513,12 +513,10 @@ class DeforumIteratorNode:
                 else:
                     val = deforum_data[key]
                 setattr(loop_args, key, val)
-        # print(anim_args.max_frames)
 
         root.animation_prompts = deforum_data.get("prompts")
 
         keys, prompt_series = get_current_keys(anim_args, args.seed, root)
-        # print(f"WOULD RETURN\n{keys}\n\n{prompt_series}")
 
         if self.frame_index > anim_args.max_frames:
             # self.reset_iteration()
@@ -1038,45 +1036,89 @@ class LoadVideo:
         if not folder_paths.exists_annotated_filepath(image):
             return "Invalid video file: {}".format(image)
         return True
-    # @classmethod
-    # def IS_CHANGED(cls, video):
-    #     video_path = folder_paths.get_annotated_filepath(video)
-    #     m = hashlib.sha256()
-    #     with open(video_path, 'rb') as f:
-    #         m.update(f.read())
-    #     return m.digest().hex()
+
+def find_next_index(output_dir, filename_prefix):
+    """
+    Finds the next index for an MP4 file given an output directory and a filename prefix.
+
+    Parameters:
+    - output_dir: The directory where the MP4 files are saved.
+    - filename_prefix: The prefix for the filenames.
+
+    Returns:
+    - An integer representing the next index for a new MP4 file.
+    """
+    # Compile a regular expression pattern to match the filenames
+    # This assumes the index is at the end of the filename, before the .mp4 extension
+    pattern = re.compile(rf"^{re.escape(filename_prefix)}_(\d+)\.mp4$")
+
+    max_index = -1
+    for filename in os.listdir(output_dir):
+        match = pattern.match(filename)
+        if match:
+            # Extract the current index from the filename
+            current_index = int(match.group(1))
+            # Update the max index found
+            if current_index > max_index:
+                max_index = current_index
+
+    # The next index is one more than the highest index found
+    next_index = max_index + 1
+    return next_index
 
 
-# NODE_CLASS_MAPPINGS = {
-#     "DeforumBaseData": DeforumBaseParamsNode,
-#     "DeforumAnimData": DeforumAnimParamsNode,
-#     "DeforumTranslationData": DeforumTranslationParamsNode,
-#     "DeforumDepthData": DeforumDepthParamsNode,
-#     "DeforumNoiseParamsData": DeforumNoiseParamsNode,
-#     "DeforumColorParamsData": DeforumColorParamsNode,
-#     "DeforumDiffusionParamsData": DeforumDiffusionParamsNode,
-#     "DeforumCadenceParams": DeforumCadenceParamsNode,
-#     "DeforumPrompt": DeforumPromptNode,
-#     "DeforumSampler": DeforumSampleNode,
-#     "DeforumIterator": DeforumIteratorNode,
-#     "DeforumCacheWrite": DeforumCacheLatentNode,
-#     "DeforumCacheLoad": DeforumGetCachedLatentNode,
-# }
-#
-# NODE_DISPLAY_NAME_MAPPINGS = {
-#     "DeforumBaseData": "Deforum Base Data",
-#     "DeforumAnimData": "Deforum Anim Data",
-#     "DeforumTranslationData": "Deforum Translation Data",
-#     "DeforumDepthData": "Deforum Depth Data",
-#     "DeforumNoiseParamsData": "Deforum Noise Data",
-#     "DeforumColorParamsData": "Deforum Color Data",
-#     "DeforumCadenceParams": "Deforum Cadence Data",
-#     "DeforumPrompt": "Deforum Prompts",
-#     "DeforumSampler": "Deforum Sampler",
-#     "DeforumIterator": "Deforum Iterator",
-#     "DeforumCacheWrite": "Deforum Write Cache Latent",
-#     "DeforumCacheLoad": "Deforum Load Cache Latent",
-# }
+class DeforumVideoSaveNode:
+    def __init__(self):
+        self.output_dir = folder_paths.get_output_directory()
+    images = []
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("IMAGE",),
+                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     "filename_prefix": ("STRING",{"default":"deforum_"}),
+                     "fps": ("INT", {"default": 24, "min": 1, "max": 10000},),
+
+                     }
+                }
+
+    RETURN_TYPES = ()
+    OUTPUT_NODE = True
+
+    FUNCTION = "fn"
+    display_name = "Deforum Save Video"
+    CATEGORY = "sampling"
+
+    def fn(self, image, deforum_frame_data, filename_prefix, fps):
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
+            filename_prefix, self.output_dir)
+
+        counter = find_next_index(full_output_folder, filename_prefix)
+
+        frame_idx = deforum_frame_data["frame_idx"]
+        max_frames = deforum_frame_data["anim_args"].max_frames
+
+        # Convert tensor to PIL Image and then to numpy array
+        pil_image = tensor2pil(image)
+        self.images.append(np.array(pil_image).astype(np.uint8))
+        print(f"[DEFORUM VIDEO SAVE NODE] holding {len(self.images)} images")
+        # When the current frame index reaches the last frame, save the video
+        if len(self.images) >= max_frames:  # frame_idx is 0-based
+
+            output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
+
+            imageio.mimsave(output_path, self.images, 'mp4', fps=fps, codec='libx264')
+
+
+            self.images = []  # Empty the list for next use
+        return (image,)
+    @classmethod
+    def IS_CHANGED(s, text, autorefresh):
+        # Force re-evaluation of the node
+        if autorefresh == "Yes":
+            return float("NaN")
+
+
 
 # Create an empty dictionary for class mappings
 NODE_CLASS_MAPPINGS = {}
@@ -1089,7 +1131,6 @@ deforum_node_module = importlib.import_module('deforum-comfy-nodes.deforum_nodes
 # Iterate through all classes defined in deforum_nodes.deforum_node
 for name, obj in inspect.getmembers(deforum_node_module):
 
-    print(name, obj)
 
     # Check if the member is a class
     if inspect.isclass(obj) and hasattr(obj, "INPUT_TYPES"):
