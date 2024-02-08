@@ -6,3 +6,4 @@ pandas==1.4.1
 numexpr
 rich
 imageio[ffmpeg]
+git+https://github.com/XmYx/deforum-studio.git

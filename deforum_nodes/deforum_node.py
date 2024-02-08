@@ -172,6 +172,28 @@ class DeforumCadenceParamsNode(DeforumDataBase):
     def INPUT_TYPES(s):
         return s.params
 
+class DeforumHybridParamsNode(DeforumDataBase):
+    params = get_node_params(deforum_hybrid_video_params)
+    display_name = "Deforum Hybrid Parameters"
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return s.params
+
+class DeforumHybridScheduleNode(DeforumDataBase):
+    params = get_node_params(deforum_hybrid_video_schedules)
+    display_name = "Deforum Hybrid Schedule"
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return s.params
+
 
 class DeforumPromptNode(DeforumDataBase):
     def __init__(self):
