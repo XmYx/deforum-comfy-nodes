@@ -46,15 +46,14 @@ from .deforum_node_base import DeforumDataBase
 
 deforum_cache = {}
 
-def parse_widget(widget_info:dict) -> tuple:
 
+def parse_widget(widget_info: dict) -> tuple:
     parsed_widget = None
-    #for key, value in widget_info.items():
     t = widget_info["type"]
     if t == "dropdown":
         parsed_widget = (widget_info["choices"],)
     elif t == "checkbox":
-        parsed_widget = ("BOOLEAN", { "default": widget_info['default'] })
+        parsed_widget = ("BOOLEAN", {"default": widget_info['default']})
     elif t == "lineedit":
         parsed_widget = ("STRING", {"default": widget_info['default']})
     elif t == "spinbox":
@@ -63,79 +62,116 @@ def parse_widget(widget_info:dict) -> tuple:
         parsed_widget = ("FLOAT", {"default": widget_info['default']})
     return parsed_widget
 
+
 def get_node_params(input_params):
     data_info = {"required": {}, }
     if input_params:
         for name, widget_info in input_params.items():
             data_info["required"][name] = parse_widget(widget_info)
-    data_info["optional"] = {"deforum_data":("deforum_data",)}
+    data_info["optional"] = {"deforum_data": ("deforum_data",)}
     return data_info
-
 
 
 class DeforumBaseParamsNode(DeforumDataBase):
     params = get_node_params(deforum_base_params)
+    display_name = "Deforum Base Parameters"
+
     def __init__(self):
         super().__init__()
+
     @classmethod
     def INPUT_TYPES(s):
         return s.params
+
 
 class DeforumAnimParamsNode(DeforumDataBase):
     params = get_node_params(deforum_anim_params)
+    display_name = "Deforum Animation Parameters"
+
     def __init__(self):
         super().__init__()
+
     @classmethod
     def INPUT_TYPES(s):
         return s.params
+
 
 class DeforumTranslationParamsNode(DeforumDataBase):
     params = get_node_params(deforum_translation_params)
+    display_name = "Deforum Translate Parameters"
+
     def __init__(self):
         super().__init__()
-    @classmethod
-    def INPUT_TYPES(s):
-        return s.params
-class DeforumDepthParamsNode(DeforumDataBase):
-    params = get_node_params(deforum_depth_params)
-    def __init__(self):
-        super().__init__()
-    @classmethod
-    def INPUT_TYPES(s):
-        return s.params
-class DeforumNoiseParamsNode(DeforumDataBase):
-    params = get_node_params(deforum_noise_params)
-    def __init__(self):
-        super().__init__()
-    @classmethod
-    def INPUT_TYPES(s):
-        return s.params
-class DeforumColorParamsNode(DeforumDataBase):
-    params = get_node_params(deforum_color_coherence_params)
-    def __init__(self):
-        super().__init__()
-    @classmethod
-    def INPUT_TYPES(s):
-        return s.params
-class DeforumDiffusionParamsNode(DeforumDataBase):
-    params = get_node_params(deforum_diffusion_schedule_params)
-    def __init__(self):
-        super().__init__()
+
     @classmethod
     def INPUT_TYPES(s):
         return s.params
 
-class DeforumCadenceParamsNode(DeforumDataBase):
-    params = get_node_params(deforum_cadence_params)
+
+class DeforumDepthParamsNode(DeforumDataBase):
+    params = get_node_params(deforum_depth_params)
+    display_name = "Deforum Depth Parameters"
+
     def __init__(self):
         super().__init__()
+
     @classmethod
     def INPUT_TYPES(s):
         return s.params
+
+
+class DeforumNoiseParamsNode(DeforumDataBase):
+    params = get_node_params(deforum_noise_params)
+    display_name = "Deforum Noise Parameters"
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return s.params
+
+
+class DeforumColorParamsNode(DeforumDataBase):
+    params = get_node_params(deforum_color_coherence_params)
+    display_name = "Deforum ColorMatch Parameters"
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return s.params
+
+
+class DeforumDiffusionParamsNode(DeforumDataBase):
+    params = get_node_params(deforum_diffusion_schedule_params)
+    display_name = "Deforum Diffusion Parameters"
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return s.params
+
+
+class DeforumCadenceParamsNode(DeforumDataBase):
+    params = get_node_params(deforum_cadence_params)
+    display_name = "Deforum Cadence Parameters"
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return s.params
+
 
 class DeforumPromptNode(DeforumDataBase):
     def __init__(self):
         super().__init__()
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -146,10 +182,12 @@ class DeforumPromptNode(DeforumDataBase):
                 "deforum_data": ("deforum_data",),
             },
         }
+
     RETURN_TYPES = (("deforum_data",))
     FUNCTION = "get"
     OUTPUT_NODE = True
     CATEGORY = f"deforum_data"
+    display_name = "Deforum Prompt"
 
     @torch.inference_mode()
     def get(self, prompts, deforum_data=None):
@@ -167,12 +205,12 @@ class DeforumPromptNode(DeforumDataBase):
             value = value.strip('"')
             prompts[key] = value
 
-
         if deforum_data:
             deforum_data["prompts"] = prompts
         else:
-            deforum_data = {"prompts":prompts}
+            deforum_data = {"prompts": prompts}
         return (deforum_data,)
+
 
 class DeforumSampleNode:
     @classmethod
@@ -185,10 +223,12 @@ class DeforumSampleNode:
                 "vae": ("VAE",)
             },
         }
+
     RETURN_TYPES = (("IMAGE",))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum_data"
+    CATEGORY = f"deforum_sampling"
+    display_name = "Deforum KSampler"
 
     @torch.inference_mode()
     def get(self, deforum_data, model, clip, vae, *args, **kwargs):
@@ -275,16 +315,17 @@ class DeforumSampleNode:
         root.raw_batch_name = args.batch_name
         args.batch_name = substitute_placeholders(args.batch_name, current_arg_list, full_base_folder_path)
 
-        #os.makedirs(args.outdir, exist_ok=True)
+        # os.makedirs(args.outdir, exist_ok=True)
 
         def generate(*args, **kwargs):
             from .deforum_comfy_sampler import sample_deforum
             image = sample_deforum(model, clip, vae, **kwargs)
 
             return image
+
         self.deforum = DeforumAnimationPipeline(generate)
 
-        self.deforum.config_dir = os.path.join(os.getcwd(),"output/_deforum_configs")
+        self.deforum.config_dir = os.path.join(os.getcwd(), "output/_deforum_configs")
         os.makedirs(self.deforum.config_dir, exist_ok=True)
         # self.deforum.generate_inpaint = self.generate_inpaint
         import comfy
@@ -302,7 +343,6 @@ class DeforumSampleNode:
 
         results = []
         for i in self.deforum.images:
-
             tensor = torch.from_numpy(np.array(i).astype(np.float32) / 255.0)
 
             results.append(tensor)
@@ -310,11 +350,11 @@ class DeforumSampleNode:
 
         return (result,)
 
-def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
 
+def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
     use_parseq = False if parseq_args == None else True
     anim_args.max_frames += 2
-    keys = DeforumAnimKeys(anim_args, seed) # if not use_parseq else ParseqAnimKeys(parseq_args, video_args)
+    keys = DeforumAnimKeys(anim_args, seed)  # if not use_parseq else ParseqAnimKeys(parseq_args, video_args)
 
     # Always enable pseudo-3d with parseq. No need for an extra toggle:
     # Whether it's used or not in practice is defined by the schedules
@@ -335,6 +375,7 @@ def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
     anim_args.max_frames -= 2
     return keys, prompt_series
 
+
 class DeforumCacheLatentNode:
     @classmethod
     def IS_CHANGED(cls, text, autorefresh):
@@ -352,9 +393,9 @@ class DeforumCacheLatentNode:
 
     RETURN_TYPES = (("LATENT",))
     FUNCTION = "cache_it"
-    CATEGORY = f"deforum_data"
+    CATEGORY = f"deforum_sampling"
+    display_name = "Deforum Cache Latent"
     OUTPUT_NODE = True
-
 
     def cache_it(self, latent=None):
         global deforum_cache
@@ -372,7 +413,7 @@ class DeforumGetCachedLatentNode:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required":{}}
+        return {"required": {}}
 
     RETURN_TYPES = (("LATENT",))
     FUNCTION = "get_cached_latent"
@@ -380,12 +421,12 @@ class DeforumGetCachedLatentNode:
     OUTPUT_NODE = True
     display_name = "Deforum Load Cached Latent"
 
-
     def get_cached_latent(self):
         latent = deforum_cache.get("latent")
         print("deforum cached latent", latent)
 
         return (latent,)
+
 
 class DeforumIteratorNode:
 
@@ -406,6 +447,7 @@ class DeforumIteratorNode:
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
             }
         }
+
     RETURN_TYPES = (("DEFORUM_FRAME_DATA", "LATENT", "STRING", "STRING"))
     RETURN_NAMES = (("deforum_frame_data", "latent", "positive_prompt", "negative_prompt"))
     FUNCTION = "get"
@@ -471,7 +513,7 @@ class DeforumIteratorNode:
                 else:
                     val = deforum_data[key]
                 setattr(loop_args, key, val)
-        #print(anim_args.max_frames)
+        # print(anim_args.max_frames)
 
         root.animation_prompts = deforum_data.get("prompts")
 
@@ -479,10 +521,10 @@ class DeforumIteratorNode:
         # print(f"WOULD RETURN\n{keys}\n\n{prompt_series}")
 
         if self.frame_index > anim_args.max_frames:
-            #self.reset_iteration()
+            # self.reset_iteration()
             self.frame_index = 0
-            #.should_run = False
-            #return [None]
+            # .should_run = False
+            # return [None]
         # else:
         args.scale = keys.cfg_scale_schedule_series[self.frame_index]
         args.prompt = prompt_series[self.frame_index]
@@ -548,7 +590,7 @@ class DeforumIteratorNode:
 
         gen_args = self.get_current_frame(args, anim_args, root, keys, self.frame_index)
 
-        #self.content.frame_slider.setMaximum(anim_args.max_frames - 1)
+        # self.content.frame_slider.setMaximum(anim_args.max_frames - 1)
 
         self.args = args
         self.root = root
@@ -557,29 +599,27 @@ class DeforumIteratorNode:
         gen_args["frame_index"] = self.frame_index
         gen_args["max_frames"] = anim_args.max_frames
 
-
         if self.frame_index == 0:
             self.rng = ImageRNGNoise((4, args.height // 8, args.width // 8), [self.seed], [self.seed - 1],
-                                0.6, 1024, 1024)
+                                     0.6, 1024, 1024)
 
             # if latent == None:
 
             l = self.rng.first().half()
-            latent = {"samples":l}
+            latent = {"samples": l}
         # else:
         #
         #     latent = self.getInputData(1)
         #     #latent = self.rng.next().half()
         print(f"[ Deforum Iterator: {self.frame_index} / {anim_args.max_frames} {self.seed}]")
         self.frame_index += 1
-        #self.content.set_frame_signal.emit(self.frame_index)
-        #print(latent)
-        #print(f"[ Current Seed List: ]\n[ {self.seeds} ]")
+        # self.content.set_frame_signal.emit(self.frame_index)
+        # print(latent)
+        # print(f"[ Current Seed List: ]\n[ {self.seeds} ]")
 
         gen_args["seed"] = int(seed)
 
         return [gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"]]
-
 
     def get_current_frame(self, args, anim_args, root, keys, frame_idx):
         prompt, negative_prompt = split_weighted_subprompts(args.prompt, frame_idx, anim_args.max_frames)
@@ -605,7 +645,6 @@ class DeforumKSampler:
                      "positive": ("CONDITIONING",),
                      "negative": ("CONDITIONING",),
 
-
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      }
                 }
@@ -628,7 +667,9 @@ class DeforumKSampler:
         # latent_image = deforum_frame_data.get("latent_image")
         denoise = deforum_frame_data.get("denoise", 1.0)
 
-        return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=denoise)
+        return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
+                               denoise=denoise)
+
 
 def tensor2pil(image):
     if image is not None:
@@ -641,11 +682,13 @@ def tensor2pil(image):
 # PIL to Tensor
 def pil2tensor(image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
-def tensor2np(img):
 
+
+def tensor2np(img):
     np_img = np.array(tensor2pil(img))
 
     return np_img
+
 
 class DeforumFrameWarpNode:
 
@@ -679,24 +722,22 @@ class DeforumFrameWarpNode:
 
             np_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
 
-
             args = data.get("args")
             anim_args = data.get("anim_args")
             keys = data.get("keys")
             frame_idx = data.get("frame_idx")
 
             predict_depths = (
-                                         anim_args.animation_mode == '3D' and anim_args.use_depth_warping) or anim_args.save_depth_maps
+                                     anim_args.animation_mode == '3D' and anim_args.use_depth_warping) or anim_args.save_depth_maps
             predict_depths = predict_depths or (
                     anim_args.hybrid_composite and anim_args.hybrid_comp_mask_type in ['Depth', 'Video Depth'])
-
 
             if self.depth_model == None or self.algo != anim_args.depth_algorithm:
                 self.vram_state = "high"
                 if self.depth_model is not None:
                     self.depth_model.to("cpu")
                     del self.depth_model
-                    #torch_gc()
+                    # torch_gc()
 
                 self.algo = anim_args.depth_algorithm
                 if predict_depths:
@@ -705,10 +746,10 @@ class DeforumFrameWarpNode:
                     # TODO Set device in root in webui
                     device = 'cuda'
                     self.depth_model = DepthModel("models/other", device,
-                                             keep_in_vram=keep_in_vram,
-                                             depth_algorithm=anim_args.depth_algorithm, Width=args.width,
-                                             Height=args.height,
-                                             midas_weight=anim_args.midas_weight)
+                                                  keep_in_vram=keep_in_vram,
+                                                  depth_algorithm=anim_args.depth_algorithm, Width=args.width,
+                                                  Height=args.height,
+                                                  midas_weight=anim_args.midas_weight)
 
                     # depth-based hybrid composite mask requires saved depth maps
                     if anim_args.hybrid_composite != 'None' and anim_args.hybrid_comp_mask_type == 'Depth':
@@ -721,8 +762,9 @@ class DeforumFrameWarpNode:
             if self.depth_model is not None:
                 self.depth_model.to('cuda')
 
-            warped_np_img, self.depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx, depth_model=self.depth_model, depth=None, device='cuda',
-                            half_precision=True)
+            warped_np_img, self.depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx,
+                                                              depth_model=self.depth_model, depth=None, device='cuda',
+                                                              half_precision=True)
             num_channels = len(self.depth.shape)
 
             if num_channels <= 3:
@@ -739,7 +781,7 @@ class DeforumFrameWarpNode:
 
             if mask is not None:
                 mask = mask.detach().cpu()
-                #mask = mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])).movedim(1, -1).expand(-1, -1, -1, 3)
+                # mask = mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])).movedim(1, -1).expand(-1, -1, -1, 3)
                 mask = mask.mean(dim=0, keepdim=False)
                 mask[mask > 1e-05] = 1
                 mask[mask < 1e-05] = 0
@@ -747,7 +789,6 @@ class DeforumFrameWarpNode:
 
             # print(mask)
             # print(mask.shape)
-
 
             # from ai_nodes.ainodes_engine_base_nodes.ainodes_backend.resizeRight import resizeright
             # from ai_nodes.ainodes_engine_base_nodes.ainodes_backend.resizeRight import interp_methods
@@ -759,13 +800,12 @@ class DeforumFrameWarpNode:
             #                                     max_numerator=10, pad_mode='reflect')
             # print(mask.shape)
             return (tensor, ret_depth,)
-            #return [data, tensor, mask, ret_depth, self.depth_model]
+            # return [data, tensor, mask, ret_depth, self.depth_model]
         else:
             return (image, image,)
 
 
 class DeforumColorMatchNode:
-
 
     @classmethod
     def INPUT_TYPES(s):
@@ -845,7 +885,7 @@ class DeforumAddNoiseNode:
             mask_vals['everywhere'] = Image.new('1', (args.width, args.height), 1)
             noise_mask_vals['everywhere'] = Image.new('1', (args.width, args.height), 1)
 
-            #from ainodes_frontend.nodes.deforum_nodes.deforum_framewarp_node import tensor2np
+            # from ainodes_frontend.nodes.deforum_nodes.deforum_framewarp_node import tensor2np
             prev_img = tensor2np(image)
             mask_image = None
             # apply scaling
@@ -871,18 +911,20 @@ class DeforumAddNoiseNode:
 
             return (image,)
 
+
 class DeforumHybridMotionNode:
     raft_model = None
     prev_image = None
     flow = None
     methods = ['RAFT', 'DIS Medium', 'DIS Fine', 'Farneback']
+
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
                     {"image": ("IMAGE",),
-                     "hybrid_image":("IMAGE",),
+                     "hybrid_image": ("IMAGE",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
-                     "hybrid_method":([s.methods]),
+                     "hybrid_method": ([s.methods]),
                      }
                 }
 
@@ -903,7 +945,6 @@ class DeforumHybridMotionNode:
 
         pil_image = np.array(tensor2pil(image)).astype(np.uint8)
         bgr_image = cv2.cvtColor(pil_image, cv2.COLOR_RGB2BGR)
-
 
         if hybrid_image is None:
             if self.prev_image is None:
@@ -927,7 +968,8 @@ class DeforumHybridMotionNode:
                 self.prev_image = bgr_image_ref
                 return (image,)
             else:
-                self.flow = get_flow_from_images(self.prev_image, bgr_image_ref, hybrid_method, self.raft_model, self.flow)
+                self.flow = get_flow_from_images(self.prev_image, bgr_image_ref, hybrid_method, self.raft_model,
+                                                 self.flow)
                 bgr_image = image_transform_optical_flow(bgr_image, self.flow, flow_factor)
                 rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
                 return (pil2tensor(rgb_image),)
@@ -949,6 +991,7 @@ class LoadVideo:
         return {"required":
                     {"image": (sorted(files), {"image_upload": True})},
                 }
+
     CATEGORY = "video"
     display_name = "Deforum Load Video"
 
@@ -983,11 +1026,18 @@ class LoadVideo:
             frame = pil2tensor(frame)  # Convert to torch tensor
 
         return (frame,)
+
     @classmethod
     def IS_CHANGED(cls, text, autorefresh):
         # Force re-evaluation of the node
         if autorefresh == "Yes":
             return float("NaN")
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, image):
+        if not folder_paths.exists_annotated_filepath(image):
+            return "Invalid video file: {}".format(image)
+        return True
     # @classmethod
     # def IS_CHANGED(cls, video):
     #     video_path = folder_paths.get_annotated_filepath(video)
@@ -996,11 +1046,6 @@ class LoadVideo:
     #         m.update(f.read())
     #     return m.digest().hex()
 
-    @classmethod
-    def VALIDATE_INPUTS(cls, image):
-        if not folder_paths.exists_annotated_filepath(image):
-            return "Invalid video file: {}".format(image)
-        return True
 
 # NODE_CLASS_MAPPINGS = {
 #     "DeforumBaseData": DeforumBaseParamsNode,

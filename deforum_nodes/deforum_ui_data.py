@@ -1,4 +1,4 @@
-
+import comfy
 deforum_base_params = {
     "width": {
         "type": "spinbox",
@@ -14,13 +14,17 @@ deforum_base_params = {
         "max": 4096,
         "step": 64
     },
-    "seed": {
-        "type": "lineedit",
-        "default": "-1",
+    # "seed": {
+    #     "type": "lineedit",
+    #     "default": "-1",
+    # },
+    "sampler_name": {
+        "type": "dropdown",
+        "choices": comfy.samplers.KSampler.SAMPLERS
     },
-    "sampler": {
-        "type": "lineedit",
-        "default": "euler_ancestral"
+    "scheduler": {
+        "type": "dropdown",
+        "choices": comfy.samplers.KSampler.SCHEDULERS
     },
     "steps": {
         "type": "spinbox",
@@ -89,14 +93,14 @@ deforum_base_params = {
         "type": "checkbox",
         "default": False
     },
-    "prompt": {
-        "type": "lineedit",
-        "default": ""
-    },
-    "timestring": {
-        "type": "lineedit",
-        "default": ""
-    },
+    # "prompt": {
+    #     "type": "lineedit",
+    #     "default": ""
+    # },
+    # "timestring": {
+    #     "type": "lineedit",
+    #     "default": ""
+    # },
     # "seed_internal": {
     #     "type": "lineedit",
     #     "default": "-1",
