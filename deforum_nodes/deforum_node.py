@@ -996,7 +996,7 @@ class DeforumHybridMotionNode:
                 return (pil2tensor(rgb_image),)
 
 
-class LoadVideo:
+class DeforumLoadVideo:
     # @classmethod
     # def INPUT_TYPES(cls):
     #     input_dir = folder_paths.get_input_directory()
