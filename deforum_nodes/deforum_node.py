@@ -468,6 +468,7 @@ class DeforumIteratorNode:
             "optional": {
                 "latent": ("LATENT",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "reset":("INT", {"default": 0, "min": 0, "max": 1},)
             }
         }
 
@@ -482,7 +483,9 @@ class DeforumIteratorNode:
     seeds = []
 
     @torch.inference_mode()
-    def get(self, deforum_data, latent=None, seed=None, *args, **kwargs):
+    def get(self, deforum_data, latent=None, seed=None, reset=0, *args, **kwargs):
+
+        reset = True if reset == 1 else False
 
         root_dict = RootArgs()
         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
@@ -620,7 +623,7 @@ class DeforumIteratorNode:
         gen_args["frame_index"] = self.frame_index
         gen_args["max_frames"] = anim_args.max_frames
 
-        if self.frame_index == 0:
+        if latent is None or reset:
             self.rng = ImageRNGNoise((4, args.height // 8, args.width // 8), [self.seed], [self.seed - 1],
                                      0.6, 1024, 1024)
 
@@ -628,6 +631,7 @@ class DeforumIteratorNode:
 
             l = self.rng.first().half()
             latent = {"samples": l}
+            gen_args["denoise"] = 1.0
         # else:
         #
         #     latent = self.getInputData(1)
@@ -644,7 +648,7 @@ class DeforumIteratorNode:
 
     def get_current_frame(self, args, anim_args, root, keys, frame_idx):
         prompt, negative_prompt = split_weighted_subprompts(args.prompt, frame_idx, anim_args.max_frames)
-        strength = keys.strength_schedule_series[frame_idx] if not frame_idx == 0 or args.use_init else 1.0
+        strength = keys.strength_schedule_series[frame_idx]
         return {"prompt": prompt,
                 "negative_prompt": negative_prompt,
                 "denoise": strength,
