@@ -48,6 +48,7 @@ from .deforum_ui_data import (deforum_base_params, deforum_anim_params, deforum_
                               deforum_hybrid_video_params, deforum_video_init_params, deforum_image_init_params,
                               deforum_hybrid_video_schedules)
 from .deforum_node_base import DeforumDataBase
+import torch.nn.functional as F
 
 deforum_cache = {}
 
@@ -691,7 +692,7 @@ class DeforumKSampler:
         # negative = deforum_frame_data.get("negative")
         # latent_image = deforum_frame_data.get("latent_image")
         denoise = deforum_frame_data.get("denoise", 1.0)
-
+        print("DENOISE", denoise)
         return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
                                denoise=denoise)
 
@@ -941,6 +942,7 @@ class DeforumHybridMotionNode:
     raft_model = None
     prev_image = None
     flow = None
+    image_size = None
     methods = ['RAFT', 'DIS Medium', 'DIS Fine', 'Farneback']
 
     @classmethod
@@ -967,14 +969,22 @@ class DeforumHybridMotionNode:
         # image_2 = self.getInputData(2)
 
         flow_factor = deforum_frame_data["keys"].hybrid_flow_factor_schedule_series[deforum_frame_data["frame_index"]]
+        p_img = tensor2pil(image)
+        size = p_img.size
 
-        pil_image = np.array(tensor2pil(image)).astype(np.uint8)
+        pil_image = np.array(p_img).astype(np.uint8)
+
+        if self.image_size != size:
+            self.prev_image = None
+            self.flow = None
+            self.image_size = size
+
         bgr_image = cv2.cvtColor(pil_image, cv2.COLOR_RGB2BGR)
 
         if hybrid_image is None:
             if self.prev_image is None:
                 self.prev_image = bgr_image
-                return [image]
+                return (image,)
             else:
                 self.flow = get_flow_from_images(self.prev_image, bgr_image, hybrid_method, self.raft_model, self.flow)
 
@@ -986,7 +996,8 @@ class DeforumHybridMotionNode:
 
                 return (pil2tensor(rgb_image),)
         else:
-            pil_image_ref = np.array(tensor2pil(hybrid_image)).astype(np.uint8)
+
+            pil_image_ref = np.array(tensor2pil(hybrid_image).resize((self.image_size), Image.Resampling.LANCZOS)).astype(np.uint8)
             bgr_image_ref = cv2.cvtColor(pil_image_ref, cv2.COLOR_RGB2BGR)
             bgr_image_ref = cv2.resize(bgr_image_ref, (bgr_image.shape[1], bgr_image.shape[0]))
             if self.prev_image is None:
@@ -1098,6 +1109,7 @@ class DeforumVideoSaveNode:
     def __init__(self):
         self.output_dir = folder_paths.get_output_directory()
     images = []
+    size = None
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
@@ -1127,6 +1139,12 @@ class DeforumVideoSaveNode:
 
         # Convert tensor to PIL Image and then to numpy array
         pil_image = tensor2pil(image)
+
+        size = pil_image.size
+        if size != self.size:
+            self.size = size
+            self.images.clear()
+
         self.images.append(np.array(pil_image).astype(np.uint8))
         print(f"[DEFORUM VIDEO SAVE NODE] holding {len(self.images)} images")
         # When the current frame index reaches the last frame, save the video
@@ -1147,6 +1165,103 @@ class DeforumVideoSaveNode:
         if autorefresh == "Yes":
             return float("NaN")
 
+
+def pyramid_blend(tensor1, tensor2, blend_value):
+    # For simplicity, we'll use two levels of blending
+    downsampled1 = F.avg_pool2d(tensor1, 2)
+    downsampled2 = F.avg_pool2d(tensor2, 2)
+
+    blended_low = (1 - blend_value) * downsampled1 + blend_value * downsampled2
+    blended_high = tensor1 + tensor2 - F.interpolate(blended_low, scale_factor=2)
+
+    return blended_high
+def gaussian_blend(tensor2, tensor1, blend_value):
+    sigma = 0.5  # Adjust for desired smoothness
+    weight = math.exp(-((blend_value - 0.5) ** 2) / (2 * sigma ** 2))
+    return (1 - weight) * tensor1 + weight * tensor2
+def sigmoidal_blend(tensor1, tensor2, blend_value):
+    # Convert blend_value into a tensor with the same shape as tensor1 and tensor2
+    blend_tensor = torch.full_like(tensor1, blend_value)
+    weight = 1 / (1 + torch.exp(-10 * (blend_tensor - 0.5)))  # Sigmoid function centered at 0.5
+    return (1 - weight) * tensor1 + weight * tensor2
+
+
+blend_methods = ["linear", "sigmoidal", "gaussian", "pyramid", "none"]
+
+def blend_tensors(obj1, obj2, blend_value, blend_method="linear"):
+    """
+    Blends tensors in two given objects based on a blend value using various blending strategies.
+    """
+
+    if blend_method == "linear":
+        weight = blend_value
+        blended_cond = (1 - weight) * obj1[0] + weight * obj2[0]
+        blended_pooled = (1 - weight) * obj1[1]['pooled_output'] + weight * obj2[1]['pooled_output']
+
+    elif blend_method == "sigmoidal":
+        blended_cond = sigmoidal_blend(obj1[0], obj2[0], blend_value)
+        blended_pooled = sigmoidal_blend(obj1[1]['pooled_output'], obj2[1]['pooled_output'], blend_value)
+
+    elif blend_method == "gaussian":
+        blended_cond = gaussian_blend(obj1[0], obj2[0], blend_value)
+        blended_pooled = gaussian_blend(obj1[1]['pooled_output'], obj2[1]['pooled_output'], blend_value)
+
+    elif blend_method == "pyramid":
+        blended_cond = pyramid_blend(obj1[0], obj2[0], blend_value)
+        blended_pooled = pyramid_blend(obj1[1]['pooled_output'], obj2[1]['pooled_output'], blend_value)
+
+    return [[blended_cond, {"pooled_output": blended_pooled}]]
+
+class DeforumConditioningBlendNode:
+    prompt = None
+    n_prompt = None
+    cond = None
+    n_cond = None
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"clip": ("CLIP",),
+                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     "blend_method": ([blend_methods]),
+                     }
+                }
+
+    RETURN_TYPES = ("CONDITIONING", "CONDITIONING")
+    RETURN_NAMES = ("POSITIVE", "NEGATIVE")
+    FUNCTION = "fn"
+    display_name = "Deforum Blend Conditionings"
+    CATEGORY = "sampling"
+    def fn(self, clip, deforum_frame_data, blend_method):
+        prompt = deforum_frame_data.get("prompt", "")
+        negative_prompt = deforum_frame_data.get("negative_prompt", "")
+        next_prompt = deforum_frame_data.get("next_prompt", None)
+        print(f"[ Deforum Conds: {prompt}, {negative_prompt} ]")
+        cond = self.get_conditioning(prompt=prompt, clip=clip)
+        # image = self.getInputData(2)
+        # controlnet = self.getInputData(3)
+
+        prompt_blend = deforum_frame_data.get("prompt_blend", 0.0)
+        #method = self.content.blend_method.currentText()
+        if blend_method != 'none':
+            if next_prompt != prompt and prompt_blend != 0.0 and next_prompt is not None:
+                next_cond = self.get_conditioning(prompt=next_prompt, clip=clip)
+                cond = blend_tensors(cond[0], next_cond[0], prompt_blend, blend_method)
+                print(f"[ Deforum Cond Blend: {next_prompt}, {prompt_blend} ]")
+        n_cond = self.get_conditioning(prompt=negative_prompt, clip=clip)
+
+        return (cond, n_cond,)
+
+    def get_conditioning(self, prompt="", clip=None, progress_callback=None):
+
+        """if gs.loaded_models["loaded"] == []:
+            for node in self.scene.nodes:
+                if isinstance(node, TorchLoaderNode):
+                    node.evalImplementation()
+                    #print("Node found")"""
+
+        tokens = clip.tokenize(prompt)
+        cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
+        return [[cond, {"pooled_output": pooled}]]
 
 
 # Create an empty dictionary for class mappings
