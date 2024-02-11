@@ -651,7 +651,11 @@ class DeforumIteratorNode:
         return [gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"], {"ui": {"string": str(self.frame_index)}}]
 
     def get_current_frame(self, args, anim_args, root, keys, frame_idx):
-        prompt, negative_prompt = split_weighted_subprompts(args.prompt, frame_idx, anim_args.max_frames)
+        if hasattr(args, 'prompt'):
+            prompt, negative_prompt = split_weighted_subprompts(args.prompt, frame_idx, anim_args.max_frames)
+        else:
+            prompt = ""
+            negative_prompt = ""
         strength = keys.strength_schedule_series[frame_idx]
         return {"prompt": prompt,
                 "negative_prompt": negative_prompt,
