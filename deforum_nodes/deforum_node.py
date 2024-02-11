@@ -390,18 +390,16 @@ def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
     if use_parseq and keys.manages_prompts():
         prompt_series = keys.prompts
     else:
-
-        if hasattr(root, 'animation_prompt'):
-
-            prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames + 1)])
-            for i, prompt in root.animation_prompts.items():
-                if str(i).isdigit():
-                    prompt_series[int(i)] = prompt
-                else:
-                    prompt_series[int(numexpr.evaluate(i))] = prompt
-            prompt_series = prompt_series.ffill().bfill()
-        else:
-            prompt_series = None
+        prompt_series = None
+        if hasattr(root, 'animation_prompts'):
+            if root.animation_prompts is not None:
+                prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames + 1)])
+                for i, prompt in root.animation_prompts.items():
+                    if str(i).isdigit():
+                        prompt_series[int(i)] = prompt
+                    else:
+                        prompt_series[int(numexpr.evaluate(i))] = prompt
+                prompt_series = prompt_series.ffill().bfill()
     anim_args.max_frames -= 2
     return keys, prompt_series
 
