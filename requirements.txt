@@ -1,8 +1,9 @@
 opencv-contrib-python
 timm==0.6.5
 matplotlib
-pandas==1.4.4
+pandas>=1.4.4
 numexpr
 rich
 imageio[ffmpeg]
+scikit-image
 git+https://github.com/XmYx/deforum-studio.git
