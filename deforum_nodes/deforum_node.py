@@ -390,14 +390,18 @@ def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
     if use_parseq and keys.manages_prompts():
         prompt_series = keys.prompts
     else:
-        prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames + 1)])
-        for i, prompt in root.animation_prompts.items():
-            if str(i).isdigit():
-                prompt_series[int(i)] = prompt
-            else:
-                prompt_series[int(numexpr.evaluate(i))] = prompt
-        prompt_series = prompt_series.ffill().bfill()
-    prompt_series = prompt_series
+
+        if hasattr(root, 'animation_prompt'):
+
+            prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames + 1)])
+            for i, prompt in root.animation_prompts.items():
+                if str(i).isdigit():
+                    prompt_series[int(i)] = prompt
+                else:
+                    prompt_series[int(numexpr.evaluate(i))] = prompt
+            prompt_series = prompt_series.ffill().bfill()
+        else:
+            prompt_series = None
     anim_args.max_frames -= 2
     return keys, prompt_series
 
@@ -552,7 +556,8 @@ class DeforumIteratorNode:
             # return [None]
         # else:
         args.scale = keys.cfg_scale_schedule_series[self.frame_index]
-        args.prompt = prompt_series[self.frame_index]
+        if prompt_series:
+            args.prompt = prompt_series[self.frame_index]
 
         args.seed = int(args.seed)
         root.seed_internal = int(root.seed_internal)
@@ -598,20 +603,19 @@ class DeforumIteratorNode:
                     return i
             return len(prompt_series) - 1  # default to the end if no change found
 
-        # Inside your main loop:
+        if prompt_series:
+            last_prompt_change = find_last_prompt_change(self.frame_index, prompt_series)
+            next_prompt_change = find_next_prompt_change(self.frame_index, prompt_series)
 
-        last_prompt_change = find_last_prompt_change(self.frame_index, prompt_series)
-        next_prompt_change = find_next_prompt_change(self.frame_index, prompt_series)
+            distance_between_changes = next_prompt_change - last_prompt_change
+            current_distance_from_last = self.frame_index - last_prompt_change
 
-        distance_between_changes = next_prompt_change - last_prompt_change
-        current_distance_from_last = self.frame_index - last_prompt_change
+            # Generate blend values for the distance between prompt changes
+            blend_values = generate_blend_values(distance_between_changes, blend_type="exponential")
 
-        # Generate blend values for the distance between prompt changes
-        blend_values = generate_blend_values(distance_between_changes, blend_type="exponential")
-
-        # Fetch the blend value based on the current frame's distance from the last prompt change
-        blend_value = blend_values[current_distance_from_last]
-        next_prompt = prompt_series[next_prompt_change]
+            # Fetch the blend value based on the current frame's distance from the last prompt change
+            blend_value = blend_values[current_distance_from_last]
+            next_prompt = prompt_series[next_prompt_change]
 
         gen_args = self.get_current_frame(args, anim_args, root, keys, self.frame_index)
 
@@ -619,8 +623,9 @@ class DeforumIteratorNode:
 
         self.args = args
         self.root = root
-        gen_args["next_prompt"] = next_prompt
-        gen_args["prompt_blend"] = blend_value
+        if prompt_series:
+            gen_args["next_prompt"] = next_prompt
+            gen_args["prompt_blend"] = blend_value
         gen_args["frame_index"] = self.frame_index
         gen_args["max_frames"] = anim_args.max_frames
 
