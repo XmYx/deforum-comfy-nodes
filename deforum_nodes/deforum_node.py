@@ -554,7 +554,7 @@ class DeforumIteratorNode:
             # return [None]
         # else:
         args.scale = keys.cfg_scale_schedule_series[self.frame_index]
-        if prompt_series:
+        if prompt_series is not None:
             args.prompt = prompt_series[self.frame_index]
 
         args.seed = int(args.seed)
@@ -601,7 +601,7 @@ class DeforumIteratorNode:
                     return i
             return len(prompt_series) - 1  # default to the end if no change found
 
-        if prompt_series:
+        if prompt_series is not None:
             last_prompt_change = find_last_prompt_change(self.frame_index, prompt_series)
             next_prompt_change = find_next_prompt_change(self.frame_index, prompt_series)
 
@@ -621,7 +621,7 @@ class DeforumIteratorNode:
 
         self.args = args
         self.root = root
-        if prompt_series:
+        if prompt_series is not None:
             gen_args["next_prompt"] = next_prompt
             gen_args["prompt_blend"] = blend_value
         gen_args["frame_index"] = self.frame_index
