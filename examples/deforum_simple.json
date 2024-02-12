@@ -1,20 +1,43 @@
 {
-  "last_node_id": 13,
+  "last_node_id": 14,
   "last_link_id": 20,
   "nodes": [
+    {
+      "id": 14,
+      "type": "Note",
+      "pos": [
+        320,
+        220
+      ],
+      "size": [
+        490.25,
+        267.75
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "properties": {
+        "text": ""
+      },
+      "widgets_values": [
+        "Welcome to Deforum Comfy.\n\nThis is the simplest example to achieve Deforum-esque animations, right click on Deforum Sampling -> Convert to Nodes to expose the inner logic, and add optional Deforum image processors, or anything you'd like.\n\nThe way Deforum works requires a full run of a graph for each frame currently (with the exception of image interpolations [WIP]), thus hitting Queue Prompt generates one frame of your animation. Use Extra Options - Auto Queue for continous generation.\n\nThe Deforum Video Save node saves it's cached frames when the current_frame reaches max_frames set in Deforum. The current frame advances with each generation, and resets to 0 when reaching/passing max_frames (i.e. max frames set lower then current frame while running), or by setting the reset parameter of the Iterator node to 1. Don't forget to flip it back to 0, as it is resetting the latents as well."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
     {
       "id": 11,
       "type": "DeforumBaseParamsNode",
       "pos": [
-        266,
-        439
+        330,
+        530
       ],
-      "size": {
-        "0": 317.4000244140625,
-        "1": 442
-      },
+      "size": [
+        482,
+        442
+      ],
       "flags": {},
-      "order": 0,
+      "order": 1,
       "mode": 0,
       "inputs": [
         {
@@ -61,15 +84,15 @@
       "id": 1,
       "type": "CheckpointLoaderSimple",
       "pos": [
-        163,
-        257
+        840,
+        220
       ],
-      "size": {
-        "0": 509.4212341308594,
-        "1": 98
-      },
+      "size": [
+        501.75,
+        108
+      ],
       "flags": {},
-      "order": 1,
+      "order": 2,
       "mode": 0,
       "outputs": [
         {
@@ -112,15 +135,15 @@
       "id": 13,
       "type": "workflow/Deforum Sampling",
       "pos": [
-        740,
-        325
+        850,
+        380
       ],
-      "size": {
-        "0": 468.3512268066406,
-        "1": 503.9618835449219
-      },
+      "size": [
+        494.5,
+        586.5
+      ],
       "flags": {},
-      "order": 2,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
@@ -192,15 +215,15 @@
       "id": 7,
       "type": "PreviewImage",
       "pos": [
-        1299,
-        126
+        1370,
+        230
       ],
-      "size": {
-        "0": 915.3906860351562,
-        "1": 929.3903198242188
-      },
+      "size": [
+        733.25,
+        732.75
+      ],
       "flags": {},
-      "order": 3,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
