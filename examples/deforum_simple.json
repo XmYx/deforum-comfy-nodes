@@ -1,0 +1,673 @@
+{
+  "last_node_id": 13,
+  "last_link_id": 20,
+  "nodes": [
+    {
+      "id": 11,
+      "type": "DeforumBaseParamsNode",
+      "pos": [
+        266,
+        439
+      ],
+      "size": {
+        "0": 317.4000244140625,
+        "1": 442
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "deforum_data",
+          "type": "deforum_data",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "deforum_data",
+          "type": "deforum_data",
+          "links": [
+            18
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DeforumBaseParamsNode"
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        "euler",
+        "normal",
+        25,
+        7,
+        1,
+        "Deforum_{timestring}",
+        "iter",
+        1,
+        "output/deforum",
+        0.8,
+        true,
+        false,
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "id": 1,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        163,
+        257
+      ],
+      "size": {
+        "0": 509.4212341308594,
+        "1": 98
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            19
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            16,
+            17
+          ],
+          "shape": 3,
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            20
+          ],
+          "shape": 3,
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors"
+      ]
+    },
+    {
+      "id": 13,
+      "type": "workflow/Deforum Sampling",
+      "pos": [
+        740,
+        325
+      ],
+      "size": {
+        "0": 468.3512268066406,
+        "1": 503.9618835449219
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 16
+        },
+        {
+          "name": "CLIPTextEncode clip",
+          "type": "CLIP",
+          "link": 17
+        },
+        {
+          "name": "deforum_data",
+          "type": "deforum_data",
+          "link": 18
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 19
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 20
+        }
+      ],
+      "outputs": [
+        {
+          "name": "positive_prompt",
+          "type": "STRING",
+          "links": null,
+          "shape": 3
+        },
+        {
+          "name": "negative_prompt",
+          "type": "STRING",
+          "links": null,
+          "shape": 3
+        },
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            15
+          ],
+          "shape": 3
+        },
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "workflow/Deforum Sampling"
+      },
+      "widgets_values": [
+        "cat in a box, sushin in the background, space",
+        "",
+        284628728613571,
+        "randomize",
+        0
+      ]
+    },
+    {
+      "id": 7,
+      "type": "PreviewImage",
+      "pos": [
+        1299,
+        126
+      ],
+      "size": {
+        "0": 915.3906860351562,
+        "1": 929.3903198242188
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 15
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    }
+  ],
+  "links": [
+    [
+      15,
+      13,
+      2,
+      7,
+      0,
+      "IMAGE"
+    ],
+    [
+      16,
+      1,
+      1,
+      13,
+      0,
+      "CLIP"
+    ],
+    [
+      17,
+      1,
+      1,
+      13,
+      1,
+      "CLIP"
+    ],
+    [
+      18,
+      11,
+      0,
+      13,
+      2,
+      "deforum_data"
+    ],
+    [
+      19,
+      1,
+      0,
+      13,
+      3,
+      "MODEL"
+    ],
+    [
+      20,
+      1,
+      2,
+      13,
+      4,
+      "VAE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {
+      "Deforum Sampling": {
+        "nodes": [
+          {
+            "type": "DeforumGetCachedLatentNode",
+            "pos": [
+              687,
+              942
+            ],
+            "size": {
+              "0": 239.2784423828125,
+              "1": 26
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "outputs": [
+              {
+                "name": "LATENT",
+                "type": "LATENT",
+                "links": [],
+                "shape": 3,
+                "slot_index": 0
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "DeforumGetCachedLatentNode"
+            },
+            "index": 0
+          },
+          {
+            "type": "CLIPTextEncode",
+            "pos": [
+              700,
+              220
+            ],
+            "size": {
+              "0": 400,
+              "1": 200
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "clip",
+                "type": "CLIP",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "CONDITIONING",
+                "type": "CONDITIONING",
+                "links": [],
+                "shape": 3,
+                "slot_index": 0
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "CLIPTextEncode"
+            },
+            "widgets_values": [
+              "cat in a box, sushin in the background, space"
+            ],
+            "index": 1
+          },
+          {
+            "type": "CLIPTextEncode",
+            "pos": [
+              690,
+              480
+            ],
+            "size": {
+              "0": 400,
+              "1": 200
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "clip",
+                "type": "CLIP",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "CONDITIONING",
+                "type": "CONDITIONING",
+                "links": [],
+                "shape": 3,
+                "slot_index": 0
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "CLIPTextEncode"
+            },
+            "widgets_values": [
+              ""
+            ],
+            "index": 2
+          },
+          {
+            "type": "DeforumIteratorNode",
+            "pos": [
+              690,
+              730
+            ],
+            "size": {
+              "0": 393,
+              "1": 166
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "deforum_data",
+                "type": "deforum_data",
+                "link": null
+              },
+              {
+                "name": "latent",
+                "type": "LATENT",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "deforum_frame_data",
+                "type": "DEFORUM_FRAME_DATA",
+                "links": [],
+                "shape": 3,
+                "slot_index": 0
+              },
+              {
+                "name": "latent",
+                "type": "LATENT",
+                "links": [],
+                "shape": 3,
+                "slot_index": 1
+              },
+              {
+                "name": "positive_prompt",
+                "type": "STRING",
+                "links": null,
+                "shape": 3
+              },
+              {
+                "name": "negative_prompt",
+                "type": "STRING",
+                "links": null,
+                "shape": 3
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "DeforumIteratorNode"
+            },
+            "widgets_values": [
+              284628728613571,
+              "randomize",
+              0
+            ],
+            "index": 3
+          },
+          {
+            "type": "DeforumKSampler",
+            "pos": [
+              703,
+              1173
+            ],
+            "size": {
+              "0": 317.4000244140625,
+              "1": 106
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "model",
+                "type": "MODEL",
+                "link": null
+              },
+              {
+                "name": "latent",
+                "type": "LATENT",
+                "link": null
+              },
+              {
+                "name": "positive",
+                "type": "CONDITIONING",
+                "link": null
+              },
+              {
+                "name": "negative",
+                "type": "CONDITIONING",
+                "link": null
+              },
+              {
+                "name": "deforum_frame_data",
+                "type": "DEFORUM_FRAME_DATA",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "LATENT",
+                "type": "LATENT",
+                "links": [],
+                "shape": 3,
+                "slot_index": 0
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "DeforumKSampler"
+            },
+            "index": 4
+          },
+          {
+            "type": "VAEDecode",
+            "pos": [
+              696,
+              1085
+            ],
+            "size": {
+              "0": 210,
+              "1": 46
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "samples",
+                "type": "LATENT",
+                "link": null
+              },
+              {
+                "name": "vae",
+                "type": "VAE",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "IMAGE",
+                "type": "IMAGE",
+                "links": [],
+                "shape": 3,
+                "slot_index": 0
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "VAEDecode"
+            },
+            "index": 5
+          },
+          {
+            "type": "DeforumCacheLatentNode",
+            "pos": [
+              696,
+              1013
+            ],
+            "size": {
+              "0": 210,
+              "1": 26
+            },
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "latent",
+                "type": "LATENT",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "LATENT",
+                "type": "LATENT",
+                "links": null,
+                "shape": 3
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "DeforumCacheLatentNode"
+            },
+            "index": 6
+          }
+        ],
+        "links": [
+          [
+            null,
+            1,
+            1,
+            0,
+            1,
+            "CLIP"
+          ],
+          [
+            null,
+            1,
+            2,
+            0,
+            1,
+            "CLIP"
+          ],
+          [
+            null,
+            0,
+            3,
+            0,
+            11,
+            "deforum_data"
+          ],
+          [
+            0,
+            0,
+            3,
+            1,
+            10,
+            "LATENT"
+          ],
+          [
+            null,
+            0,
+            4,
+            0,
+            1,
+            "MODEL"
+          ],
+          [
+            3,
+            1,
+            4,
+            1,
+            9,
+            "LATENT"
+          ],
+          [
+            1,
+            0,
+            4,
+            2,
+            4,
+            "CONDITIONING"
+          ],
+          [
+            2,
+            0,
+            4,
+            3,
+            5,
+            "CONDITIONING"
+          ],
+          [
+            3,
+            0,
+            4,
+            4,
+            9,
+            "DEFORUM_FRAME_DATA"
+          ],
+          [
+            4,
+            0,
+            5,
+            0,
+            3,
+            "LATENT"
+          ],
+          [
+            null,
+            2,
+            5,
+            1,
+            1,
+            "VAE"
+          ],
+          [
+            4,
+            0,
+            6,
+            0,
+            3,
+            "LATENT"
+          ]
+        ],
+        "external": [
+          [
+            5,
+            0,
+            "IMAGE"
+          ]
+        ]
+      }
+    }
+  },
+  "version": 0.4
+}
