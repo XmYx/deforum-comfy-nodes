@@ -31,7 +31,7 @@ import pandas as pd
 import torch
 from PIL import Image
 
-from deforum import DeforumAnimationPipeline, ImageRNGNoise
+from deforum import DeforumAnimationPipeline, ImageRNGNoise, FilmModel
 from deforum.generators.deforum_flow_generator import get_flow_from_images
 from deforum.generators.deforum_noise_generator import add_noise
 from deforum.models import RAFT
@@ -1137,6 +1137,13 @@ class DeforumVideoSaveNode:
     FUNCTION = "fn"
     display_name = "Deforum Save Video"
     CATEGORY = "sampling"
+    def add_image(self, image):
+        pil_image = tensor2pil(image.unsqueeze(0))
+        size = pil_image.size
+        if size != self.size:
+            self.size = size
+            self.images.clear()
+        self.images.append(np.array(pil_image).astype(np.uint8))
 
     def fn(self, image, deforum_frame_data, filename_prefix, fps, dump_every):
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
@@ -1147,15 +1154,12 @@ class DeforumVideoSaveNode:
         frame_idx = deforum_frame_data["frame_idx"]
         max_frames = deforum_frame_data["anim_args"].max_frames
 
-        # Convert tensor to PIL Image and then to numpy array
-        pil_image = tensor2pil(image)
+        if image.shape[0] > 1:
+            for img in image:
+                self.add_image(img)
+        else:
+            self.add_image(image[0])
 
-        size = pil_image.size
-        if size != self.size:
-            self.size = size
-            self.images.clear()
-
-        self.images.append(np.array(pil_image).astype(np.uint8))
         print(f"[DEFORUM VIDEO SAVE NODE] holding {len(self.images)} images")
         # When the current frame index reaches the last frame, save the video
         if len(self.images) >= max_frames or dump_every >= len(self.images):  # frame_idx is 0-based
@@ -1174,6 +1178,77 @@ class DeforumVideoSaveNode:
         # Force re-evaluation of the node
         if autorefresh == "Yes":
             return float("NaN")
+
+class DeforumFILMInterpolationNode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("IMAGE",),
+                     "inter_amount": ("INT", {"default": 2, "min": 1, "max": 10000},),
+
+                     }
+                }
+
+    RETURN_TYPES = ("IMAGE",)
+    # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
+    FUNCTION = "fn"
+    display_name = "Deforum FILM Interpolation"
+    CATEGORY = "deforum"
+    model = None
+    FILM_temp = []
+    @classmethod
+    def IS_CHANGED(self, *args, **kwargs):
+        # Force re-evaluation of the node
+        return float("NaN")
+
+    def interpolate(self, image, inter_frames):
+
+        if self.model is None:
+            self.model = FilmModel()
+
+            self.model.model.cuda()
+
+        return_frames = []
+        pil_image = tensor2pil(image.clone().detach())
+        np_image = np.array(pil_image.convert("RGB"))
+        self.FILM_temp.append(np_image)
+        if len(self.FILM_temp) == 2:
+
+            # with torch.inference_mode():
+
+            frames = self.model.inference(self.FILM_temp[0], self.FILM_temp[1], inter_frames=inter_frames)
+            skip_first, skip_last = True, False
+            if skip_first:
+                frames.pop(0)
+            if skip_last:
+                frames.pop(-1)
+
+            for frame in frames:
+                tensor = pil2tensor(frame)[0]
+                return_frames.append(tensor)
+            self.FILM_temp = [self.FILM_temp[1]]
+        print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
+        if len(return_frames) > 0:
+            return_frames = torch.stack(return_frames, dim=0)
+            return return_frames
+        else:
+            return image.unsqueeze(0)
+
+
+    def fn(self, image, inter_amount):
+        ret = image
+        if image.shape[0] > 1:
+            for img in image:
+                ret = self.interpolate(img, inter_amount)
+        else:
+            ret = self.interpolate(image[0], inter_amount)
+
+
+        print("RETURN OBJECT", ret.shape)
+
+
+        return (ret,)
+
 
 
 def pyramid_blend(tensor1, tensor2, blend_value):
