@@ -596,8 +596,6 @@ class DeforumIteratorNode:
 
         def find_next_prompt_change(current_index, prompt_series):
             # Step forward from the current position
-
-            print(prompt_series)
             for i in range(current_index + 1, len(prompt_series) - 1):
                 if i < anim_args.max_frames:
 
@@ -607,8 +605,6 @@ class DeforumIteratorNode:
 
         if prompt_series is not None:
             last_prompt_change = find_last_prompt_change(self.frame_index, prompt_series)
-
-            #print(self.frame_index, anim_args.max_frames)
 
             next_prompt_change = find_next_prompt_change(self.frame_index, prompt_series)
 
