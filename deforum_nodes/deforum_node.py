@@ -729,7 +729,10 @@ def tensor2np(img):
 
 
 class DeforumFrameWarpNode:
-
+    def __init__(self):
+        self.depth_model = None
+        self.depth = None
+        self.algo = ""
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
@@ -743,9 +746,7 @@ class DeforumFrameWarpNode:
     display_name = "Deforum Frame Warp"
     CATEGORY = "sampling"
 
-    depth_model = None
-    depth = None
-    algo = ""
+
 
     def fn(self, image, deforum_frame_data):
         from deforum.models import DepthModel
@@ -954,10 +955,12 @@ class DeforumAddNoiseNode:
 
 class DeforumHybridMotionNode:
     raft_model = None
-    prev_image = None
-    flow = None
-    image_size = None
-    methods = ['RAFT', 'DIS Medium', 'DIS Fine', 'Farneback']
+
+    def __init__(self):
+        self.prev_image = None
+        self.flow = None
+        self.image_size = None
+        self.methods = ['RAFT', 'DIS Medium', 'DIS Fine', 'Farneback']
 
     @classmethod
     def INPUT_TYPES(s):
@@ -977,10 +980,6 @@ class DeforumHybridMotionNode:
     def fn(self, image, hybrid_image, deforum_frame_data, hybrid_method):
         if self.raft_model is None:
             self.raft_model = RAFT()
-        #
-        # data = self.getInputData(0)
-        # image = self.getInputData(1)
-        # image_2 = self.getInputData(2)
 
         flow_factor = deforum_frame_data["keys"].hybrid_flow_factor_schedule_series[deforum_frame_data["frame_index"]]
         p_img = tensor2pil(image)
@@ -1122,8 +1121,8 @@ def find_next_index(output_dir, filename_prefix):
 class DeforumVideoSaveNode:
     def __init__(self):
         self.output_dir = folder_paths.get_output_directory()
-    images = []
-    size = None
+        self.images = []
+        self.size = None
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
@@ -1192,6 +1191,9 @@ class DeforumVideoSaveNode:
             return float("NaN")
 
 class DeforumFILMInterpolationNode:
+    def __init__(self):
+        self.FILM_temp = []
+        self.model = None
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
@@ -1208,7 +1210,6 @@ class DeforumFILMInterpolationNode:
     FUNCTION = "fn"
     display_name = "Deforum FILM Interpolation"
     CATEGORY = "deforum"
-    model = None
     FILM_temp = []
     @classmethod
     def IS_CHANGED(self, *args, **kwargs):
@@ -1250,18 +1251,38 @@ class DeforumFILMInterpolationNode:
 
 
     def fn(self, image, inter_amount, skip_first, skip_last):
-        ret = image
+        result = []
+
         if image.shape[0] > 1:
             for img in image:
-                ret = self.interpolate(img, inter_amount, skip_first, skip_last)
+                interpolated_frames = self.interpolate(img, inter_amount, skip_first, skip_last)
+
+                for f in interpolated_frames:
+                    result.append(f)
+
+            ret = torch.stack(result, dim=0)
         else:
             ret = self.interpolate(image[0], inter_amount, skip_first, skip_last)
 
-
-        print("RETURN OBJECT", ret.shape)
-
-
         return (ret,)
+
+        # ret = image
+        # if image.shape[0] > 1:
+        #     ret = []
+        #     for img in image:
+        #         res = self.interpolate(img, inter_amount, skip_first, skip_last)
+        #
+        #         print(res.shape)
+        #
+        #         ret.append(res)
+        #     ret = torch.stack(ret, dim=0)
+        #
+        # else:
+        #     ret = self.interpolate(image[0], inter_amount, skip_first, skip_last)
+        # print("RETURN OBJECT", ret.shape)
+        #
+        #
+        # return (ret,)
 
 
 
