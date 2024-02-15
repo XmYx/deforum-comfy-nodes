@@ -379,7 +379,7 @@ class DeforumPromptNode(DeforumDataBase):
 
 def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
     use_parseq = False if parseq_args == None else True
-    #anim_args.max_frames += 2
+    anim_args.max_frames += 2
     keys = DeforumAnimKeys(anim_args, seed)  # if not use_parseq else ParseqAnimKeys(parseq_args, video_args)
 
     # Always enable pseudo-3d with parseq. No need for an extra toggle:
@@ -400,7 +400,7 @@ def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
                     else:
                         prompt_series[int(numexpr.evaluate(i))] = prompt
                 prompt_series = prompt_series.ffill().bfill()
-    #anim_args.max_frames -= 2
+    anim_args.max_frames -= 2
     return keys, prompt_series
 
 
