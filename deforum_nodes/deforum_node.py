@@ -1126,6 +1126,7 @@ class DeforumVideoSaveNode:
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      "filename_prefix": ("STRING",{"default":"deforum_"}),
                      "fps": ("INT", {"default": 24, "min": 1, "max": 10000},),
+                     "dump_every": ("INT", {"default": 0, "min": 0, "max": 4096},),
 
                      }
                 }
@@ -1137,7 +1138,7 @@ class DeforumVideoSaveNode:
     display_name = "Deforum Save Video"
     CATEGORY = "sampling"
 
-    def fn(self, image, deforum_frame_data, filename_prefix, fps):
+    def fn(self, image, deforum_frame_data, filename_prefix, fps, dump_every):
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
 
@@ -1157,16 +1158,16 @@ class DeforumVideoSaveNode:
         self.images.append(np.array(pil_image).astype(np.uint8))
         print(f"[DEFORUM VIDEO SAVE NODE] holding {len(self.images)} images")
         # When the current frame index reaches the last frame, save the video
-        if len(self.images) >= max_frames:  # frame_idx is 0-based
+        if len(self.images) >= max_frames or dump_every >= len(self.images):  # frame_idx is 0-based
+            if len(self.images) >= 2:
+                output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
+                writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=10, pixelformat='yuv420p')
 
-            output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
-            writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=10, pixelformat='yuv420p')
+                for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
+                    writer.append_data(frame)
+                writer.close()
 
-            for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
-                writer.append_data(frame)
-            writer.close()
-
-            self.images = []  # Empty the list for next use
+                self.images = []  # Empty the list for next use
         return (image,)
     @classmethod
     def IS_CHANGED(s, text, autorefresh):
