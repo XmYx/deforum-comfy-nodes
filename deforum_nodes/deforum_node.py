@@ -1126,6 +1126,7 @@ class DeforumVideoSaveNode:
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      "filename_prefix": ("STRING",{"default":"deforum_"}),
                      "fps": ("INT", {"default": 24, "min": 1, "max": 10000},),
+                     "dump_by": (["max_frames", "per_N_frames"],),
                      "dump_every": ("INT", {"default": 0, "min": 0, "max": 4096},),
 
                      }
@@ -1145,7 +1146,7 @@ class DeforumVideoSaveNode:
             self.images.clear()
         self.images.append(np.array(pil_image).astype(np.uint8))
 
-    def fn(self, image, deforum_frame_data, filename_prefix, fps, dump_every):
+    def fn(self, image, deforum_frame_data, filename_prefix, fps, dump_by, dump_every):
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
 
@@ -1162,7 +1163,13 @@ class DeforumVideoSaveNode:
 
         print(f"[DEFORUM VIDEO SAVE NODE] holding {len(self.images)} images")
         # When the current frame index reaches the last frame, save the video
-        if len(self.images) >= max_frames or dump_every >= len(self.images):  # frame_idx is 0-based
+
+        if dump_by == "max_frames":
+            dump = len(self.images) >= max_frames
+        else:
+            dump = len(self.images) >= dump_every
+
+        if dump == True:  # frame_idx is 0-based
             if len(self.images) >= 2:
                 output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
                 writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=10, pixelformat='yuv420p')
@@ -1185,6 +1192,8 @@ class DeforumFILMInterpolationNode:
         return {"required":
                     {"image": ("IMAGE",),
                      "inter_amount": ("INT", {"default": 2, "min": 1, "max": 10000},),
+                     "skip_first": ("BOOLEAN", {"default":True}),
+                     "skip_last": ("BOOLEAN", {"default":False}),
 
                      }
                 }
@@ -1201,7 +1210,7 @@ class DeforumFILMInterpolationNode:
         # Force re-evaluation of the node
         return float("NaN")
 
-    def interpolate(self, image, inter_frames):
+    def interpolate(self, image, inter_frames, skip_first, skip_last):
 
         if self.model is None:
             self.model = FilmModel()
@@ -1217,7 +1226,7 @@ class DeforumFILMInterpolationNode:
             # with torch.inference_mode():
 
             frames = self.model.inference(self.FILM_temp[0], self.FILM_temp[1], inter_frames=inter_frames)
-            skip_first, skip_last = True, False
+            # skip_first, skip_last = True, False
             if skip_first:
                 frames.pop(0)
             if skip_last:
@@ -1235,13 +1244,13 @@ class DeforumFILMInterpolationNode:
             return image.unsqueeze(0)
 
 
-    def fn(self, image, inter_amount):
+    def fn(self, image, inter_amount, skip_first, skip_last):
         ret = image
         if image.shape[0] > 1:
             for img in image:
-                ret = self.interpolate(img, inter_amount)
+                ret = self.interpolate(img, inter_amount, skip_first, skip_last)
         else:
-            ret = self.interpolate(image[0], inter_amount)
+            ret = self.interpolate(image[0], inter_amount, skip_first, skip_last)
 
 
         print("RETURN OBJECT", ret.shape)
