@@ -955,12 +955,12 @@ class DeforumAddNoiseNode:
 
 class DeforumHybridMotionNode:
     raft_model = None
+    methods = ['RAFT', 'DIS Medium', 'DIS Fine', 'Farneback']
 
     def __init__(self):
         self.prev_image = None
         self.flow = None
         self.image_size = None
-        self.methods = ['RAFT', 'DIS Medium', 'DIS Fine', 'Farneback']
 
     @classmethod
     def INPUT_TYPES(s):
