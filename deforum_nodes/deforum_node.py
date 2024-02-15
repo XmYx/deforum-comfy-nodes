@@ -379,7 +379,7 @@ class DeforumPromptNode(DeforumDataBase):
 
 def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
     use_parseq = False if parseq_args == None else True
-    anim_args.max_frames += 2
+    #anim_args.max_frames += 2
     keys = DeforumAnimKeys(anim_args, seed)  # if not use_parseq else ParseqAnimKeys(parseq_args, video_args)
 
     # Always enable pseudo-3d with parseq. No need for an extra toggle:
@@ -400,7 +400,7 @@ def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
                     else:
                         prompt_series[int(numexpr.evaluate(i))] = prompt
                 prompt_series = prompt_series.ffill().bfill()
-    anim_args.max_frames -= 2
+    #anim_args.max_frames -= 2
     return keys, prompt_series
 
 
@@ -596,13 +596,20 @@ class DeforumIteratorNode:
 
         def find_next_prompt_change(current_index, prompt_series):
             # Step forward from the current position
-            for i in range(current_index + 1, len(prompt_series)):
-                if prompt_series[i] != prompt_series[current_index]:
-                    return i
+
+            print(prompt_series)
+            for i in range(current_index + 1, len(prompt_series) - 1):
+                if i < anim_args.max_frames:
+
+                    if prompt_series[i] != prompt_series[current_index]:
+                        return i
             return len(prompt_series) - 1  # default to the end if no change found
 
         if prompt_series is not None:
             last_prompt_change = find_last_prompt_change(self.frame_index, prompt_series)
+
+            #print(self.frame_index, anim_args.max_frames)
+
             next_prompt_change = find_next_prompt_change(self.frame_index, prompt_series)
 
             distance_between_changes = next_prompt_change - last_prompt_change
@@ -613,7 +620,9 @@ class DeforumIteratorNode:
 
             # Fetch the blend value based on the current frame's distance from the last prompt change
             blend_value = blend_values[current_distance_from_last]
-            next_prompt = prompt_series[next_prompt_change]
+
+            if len(prompt_series) - 1 > next_prompt_change:
+                next_prompt = prompt_series[next_prompt_change]
 
         gen_args = self.get_current_frame(args, anim_args, root, keys, self.frame_index)
 
