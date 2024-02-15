@@ -547,7 +547,7 @@ class DeforumIteratorNode:
 
         keys, prompt_series = get_current_keys(anim_args, args.seed, root)
 
-        if self.frame_index > anim_args.max_frames:
+        if self.frame_index > anim_args.max_frames or reset:
             # self.reset_iteration()
             self.frame_index = 0
             # .should_run = False
