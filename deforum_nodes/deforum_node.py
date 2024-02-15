@@ -739,6 +739,7 @@ class DeforumFrameWarpNode:
     CATEGORY = "sampling"
 
     depth_model = None
+    depth = None
     algo = ""
 
     def fn(self, image, deforum_frame_data):
@@ -759,7 +760,8 @@ class DeforumFrameWarpNode:
             anim_args = data.get("anim_args")
             keys = data.get("keys")
             frame_idx = data.get("frame_idx")
-
+            if frame_idx == 0:
+                self.depth = None
             predict_depths = (
                                      anim_args.animation_mode == '3D' and anim_args.use_depth_warping) or anim_args.save_depth_maps
             predict_depths = predict_depths or (
@@ -796,7 +798,7 @@ class DeforumFrameWarpNode:
                 self.depth_model.to('cuda')
 
             warped_np_img, self.depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx,
-                                                              depth_model=self.depth_model, depth=None, device='cuda',
+                                                              depth_model=self.depth_model, depth=self.depth, device='cuda',
                                                               half_precision=True)
             num_channels = len(self.depth.shape)
 
@@ -812,13 +814,13 @@ class DeforumFrameWarpNode:
 
             tensor = pil2tensor(image)
 
-            if mask is not None:
-                mask = mask.detach().cpu()
-                # mask = mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])).movedim(1, -1).expand(-1, -1, -1, 3)
-                mask = mask.mean(dim=0, keepdim=False)
-                mask[mask > 1e-05] = 1
-                mask[mask < 1e-05] = 0
-                mask = mask[0].unsqueeze(0)
+            # if mask is not None:
+            #     mask = mask.detach().cpu()
+            #     # mask = mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])).movedim(1, -1).expand(-1, -1, -1, 3)
+            #     mask = mask.mean(dim=0, keepdim=False)
+            #     mask[mask > 1e-05] = 1
+            #     mask[mask < 1e-05] = 0
+            #     mask = mask[0].unsqueeze(0)
 
             # print(mask)
             # print(mask.shape)

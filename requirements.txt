@@ -1,7 +1,7 @@
 opencv-contrib-python
 timm==0.6.5
 matplotlib
-pandas>=1.4.4
+pandas<=1.5.1
 numexpr
 rich
 imageio[ffmpeg]
