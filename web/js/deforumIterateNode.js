@@ -20,11 +20,7 @@ app.registerExtension({
 				const v = app.nodeOutputs?.[this.id + ""];
 				if (!this.flags.collapsed && v) {
 
-					console.log(v["counter"][0])
-
 					const text = v["counter"] + "";
-
-
 					ctx.save();
 					ctx.font = "bold 48px sans-serif";
 					ctx.fillStyle = "dodgerblue";
