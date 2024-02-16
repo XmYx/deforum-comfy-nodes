@@ -551,7 +551,6 @@ class DeforumIteratorNode:
             "optional": {
                 "latent": ("LATENT",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                "counter": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "reset_counter":("BOOLEAN", {"default": False},),
                 "reset_latent":("BOOLEAN", {"default": False},),
             }
@@ -568,10 +567,9 @@ class DeforumIteratorNode:
     seeds = []
 
     @torch.inference_mode()
-    def get(self, deforum_data, latent=None, seed=None, counter=None, reset_counter=False, reset_latent=False, *args, **kwargs):
+    def get(self, deforum_data, latent=None, seed=None, reset_counter=False, reset_latent=False, *args, **kwargs):
 
 
-        counter += 1
         root_dict = RootArgs()
         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
         anim_args_dict = {key: value["value"] for key, value in DeforumAnimArgs().items()}
