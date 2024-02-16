@@ -537,10 +537,10 @@ class DeforumGetCachedLatentNode:
 class DeforumIteratorNode:
 
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
+    def IS_CHANGED(cls, *args, **kwargs):
         # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+        # if autorefresh == "Yes":
+        return float("NaN")
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -551,7 +551,9 @@ class DeforumIteratorNode:
             "optional": {
                 "latent": ("LATENT",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                "reset":("INT", {"default": 0, "min": 0, "max": 1},)
+                "counter": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "reset_counter":("BOOLEAN", {"default": False},),
+                "reset_latent":("BOOLEAN", {"default": False},),
             }
         }
 
@@ -566,10 +568,10 @@ class DeforumIteratorNode:
     seeds = []
 
     @torch.inference_mode()
-    def get(self, deforum_data, latent=None, seed=None, reset=0, *args, **kwargs):
+    def get(self, deforum_data, latent=None, seed=None, counter=None, reset_counter=False, reset_latent=False, *args, **kwargs):
 
-        reset = True if reset == 1 else False
 
+        counter += 1
         root_dict = RootArgs()
         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
         anim_args_dict = {key: value["value"] for key, value in DeforumAnimArgs().items()}
@@ -627,7 +629,8 @@ class DeforumIteratorNode:
 
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
-        if self.frame_index > anim_args.max_frames or reset:
+        if self.frame_index > anim_args.max_frames or reset_counter:
+            self.reset_counter = False
             # self.reset_iteration()
             self.frame_index = 0
             # .should_run = False
@@ -712,7 +715,7 @@ class DeforumIteratorNode:
         gen_args["frame_index"] = self.frame_index
         gen_args["max_frames"] = anim_args.max_frames
 
-        if latent is None or reset:
+        if latent is None or reset_latent:
             self.rng = ImageRNGNoise((4, args.height // 8, args.width // 8), [self.seed], [self.seed - 1],
                                      0.6, 1024, 1024)
 
@@ -732,8 +735,8 @@ class DeforumIteratorNode:
         # print(f"[ Current Seed List: ]\n[ {self.seeds} ]")
 
         gen_args["seed"] = int(seed)
-
-        return [gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"], {"ui": {"string": str(self.frame_index)}}]
+        return {"ui": {"counter":(self.frame_index,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
+        # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 
     def get_current_frame(self, args, anim_args, root, keys, frame_idx, areas=None):
         if hasattr(args, 'prompt'):
