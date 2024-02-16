@@ -39,9 +39,11 @@ from deforum.pipeline_utils import next_seed
 from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKeys
 from deforum.pipelines.deforum_animation.animation_params import RootArgs, DeforumArgs, DeforumAnimArgs, \
     DeforumOutputArgs, LoopArgs, ParseqArgs
+from deforum.pipelines.deforum_animation.pipeline_deforum_animation import interpolate_areas
 from deforum.utils.image_utils import maintain_colors, unsharp_mask, compose_mask_with_check, \
     image_transform_optical_flow
 from deforum.utils.string_utils import substitute_placeholders, split_weighted_subprompts
+from nodes import MAX_RESOLUTION
 from .deforum_ui_data import (deforum_base_params, deforum_anim_params, deforum_translation_params,
                               deforum_cadence_params, deforum_masking_params, deforum_depth_params,
                               deforum_noise_params, deforum_color_coherence_params, deforum_diffusion_schedule_params,
@@ -240,6 +242,82 @@ class DeforumPromptNode(DeforumDataBase):
         return (deforum_data,)
 
 
+class DeforumAreaPromptNode(DeforumDataBase):
+
+    default_area_prompt = '[{"0": [{"prompt": "a vast starscape with distant nebulae and galaxies", "x": 0, "y": 0, "w": 1024, "h": 1024, "s": 0.7}, {"prompt": "detailed sci-fi spaceship", "x": 512, "y": 512, "w": 50, "h": 50, "s": 0.7}]}, {"50": [{"prompt": "a vast starscape with distant nebulae and galaxies", "x": 0, "y": 0, "w": 1024, "h": 1024, "s": 0.7}, {"prompt": "detailed sci-fi spaceship", "x": 412, "y": 412, "w": 200, "h": 200, "s": 0.7}]}, {"100": [{"prompt": "a vast starscape with distant nebulae and galaxies", "x": 0, "y": 0, "w": 1024, "h": 1024, "s": 0.7}, {"prompt": "detailed sci-fi spaceship", "x": 112, "y": 112, "w": 800, "h": 800, "s": 0.7}]}]'
+    default_prompt = "Alien landscape"
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "keyframe": ("INT", {"default": 0, "min": 0, "max": 8192, "step": 1}),
+                "mode":(["default", "percentage", "strength"],),
+                "prompt": ("STRING", {"forceInput": False, "multiline": True, 'default': cls.default_prompt,}),
+                "width": ("INT", {"default": 64, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "height": ("INT", {"default": 64, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "x": ("INT", {"default": 0, "min": 0, "max": MAX_RESOLUTION, "step": 8}),
+                "y": ("INT", {"default": 0, "min": 0, "max": MAX_RESOLUTION, "step": 8}),
+                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+            },
+            "optional": {
+                "deforum_data": ("deforum_data",),
+            },
+        }
+
+    RETURN_TYPES = (("deforum_data",))
+    FUNCTION = "get"
+    OUTPUT_NODE = True
+    CATEGORY = f"deforum_data"
+    display_name = "Deforum Area Prompt"
+
+    @torch.inference_mode()
+    def get(self, keyframe, mode, prompt, width, height, x, y, strength, deforum_data=None):
+
+        area_prompt = {"prompt": prompt, "x": x, "y": y, "w": width, "h": height, "s": strength, "mode":mode}
+        area_prompt_dict = {f"{keyframe}": [area_prompt]}
+
+        if not deforum_data:
+            deforum_data = {"area_prompts":[area_prompt_dict]}
+
+        if "area_prompts" not in deforum_data:
+            deforum_data["area_prompts"] = [area_prompt_dict]
+        else:
+
+            added = None
+
+            for item in deforum_data["area_prompts"]:
+                for k, v in item.items():
+                    if int(k) == keyframe:
+                        if area_prompt not in v:
+                            v.append(area_prompt)
+                            added = True
+                        else:
+                            added = True
+            if not added:
+                deforum_data["area_prompts"].append(area_prompt_dict)
+
+        deforum_data["prompts"] = None
+
+
+            # if area_prompt not in deforum_data["area_prompts"]:
+            #     deforum_data["area_prompts"].append(area_prompt)
+        # print(deforum_data)
+
+        # print("Deforum Area Prompt Result", prompts)
+        #
+        # if deforum_data:
+        #     deforum_data["area_prompts"] = prompts
+        #     deforum_data["prompts"] = None
+        # else:
+        #     deforum_data = {"area_prompts": prompts,
+        #                     "prompts":None}
+        return (deforum_data,)
+
+
 # class DeforumSampleNode:
 #     @classmethod
 #     def INPUT_TYPES(cls):
@@ -377,11 +455,11 @@ class DeforumPromptNode(DeforumDataBase):
 #         return (result,)
 
 
-def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
+def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None, area_prompts=None):
     use_parseq = False if parseq_args == None else True
     anim_args.max_frames += 2
     keys = DeforumAnimKeys(anim_args, seed)  # if not use_parseq else ParseqAnimKeys(parseq_args, video_args)
-
+    areas = None
     # Always enable pseudo-3d with parseq. No need for an extra toggle:
     # Whether it's used or not in practice is defined by the schedules
     if use_parseq:
@@ -400,8 +478,10 @@ def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None):
                     else:
                         prompt_series[int(numexpr.evaluate(i))] = prompt
                 prompt_series = prompt_series.ffill().bfill()
+        if area_prompts is not None:
+            areas = interpolate_areas(area_prompts, anim_args.max_frames)
     anim_args.max_frames -= 2
-    return keys, prompt_series
+    return keys, prompt_series, areas
 
 
 class DeforumCacheLatentNode:
@@ -545,7 +625,7 @@ class DeforumIteratorNode:
 
         root.animation_prompts = deforum_data.get("prompts")
 
-        keys, prompt_series = get_current_keys(anim_args, args.seed, root)
+        keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
         if self.frame_index > anim_args.max_frames or reset:
             # self.reset_iteration()
@@ -620,7 +700,7 @@ class DeforumIteratorNode:
             if len(prompt_series) - 1 > next_prompt_change:
                 next_prompt = prompt_series[next_prompt_change]
 
-        gen_args = self.get_current_frame(args, anim_args, root, keys, self.frame_index)
+        gen_args = self.get_current_frame(args, anim_args, root, keys, self.frame_index, areas)
 
         # self.content.frame_slider.setMaximum(anim_args.max_frames - 1)
 
@@ -655,13 +735,16 @@ class DeforumIteratorNode:
 
         return [gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"], {"ui": {"string": str(self.frame_index)}}]
 
-    def get_current_frame(self, args, anim_args, root, keys, frame_idx):
+    def get_current_frame(self, args, anim_args, root, keys, frame_idx, areas=None):
         if hasattr(args, 'prompt'):
             prompt, negative_prompt = split_weighted_subprompts(args.prompt, frame_idx, anim_args.max_frames)
         else:
             prompt = ""
             negative_prompt = ""
         strength = keys.strength_schedule_series[frame_idx]
+
+        print(areas)
+
         return {"prompt": prompt,
                 "negative_prompt": negative_prompt,
                 "denoise": strength,
@@ -671,7 +754,8 @@ class DeforumIteratorNode:
                 "keys": keys,
                 "frame_idx": frame_idx,
                 "anim_args": anim_args,
-                "args": args}
+                "args": args,
+                "areas":areas[frame_idx]}
 
 
 class DeforumKSampler:
@@ -1352,22 +1436,38 @@ class DeforumConditioningBlendNode:
     display_name = "Deforum Blend Conditionings"
     CATEGORY = "sampling"
     def fn(self, clip, deforum_frame_data, blend_method):
-        prompt = deforum_frame_data.get("prompt", "")
+        areas = deforum_frame_data.get("areas")
         negative_prompt = deforum_frame_data.get("negative_prompt", "")
-        next_prompt = deforum_frame_data.get("next_prompt", None)
-        print(f"[ Deforum Conds: {prompt}, {negative_prompt} ]")
-        cond = self.get_conditioning(prompt=prompt, clip=clip)
-        # image = self.getInputData(2)
-        # controlnet = self.getInputData(3)
-
-        prompt_blend = deforum_frame_data.get("prompt_blend", 0.0)
-        #method = self.content.blend_method.currentText()
-        if blend_method != 'none':
-            if next_prompt != prompt and prompt_blend != 0.0 and next_prompt is not None:
-                next_cond = self.get_conditioning(prompt=next_prompt, clip=clip)
-                cond = blend_tensors(cond[0], next_cond[0], prompt_blend, blend_method)
-                print(f"[ Deforum Cond Blend: {next_prompt}, {prompt_blend} ]")
         n_cond = self.get_conditioning(prompt=negative_prompt, clip=clip)
+
+        if not areas:
+            prompt = deforum_frame_data.get("prompt", "")
+            next_prompt = deforum_frame_data.get("next_prompt", None)
+            print(f"[ Deforum Conds: {prompt}, {negative_prompt} ]")
+            cond = self.get_conditioning(prompt=prompt, clip=clip)
+            # image = self.getInputData(2)
+            # controlnet = self.getInputData(3)
+
+            prompt_blend = deforum_frame_data.get("prompt_blend", 0.0)
+            #method = self.content.blend_method.currentText()
+            if blend_method != 'none':
+                if next_prompt != prompt and prompt_blend != 0.0 and next_prompt is not None:
+                    next_cond = self.get_conditioning(prompt=next_prompt, clip=clip)
+                    cond = blend_tensors(cond[0], next_cond[0], prompt_blend, blend_method)
+                    print(f"[ Deforum Cond Blend: {next_prompt}, {prompt_blend} ]")
+        else:
+            from nodes import ConditioningSetArea
+            area_setter = ConditioningSetArea()
+            cond = []
+            for area in areas:
+                print("AREA TO USE", area)
+                prompt = area.get("prompt", None)
+                if prompt:
+
+                    new_cond = self.get_conditioning(clip=clip, prompt=area["prompt"])
+                    new_cond = area_setter.append(conditioning=new_cond, width=int(area["w"]), height=int(area["h"]), x=int(area["x"]),
+                                                  y=int(area["y"]), strength=area["s"])[0]
+                    cond += new_cond
 
         return (cond, n_cond,)
 
