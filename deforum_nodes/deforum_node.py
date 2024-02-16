@@ -744,8 +744,6 @@ class DeforumIteratorNode:
             negative_prompt = ""
         strength = keys.strength_schedule_series[frame_idx]
 
-        print(areas)
-
         return {"prompt": prompt,
                 "negative_prompt": negative_prompt,
                 "denoise": strength,
@@ -756,7 +754,7 @@ class DeforumIteratorNode:
                 "frame_idx": frame_idx,
                 "anim_args": anim_args,
                 "args": args,
-                "areas":areas[frame_idx]}
+                "areas":areas[frame_idx] if areas is not None else None}
 
 
 class DeforumKSampler:
