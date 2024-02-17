@@ -14,6 +14,7 @@ import inspect
 import json
 import math
 import os
+import random
 import re
 import secrets
 import time
@@ -34,6 +35,7 @@ from PIL import Image
 from deforum import DeforumAnimationPipeline, ImageRNGNoise, FilmModel
 from deforum.generators.deforum_flow_generator import get_flow_from_images
 from deforum.generators.deforum_noise_generator import add_noise
+from deforum.generators.rng_noise_generator import slerp
 from deforum.models import RAFT
 from deforum.pipeline_utils import next_seed
 from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKeys
@@ -534,6 +536,59 @@ class DeforumGetCachedLatentNode:
         return (latent,)
 
 
+class DeforumSeedNode:
+    @classmethod
+    def IS_CHANGED(cls, *args, **kwargs):
+        return float("NaN")
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            },
+        }
+    FUNCTION = "get"
+    OUTPUT_NODE = True
+    CATEGORY = f"deforum_data"
+    RETURN_TYPES = (("INT",))
+    display_name = "Deforum Seed Node"
+
+    @torch.inference_mode()
+    def get(self, seed, *args, **kwargs):
+        return (seed,)
+
+
+
+def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
+    """
+    Generates a list of seed integers compatible with PyTorch in various manners.
+
+    Parameters:
+    - max_frames (int): The maximum number of frames/length of the seed list.
+    - mode (str): The mode of seed generation, one of 'fixed', 'random', 'ladder', 'incrementing', or 'decrementing'.
+    - start_seed (int): The starting seed value for modes other than 'random'.
+    - step (int): The step size for 'incrementing', 'decrementing', and 'ladder' modes.
+
+    Returns:
+    - list: A list of seed integers.
+    """
+    if mode == 'fixed':
+        return [start_seed for _ in range(max_frames)]
+    elif mode == 'random':
+        return [random.randint(0, 2**32 - 1) for _ in range(max_frames)]
+    elif mode == 'ladder':
+        # Generate a ladder sequence where the sequence is repeated after reaching the max_frames
+        return [(start_seed + i // 2 * step if i % 2 == 0 else start_seed + (i // 2 + 1) * step) % (2**32) for i in range(max_frames)]
+    elif mode == 'incrementing':
+        return [(start_seed + i * step) % (2**32) for i in range(max_frames)]
+    elif mode == 'decrementing':
+        return [(start_seed - i * step) % (2**32) for i in range(max_frames)]
+    else:
+        raise ValueError("Invalid mode specified. Choose among 'fixed', 'random', 'ladder', 'incrementing', 'decrementing'.")
+
+
+
+
 class DeforumIteratorNode:
 
     @classmethod
@@ -551,6 +606,9 @@ class DeforumIteratorNode:
             "optional": {
                 "latent": ("LATENT",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "subseed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "subseed_strength": ("FLOAT", {"default": 0.8, "min": 0, "max": 1.0}),
+                "slerp_strength": ("FLOAT", {"default": 0.1, "min": 0, "max": 1.0}),
                 "reset_counter":("BOOLEAN", {"default": False},),
                 "reset_latent":("BOOLEAN", {"default": False},),
             }
@@ -567,7 +625,7 @@ class DeforumIteratorNode:
     seeds = []
 
     @torch.inference_mode()
-    def get(self, deforum_data, latent=None, seed=None, reset_counter=False, reset_latent=False, *args, **kwargs):
+    def get(self, deforum_data, latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, *args, **kwargs):
 
 
         root_dict = RootArgs()
@@ -713,8 +771,11 @@ class DeforumIteratorNode:
         gen_args["frame_index"] = self.frame_index
         gen_args["max_frames"] = anim_args.max_frames
 
+        seeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, seed, args.seed_iter_N)
+        subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
+
         if latent is None or reset_latent:
-            self.rng = ImageRNGNoise((4, args.height // 8, args.width // 8), [self.seed], [self.seed - 1],
+            self.rng = ImageRNGNoise((4, args.height // 8, args.width // 8), [seeds[self.frame_index]], [subseeds[self.frame_index]],
                                      0.6, 1024, 1024)
 
             # if latent == None:
@@ -722,6 +783,9 @@ class DeforumIteratorNode:
             l = self.rng.first().half()
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
+        else:
+            l = self.rng.next().detach().cpu()
+            latent = {"samples":slerp(slerp_strength, latent["samples"], l)}
         # else:
         #
         #     latent = self.getInputData(1)

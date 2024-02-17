@@ -53,8 +53,9 @@ deforum_base_params = {
     },
     "seed_behavior": {
         "type": "dropdown",
-        "choices": ["iter", "fixed", "random", "ladder", "alternate", "schedule"]
+        "choices": ["fixed", "random", "ladder", "incrementing", "decrementing"]
     },
+
     "seed_iter_N": {
         "type": "spinbox",
         "default": 1,
