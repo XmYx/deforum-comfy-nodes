@@ -558,6 +558,8 @@ class DeforumSeedNode:
         return (seed,)
 
 
+def get_latent_with_seed(seed):
+    return torch.randn(generator=torch.manual_seed(seed))
 
 def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
     """
@@ -601,7 +603,8 @@ class DeforumIteratorNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "deforum_data": ("deforum_data",)
+                "deforum_data": ("deforum_data",),
+                "latent_type": (["stable_diffusion", "stable_cascade"],)
             },
             "optional": {
                 "latent": ("LATENT",),
@@ -625,7 +628,7 @@ class DeforumIteratorNode:
     seeds = []
 
     @torch.inference_mode()
-    def get(self, deforum_data, latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, *args, **kwargs):
+    def get(self, deforum_data, latent_type, latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, *args, **kwargs):
 
 
         root_dict = RootArgs()
@@ -775,17 +778,23 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent:
-            self.rng = ImageRNGNoise((4, args.height // 8, args.width // 8), [seeds[self.frame_index]], [subseeds[self.frame_index]],
-                                     0.6, 1024, 1024)
 
-            # if latent == None:
+            if latent_type == "stable_diffusion":
 
-            l = self.rng.first().half()
+                self.rng = ImageRNGNoise((4, args.height // 8, args.width // 8), [seeds[self.frame_index]], [subseeds[self.frame_index]],
+                                         0.6, 1024, 1024)
+
+                # if latent == None:
+
+                l = self.rng.first().half()
+            else:
+                l = torch.zeros([1, 16, args.height // 42, args.width // 42])
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
         else:
-            l = self.rng.next().detach().cpu()
-            latent = {"samples":slerp(slerp_strength, latent["samples"], l)}
+            if latent_type == "stable_diffusion":
+                l = self.rng.next().detach().cpu()
+                latent = {"samples":slerp(slerp_strength, latent["samples"], l)}
         # else:
         #
         #     latent = self.getInputData(1)
