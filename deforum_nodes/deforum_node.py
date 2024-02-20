@@ -1297,9 +1297,9 @@ class DeforumLoadVideo:
             return float("NaN")
 
     @classmethod
-    def VALIDATE_INPUTS(cls, image):
-        if not folder_paths.exists_annotated_filepath(image):
-            return "Invalid video file: {}".format(image)
+    def VALIDATE_INPUTS(cls, video):
+        if not folder_paths.exists_annotated_filepath(video):
+            return "Invalid video file: {}".format(video)
         return True
 
 def find_next_index(output_dir, filename_prefix):
