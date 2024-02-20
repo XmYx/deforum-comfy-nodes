@@ -777,6 +777,10 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent or not hasattr(self, "rng"):
+
+            if init_latent is not None:
+                args.height, args.width = init_latent["samples"].shape[2] * 8, init_latent["samples"].shape[3] * 8
+
             if latent_type == "stable_diffusion":
                 channels = 4
                 compression = 8
@@ -803,6 +807,7 @@ class DeforumIteratorNode:
             #("DEBUG LATENT FOUND", latent)
 
             if latent_type == "stable_diffusion":
+                args.height, args.width = latent["samples"].shape[2] * 8, latent["samples"].shape[3] * 8
                 l = self.rng.next().clone().to(comfy.model_management.intermediate_device())
                 s = latent["samples"].clone().to(comfy.model_management.intermediate_device())
                 # print(latent["samples"].shape)
