@@ -813,7 +813,6 @@ class DeforumIteratorNode:
         #     latent = self.getInputData(1)
         #     #latent = self.rng.next().half()
         print(f"[ Deforum Iterator: {self.frame_index} / {anim_args.max_frames} {self.seed}]")
-        self.frame_index += 1
         # self.content.set_frame_signal.emit(self.frame_index)
         # print(latent)
         # print(f"[ Current Seed List: ]\n[ {self.seeds} ]")
@@ -823,6 +822,7 @@ class DeforumIteratorNode:
         if self.frame_index == 0 and init_latent is not None:
             latent = init_latent
             gen_args["denoise"] = keys.strength_schedule_series[0]
+        self.frame_index += 1
 
         return {"ui": {"counter":(self.frame_index,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
