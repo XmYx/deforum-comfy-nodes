@@ -822,6 +822,7 @@ class DeforumIteratorNode:
 
         if self.frame_index == 0 and init_latent is not None:
             latent = init_latent
+            gen_args["denoise"] = keys.strength_schedule_series[0]
 
         return {"ui": {"counter":(self.frame_index,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
