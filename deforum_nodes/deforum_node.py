@@ -53,7 +53,7 @@ from .deforum_ui_data import (deforum_base_params, deforum_anim_params, deforum_
                               deforum_hybrid_video_schedules)
 from .deforum_node_base import DeforumDataBase
 import torch.nn.functional as F
-
+import comfy
 deforum_cache = {}
 video_extensions = ['webm', 'mp4', 'mkv', 'gif']
 
@@ -788,7 +788,7 @@ class DeforumIteratorNode:
 
                 # if latent == None:
 
-                l = self.rng.first().half()
+                l = self.rng.first().half().to(comfy.model_management.intermediate_device())
             else:
                 channels = 16
                 compression = 32
@@ -797,7 +797,7 @@ class DeforumIteratorNode:
                                          0.6, 1024, 1024)
 
             # else:
-                l = torch.zeros([1, 16, args.height // 42, args.width // 42])
+                l = torch.zeros([1, 16, args.height // 42, args.width // 42]).to(comfy.model_management.intermediate_device())
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
         else:
@@ -805,11 +805,11 @@ class DeforumIteratorNode:
             #("DEBUG LATENT FOUND", latent)
 
             if latent_type == "stable_diffusion":
-                l = self.rng.next().cuda()#.detach().cpu()
-
+                l = self.rng.next().clone().to(comfy.model_management.intermediate_device())
+                s = latent["samples"].clone().to(comfy.model_management.intermediate_device())
                 # print(latent["samples"].shape)
                 # print(l.shape)
-                latent = {"samples":slerp(slerp_strength, latent["samples"], l)}
+                latent = {"samples":slerp(slerp_strength, s, l)}
         # else:
         #
         #     latent = self.getInputData(1)
