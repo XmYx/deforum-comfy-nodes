@@ -1269,7 +1269,8 @@ class DeforumLoadVideo:
 
             self.cap = cv2.VideoCapture(video_path)
             self.current_frame = -1
-        
+            self.video_path = video_path
+
 
 
         success, frame = self.cap.read()
