@@ -13,10 +13,22 @@ app.registerExtension({
 	},
 	beforeRegisterNodeDef(nodeType) {
 		if (nodeType.comfyClass === "DeforumIteratorNode") {
-			const onDrawForeground = nodeType.prototype.onDrawForeground;
+            const onExecuted = nodeType.prototype.onExecuted
+            nodeType.prototype.onExecuted = function (message) {
+
+            const r = onExecuted ? onExecuted.apply(this, message) : undefined
+                for (const w of this.widgets || []) {
+                    if (w.name === "reset_counter") {
+                        const counterWidget = w;
+                        counterWidget.value = false;
+                    }
+                }
+            return r
+            }
+
+            const onDrawForeground = nodeType.prototype.onDrawForeground;
 			nodeType.prototype.onDrawForeground = function (ctx) {
 				const r = onDrawForeground?.apply?.(this, arguments);
-
 				const v = app.nodeOutputs?.[this.id + ""];
 				if (!this.flags.collapsed && v) {
 
