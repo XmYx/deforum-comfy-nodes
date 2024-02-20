@@ -55,7 +55,7 @@ from .deforum_node_base import DeforumDataBase
 import torch.nn.functional as F
 
 deforum_cache = {}
-
+video_extensions = ['webm', 'mp4', 'mkv', 'gif']
 
 def parse_widget(widget_info: dict) -> tuple:
     parsed_widget = None
@@ -1223,13 +1223,24 @@ class DeforumLoadVideo:
     #     return {"required":
     #                 {"video": (sorted(video_files), {"file_upload": True})},
     #             }
+    # @classmethod
+    # def INPUT_TYPES(s):
+    #     input_dir = folder_paths.get_input_directory()
+    #     files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
+    #     return {"required":
+    #                 {"image": (sorted(files), {"image_upload": True})},
+    #             }
     @classmethod
     def INPUT_TYPES(s):
         input_dir = folder_paths.get_input_directory()
-        files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
-        return {"required":
-                    {"image": (sorted(files), {"image_upload": True})},
-                }
+        files = []
+        for f in os.listdir(input_dir):
+            if os.path.isfile(os.path.join(input_dir, f)):
+                file_parts = f.split('.')
+                if len(file_parts) > 1 and (file_parts[-1] in video_extensions):
+                    files.append(f)
+        return {"required": {
+                    "video": (sorted(files),),},}
 
     CATEGORY = "video"
     display_name = "Deforum Load Video"
@@ -1241,8 +1252,8 @@ class DeforumLoadVideo:
         self.cap = None
         self.current_frame = None
 
-    def load_video_frame(self, image):
-        video_path = folder_paths.get_annotated_filepath(image)
+    def load_video_frame(self, video):
+        video_path = folder_paths.get_annotated_filepath(video)
 
         # Initialize or reset video capture
         if self.cap is None or self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
