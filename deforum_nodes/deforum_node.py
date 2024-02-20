@@ -780,20 +780,32 @@ class DeforumIteratorNode:
         if latent is None or reset_latent:
 
             if latent_type == "stable_diffusion":
-
-                self.rng = ImageRNGNoise((4, args.height // 8, args.width // 8), [seeds[self.frame_index]], [subseeds[self.frame_index]],
+                channels = 4
+                compression = 8
+                self.rng = ImageRNGNoise((channels, args.height // compression, args.width // compression),
+                                         [seeds[self.frame_index]], [subseeds[self.frame_index]],
                                          0.6, 1024, 1024)
 
                 # if latent == None:
 
                 l = self.rng.first().half()
             else:
+                channels = 16
+                compression = 32
+                self.rng = ImageRNGNoise((channels, args.height // compression, args.width // compression),
+                                         [seeds[self.frame_index]], [subseeds[self.frame_index]],
+                                         0.6, 1024, 1024)
+
+            # else:
                 l = torch.zeros([1, 16, args.height // 42, args.width // 42])
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
         else:
             if latent_type == "stable_diffusion":
-                l = self.rng.next().detach().cpu()
+                l = self.rng.next()#.detach().cpu()
+
+                print(latent["samples"].shape)
+                print(l.shape)
                 latent = {"samples":slerp(slerp_strength, latent["samples"], l)}
         # else:
         #
@@ -804,7 +816,7 @@ class DeforumIteratorNode:
         # self.content.set_frame_signal.emit(self.frame_index)
         # print(latent)
         # print(f"[ Current Seed List: ]\n[ {self.seeds} ]")
-
+        gen_args["noise"] = self.rng
         gen_args["seed"] = int(seed)
         return {"ui": {"counter":(self.frame_index,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
@@ -828,6 +840,8 @@ class DeforumIteratorNode:
                 "anim_args": anim_args,
                 "args": args,
                 "areas":areas[frame_idx] if areas is not None else None}
+
+
 
 
 class DeforumKSampler:
@@ -860,7 +874,7 @@ class DeforumKSampler:
         # negative = deforum_frame_data.get("negative")
         # latent_image = deforum_frame_data.get("latent_image")
         denoise = deforum_frame_data.get("denoise", 1.0)
-        print("DENOISE", denoise)
+        #print("DENOISE", denoise)
         return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
                                denoise=denoise)
 
@@ -1179,6 +1193,23 @@ class DeforumHybridMotionNode:
                 rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
                 return (pil2tensor(rgb_image),)
 
+class DeforumSetVAEDownscaleRatioNode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"vae": ("VAE",),
+                     "downscale_ratio": ("INT", {"default": 42, "min": 32, "max": 64, "step": 1}),
+                     },
+                }
+    RETURN_TYPES = ("VAE",)
+    FUNCTION = "fn"
+    display_name = "Deforum Set VAE Downscale Ratio"
+    CATEGORY = "sampling"
+
+    def fn(self, vae, downscale_ratio):
+        vae.downscale_ratio = downscale_ratio
+        return (vae,)
+
 
 class DeforumLoadVideo:
     # @classmethod
@@ -1386,8 +1417,8 @@ class DeforumFILMInterpolationNode:
         if len(self.FILM_temp) == 2:
 
             # with torch.inference_mode():
-
-            frames = self.model.inference(self.FILM_temp[0], self.FILM_temp[1], inter_frames=inter_frames)
+            with torch.no_grad():
+                frames = self.model.inference(self.FILM_temp[0], self.FILM_temp[1], inter_frames=inter_frames)
             # skip_first, skip_last = True, False
             if skip_first:
                 frames.pop(0)
@@ -1545,11 +1576,6 @@ class DeforumConditioningBlendNode:
 
     def get_conditioning(self, prompt="", clip=None, progress_callback=None):
 
-        """if gs.loaded_models["loaded"] == []:
-            for node in self.scene.nodes:
-                if isinstance(node, TorchLoaderNode):
-                    node.evalImplementation()
-                    #print("Node found")"""
 
         tokens = clip.tokenize(prompt)
         cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
