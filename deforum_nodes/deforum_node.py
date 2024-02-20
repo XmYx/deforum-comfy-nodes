@@ -802,7 +802,7 @@ class DeforumIteratorNode:
             gen_args["denoise"] = 1.0
         else:
             if latent_type == "stable_diffusion":
-                l = self.rng.next()#.detach().cpu()
+                l = self.rng.next().cuda()#.detach().cpu()
 
                 print(latent["samples"].shape)
                 print(l.shape)
