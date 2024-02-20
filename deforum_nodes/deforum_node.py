@@ -777,50 +777,32 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent or not hasattr(self, "rng"):
-
-            if init_latent is not None:
-                args.height, args.width = init_latent["samples"].shape[2] * 8, init_latent["samples"].shape[3] * 8
-
             if latent_type == "stable_diffusion":
                 channels = 4
                 compression = 8
-                self.rng = ImageRNGNoise((channels, args.height // compression, args.width // compression),
-                                         [seeds[self.frame_index]], [subseeds[self.frame_index]],
-                                         0.6, 1024, 1024)
-
-                # if latent == None:
-
-                l = self.rng.first().half().to(comfy.model_management.intermediate_device())
             else:
                 channels = 16
-                compression = 32
-                self.rng = ImageRNGNoise((channels, args.height // compression, args.width // compression),
-                                         [seeds[self.frame_index]], [subseeds[self.frame_index]],
-                                         0.6, 1024, 1024)
-
-            # else:
+                compression = 42
+            if init_latent is not None:
+                args.height, args.width = init_latent["samples"].shape[2] * 8, init_latent["samples"].shape[3] * 8
+            self.rng = ImageRNGNoise((channels, args.height // compression, args.width // compression),
+                                     [seeds[self.frame_index]], [subseeds[self.frame_index]],
+                                     0.6, 1024, 1024)
+            if latent_type == "stable_diffusion":
+                l = self.rng.first().half().to(comfy.model_management.intermediate_device())
+            else:
                 l = torch.zeros([1, 16, args.height // 42, args.width // 42]).to(comfy.model_management.intermediate_device())
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
         else:
 
-            #("DEBUG LATENT FOUND", latent)
 
-            if latent_type == "stable_diffusion":
+            if latent_type == "stable_diffusion" and slerp_strength > 0:
                 args.height, args.width = latent["samples"].shape[2] * 8, latent["samples"].shape[3] * 8
                 l = self.rng.next().clone().to(comfy.model_management.intermediate_device())
                 s = latent["samples"].clone().to(comfy.model_management.intermediate_device())
-                # print(latent["samples"].shape)
-                # print(l.shape)
                 latent = {"samples":slerp(slerp_strength, s, l)}
-        # else:
-        #
-        #     latent = self.getInputData(1)
-        #     #latent = self.rng.next().half()
         print(f"[ Deforum Iterator: {self.frame_index} / {anim_args.max_frames} {self.seed}]")
-        # self.content.set_frame_signal.emit(self.frame_index)
-        # print(latent)
-        # print(f"[ Current Seed List: ]\n[ {self.seeds} ]")
         gen_args["noise"] = self.rng
         gen_args["seed"] = int(seed)
 
