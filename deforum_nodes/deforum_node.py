@@ -807,8 +807,8 @@ class DeforumIteratorNode:
             if latent_type == "stable_diffusion":
                 l = self.rng.next().cuda()#.detach().cpu()
 
-                print(latent["samples"].shape)
-                print(l.shape)
+                # print(latent["samples"].shape)
+                # print(l.shape)
                 latent = {"samples":slerp(slerp_strength, latent["samples"], l)}
         # else:
         #
