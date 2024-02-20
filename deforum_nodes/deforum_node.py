@@ -608,6 +608,7 @@ class DeforumIteratorNode:
             },
             "optional": {
                 "latent": ("LATENT",),
+                "init_latent": ("LATENT",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "subseed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "subseed_strength": ("FLOAT", {"default": 0.8, "min": 0, "max": 1.0}),
@@ -628,9 +629,7 @@ class DeforumIteratorNode:
     seeds = []
 
     @torch.inference_mode()
-    def get(self, deforum_data, latent_type, latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, *args, **kwargs):
-
-
+    def get(self, deforum_data, latent_type, latent=None, init_latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, *args, **kwargs):
         root_dict = RootArgs()
         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
         anim_args_dict = {key: value["value"] for key, value in DeforumAnimArgs().items()}
@@ -778,7 +777,6 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent or not hasattr(self, "rng"):
-
             if latent_type == "stable_diffusion":
                 channels = 4
                 compression = 8
@@ -821,6 +819,10 @@ class DeforumIteratorNode:
         # print(f"[ Current Seed List: ]\n[ {self.seeds} ]")
         gen_args["noise"] = self.rng
         gen_args["seed"] = int(seed)
+
+        if self.frame_index == 0 and init_latent is not None:
+            latent = init_latent
+
         return {"ui": {"counter":(self.frame_index,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 
