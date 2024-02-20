@@ -777,7 +777,7 @@ class DeforumIteratorNode:
         seeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, seed, args.seed_iter_N)
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
-        if latent is None or reset_latent:
+        if latent is None or reset_latent or not hasattr(self, "rng"):
 
             if latent_type == "stable_diffusion":
                 channels = 4
@@ -801,6 +801,9 @@ class DeforumIteratorNode:
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
         else:
+
+            #("DEBUG LATENT FOUND", latent)
+
             if latent_type == "stable_diffusion":
                 l = self.rng.next().cuda()#.detach().cpu()
 
