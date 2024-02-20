@@ -1215,6 +1215,10 @@ class DeforumSetVAEDownscaleRatioNode:
 
 
 class DeforumLoadVideo:
+
+    def __init__(self):
+        self.video_path = None
+
     # @classmethod
     # def INPUT_TYPES(cls):
     #     input_dir = folder_paths.get_input_directory()
@@ -1256,9 +1260,17 @@ class DeforumLoadVideo:
         video_path = folder_paths.get_annotated_filepath(video)
 
         # Initialize or reset video capture
-        if self.cap is None or self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
+        if self.cap is None or self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.video_path != video_path:
+            try:
+                self.cap.release()
+            except:
+                pass
+            self.cap = cv2.VideoCapture(video_path)
+
             self.cap = cv2.VideoCapture(video_path)
             self.current_frame = -1
+        
+
 
         success, frame = self.cap.read()
         if success:
