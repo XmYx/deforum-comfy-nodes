@@ -36,7 +36,7 @@ from deforum import DeforumAnimationPipeline, ImageRNGNoise, FilmModel
 from deforum.generators.deforum_flow_generator import get_flow_from_images
 from deforum.generators.deforum_noise_generator import add_noise
 from deforum.generators.rng_noise_generator import slerp
-from deforum.models import RAFT
+from deforum.models import RAFT, DepthModel
 from deforum.pipeline_utils import next_seed
 from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKeys
 from deforum.pipelines.deforum_animation.animation_params import RootArgs, DeforumArgs, DeforumAnimArgs, \
@@ -55,8 +55,9 @@ from .deforum_node_base import DeforumDataBase
 import torch.nn.functional as F
 import comfy
 deforum_cache = {}
+deforum_models = {}
 video_extensions = ['webm', 'mp4', 'mkv', 'gif']
-
+deforum_depth_algo = ""
 def parse_widget(widget_info: dict) -> tuple:
     parsed_widget = None
     t = widget_info["type"]
@@ -304,157 +305,144 @@ class DeforumAreaPromptNode(DeforumDataBase):
 
         deforum_data["prompts"] = None
 
-
-            # if area_prompt not in deforum_data["area_prompts"]:
-            #     deforum_data["area_prompts"].append(area_prompt)
-        # print(deforum_data)
-
-        # print("Deforum Area Prompt Result", prompts)
-        #
-        # if deforum_data:
-        #     deforum_data["area_prompts"] = prompts
-        #     deforum_data["prompts"] = None
-        # else:
-        #     deforum_data = {"area_prompts": prompts,
-        #                     "prompts":None}
         return (deforum_data,)
 
 
-# class DeforumSampleNode:
-#     @classmethod
-#     def INPUT_TYPES(cls):
-#         return {
-#             "required": {
-#                 "deforum_data": ("deforum_data",),
-#                 "model": ("MODEL",),
-#                 "clip": ("CLIP",),
-#                 "vae": ("VAE",)
-#             },
-#         }
-#
-#     RETURN_TYPES = (("IMAGE",))
-#     FUNCTION = "get"
-#     OUTPUT_NODE = True
-#     CATEGORY = f"deforum_sampling"
-#     display_name = "Deforum KSampler"
-#
-#     @torch.inference_mode()
-#     def get(self, deforum_data, model, clip, vae, *args, **kwargs):
-#
-#         root_dict = RootArgs()
-#         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
-#         anim_args_dict = {key: value["value"] for key, value in DeforumAnimArgs().items()}
-#         output_args_dict = {key: value["value"] for key, value in DeforumOutputArgs().items()}
-#         loop_args_dict = {key: value["value"] for key, value in LoopArgs().items()}
-#         parseq_args_dict = {key: value["value"] for key, value in ParseqArgs().items()}
-#         root = SimpleNamespace(**root_dict)
-#         args = SimpleNamespace(**args_dict)
-#         anim_args = SimpleNamespace(**anim_args_dict)
-#         video_args = SimpleNamespace(**output_args_dict)
-#         parseq_args = SimpleNamespace(**parseq_args_dict)
-#
-#         parseq_args.parseq_manifest = ""
-#
-#         # #parseq_args = None
-#         loop_args = SimpleNamespace(**loop_args_dict)
-#         controlnet_args = SimpleNamespace(**{"controlnet_args": "None"})
-#
-#         for key, value in args.__dict__.items():
-#             if key in deforum_data:
-#                 if deforum_data[key] == "":
-#                     val = None
-#                 else:
-#                     val = deforum_data[key]
-#                 setattr(args, key, val)
-#
-#         for key, value in anim_args.__dict__.items():
-#             if key in deforum_data:
-#                 if deforum_data[key] == "" and "schedule" not in key:
-#                     val = None
-#                 else:
-#                     val = deforum_data[key]
-#                 setattr(anim_args, key, val)
-#
-#         for key, value in video_args.__dict__.items():
-#             if key in deforum_data:
-#                 if deforum_data[key] == "" and "schedule" not in key:
-#                     val = None
-#                 else:
-#                     val = deforum_data[key]
-#                 setattr(anim_args, key, val)
-#
-#         for key, value in root.__dict__.items():
-#             if key in deforum_data:
-#                 if deforum_data[key] == "":
-#                     val = None
-#                 else:
-#                     val = deforum_data[key]
-#                 setattr(root, key, val)
-#
-#         for key, value in loop_args.__dict__.items():
-#             if key in deforum_data:
-#                 if deforum_data[key] == "":
-#                     val = None
-#                 else:
-#                     val = deforum_data[key]
-#                 setattr(loop_args, key, val)
-#
-#         success = None
-#         root.timestring = time.strftime('%Y%m%d%H%M%S')
-#         args.timestring = root.timestring
-#         args.strength = max(0.0, min(1.0, args.strength))
-#
-#         root.animation_prompts = deforum_data.get("prompts", {})
-#
-#
-#         if not args.use_init and not anim_args.hybrid_use_init_image:
-#             args.init_image = None
-#
-#         elif anim_args.animation_mode == 'Video Input':
-#             args.use_init = True
-#
-#         current_arg_list = [args, anim_args, video_args, parseq_args, root]
-#         full_base_folder_path = os.path.join(os.getcwd(), "output/deforum")
-#
-#         args.batch_name = f"aiNodes_Deforum_{args.timestring}"
-#         args.outdir = os.path.join(full_base_folder_path, args.batch_name)
-#
-#         root.raw_batch_name = args.batch_name
-#         args.batch_name = substitute_placeholders(args.batch_name, current_arg_list, full_base_folder_path)
-#
-#         # os.makedirs(args.outdir, exist_ok=True)
-#
-#         def generate(*args, **kwargs):
-#             from .deforum_comfy_sampler import sample_deforum
-#             image = sample_deforum(model, clip, vae, **kwargs)
-#
-#             return image
-#
-#         self.deforum = DeforumAnimationPipeline(generate)
-#
-#         self.deforum.config_dir = os.path.join(os.getcwd(), "output/_deforum_configs")
-#         os.makedirs(self.deforum.config_dir, exist_ok=True)
-#         # self.deforum.generate_inpaint = self.generate_inpaint
-#         import comfy
-#         pbar = comfy.utils.ProgressBar(deforum_data["max_frames"])
-#
-#         def datacallback(data=None):
-#             if data:
-#                 if "image" in data:
-#                     pbar.update_absolute(data["frame_idx"], deforum_data["max_frames"], ("JPEG", data["image"], 512))
-#
-#         self.deforum.datacallback = datacallback
-#         deforum_data["turbo_steps"] = deforum_data["diffusion_cadence"]
-#         animation = self.deforum(**deforum_data)
-#
-#         results = []
-#         for i in self.deforum.images:
-#             tensor = torch.from_numpy(np.array(i).astype(np.float32) / 255.0)
-#
-#             results.append(tensor)
-#             result = torch.stack(results, dim=0)
-#
-#         return (result,)
+class DeforumSingleSampleNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "deforum_data": ("deforum_data",),
+                "model": ("MODEL",),
+                "clip": ("CLIP",),
+                "vae": ("VAE",)
+            },
+        }
+
+    RETURN_TYPES = (("IMAGE",))
+    FUNCTION = "get"
+    OUTPUT_NODE = True
+    CATEGORY = f"deforum_sampling"
+    display_name = "Deforum Integrated Pipeline"
+
+    @torch.inference_mode()
+    def get(self, deforum_data, model, clip, vae, *args, **kwargs):
+
+        root_dict = RootArgs()
+        args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
+        anim_args_dict = {key: value["value"] for key, value in DeforumAnimArgs().items()}
+        output_args_dict = {key: value["value"] for key, value in DeforumOutputArgs().items()}
+        loop_args_dict = {key: value["value"] for key, value in LoopArgs().items()}
+        parseq_args_dict = {key: value["value"] for key, value in ParseqArgs().items()}
+        root = SimpleNamespace(**root_dict)
+        args = SimpleNamespace(**args_dict)
+        anim_args = SimpleNamespace(**anim_args_dict)
+        video_args = SimpleNamespace(**output_args_dict)
+        parseq_args = SimpleNamespace(**parseq_args_dict)
+
+        parseq_args.parseq_manifest = ""
+
+        # #parseq_args = None
+        loop_args = SimpleNamespace(**loop_args_dict)
+        controlnet_args = SimpleNamespace(**{"controlnet_args": "None"})
+
+        for key, value in args.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "":
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(args, key, val)
+
+        for key, value in anim_args.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "" and "schedule" not in key:
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(anim_args, key, val)
+
+        for key, value in video_args.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "" and "schedule" not in key:
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(anim_args, key, val)
+
+        for key, value in root.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "":
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(root, key, val)
+
+        for key, value in loop_args.__dict__.items():
+            if key in deforum_data:
+                if deforum_data[key] == "":
+                    val = None
+                else:
+                    val = deforum_data[key]
+                setattr(loop_args, key, val)
+
+        success = None
+        root.timestring = time.strftime('%Y%m%d%H%M%S')
+        args.timestring = root.timestring
+        args.strength = max(0.0, min(1.0, args.strength))
+
+        root.animation_prompts = deforum_data.get("prompts", {})
+
+
+        if not args.use_init and not anim_args.hybrid_use_init_image:
+            args.init_image = None
+
+        elif anim_args.animation_mode == 'Video Input':
+            args.use_init = True
+
+        current_arg_list = [args, anim_args, video_args, parseq_args, root]
+        full_base_folder_path = os.path.join(os.getcwd(), "output/deforum")
+
+        args.batch_name = f"aiNodes_Deforum_{args.timestring}"
+        args.outdir = os.path.join(full_base_folder_path, args.batch_name)
+
+        root.raw_batch_name = args.batch_name
+        args.batch_name = substitute_placeholders(args.batch_name, current_arg_list, full_base_folder_path)
+
+        # os.makedirs(args.outdir, exist_ok=True)
+
+        def generate(*args, **kwargs):
+            from .deforum_comfy_sampler import sample_deforum
+            image = sample_deforum(model, clip, vae, **kwargs)
+
+            return image
+
+        self.deforum = DeforumAnimationPipeline(generate)
+
+        self.deforum.config_dir = os.path.join(os.getcwd(), "output/_deforum_configs")
+        os.makedirs(self.deforum.config_dir, exist_ok=True)
+        # self.deforum.generate_inpaint = self.generate_inpaint
+        import comfy
+        pbar = comfy.utils.ProgressBar(deforum_data["max_frames"])
+
+        def datacallback(data=None):
+            if data:
+                if "image" in data:
+                    pbar.update_absolute(data["frame_idx"], deforum_data["max_frames"], ("JPEG", data["image"], 512))
+
+        self.deforum.datacallback = datacallback
+        deforum_data["turbo_steps"] = deforum_data.get("diffusion_cadence", 0)
+        animation = self.deforum(**deforum_data)
+
+        results = []
+        for i in self.deforum.images:
+            tensor = torch.from_numpy(np.array(i).astype(np.float32) / 255.0)
+
+            results.append(tensor)
+            result = torch.stack(results, dim=0)
+
+        return (result,)
 
 
 def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None, area_prompts=None):
@@ -593,6 +581,9 @@ def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
 
 class DeforumIteratorNode:
 
+    def __init__(self):
+        self.first_run = True
+
     @classmethod
     def IS_CHANGED(cls, *args, **kwargs):
         # Force re-evaluation of the node
@@ -638,6 +629,7 @@ class DeforumIteratorNode:
         root = SimpleNamespace(**root_dict)
         args = SimpleNamespace(**args_dict)
         anim_args = SimpleNamespace(**anim_args_dict)
+        anim_args.diffusion_cadence = 1
         video_args = SimpleNamespace(**output_args_dict)
         parseq_args = None
         loop_args = SimpleNamespace(**loop_args_dict)
@@ -693,6 +685,8 @@ class DeforumIteratorNode:
             self.frame_index = 0
             # .should_run = False
             # return [None]
+            self.first_run = True
+
         # else:
         args.scale = keys.cfg_scale_schedule_series[self.frame_index]
         if prompt_series is not None:
@@ -809,8 +803,14 @@ class DeforumIteratorNode:
         if self.frame_index == 0 and init_latent is not None:
             latent = init_latent
             gen_args["denoise"] = keys.strength_schedule_series[0]
-        self.frame_index += 1
 
+        #if anim_args.diffusion_cadence > 1:
+
+        if anim_args.diffusion_cadence > 1:
+            self.frame_index += anim_args.diffusion_cadence if not self.first_run else 0# if anim_args.diffusion_cadence == 1
+            self.first_run = False
+        else:
+            self.frame_index += 1
         return {"ui": {"counter":(self.frame_index,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 
@@ -1414,7 +1414,6 @@ class DeforumFILMInterpolationNode:
     FUNCTION = "fn"
     display_name = "Deforum FILM Interpolation"
     CATEGORY = "deforum"
-    FILM_temp = []
     @classmethod
     def IS_CHANGED(self, *args, **kwargs):
         # Force re-evaluation of the node
@@ -1467,26 +1466,131 @@ class DeforumFILMInterpolationNode:
             ret = torch.stack(result, dim=0)
         else:
             ret = self.interpolate(image[0], inter_amount, skip_first, skip_last)
-
+        print("FILM NODE ", ret.shape)
         return (ret,)
 
-        # ret = image
-        # if image.shape[0] > 1:
-        #     ret = []
-        #     for img in image:
-        #         res = self.interpolate(img, inter_amount, skip_first, skip_last)
-        #
-        #         print(res.shape)
-        #
-        #         ret.append(res)
-        #     ret = torch.stack(ret, dim=0)
-        #
-        # else:
-        #     ret = self.interpolate(image[0], inter_amount, skip_first, skip_last)
-        # print("RETURN OBJECT", ret.shape)
-        #
-        #
-        # return (ret,)
+class DeforumCadenceNode:
+    def __init__(self):
+        self.FILM_temp = []
+        self.model = None
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("IMAGE",),
+                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     }
+                }
+
+    RETURN_TYPES = ("IMAGE",)
+    # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
+    FUNCTION = "interpolate"
+    display_name = "Deforum Cadence Interpolation"
+    CATEGORY = "deforum"
+
+    @classmethod
+    def IS_CHANGED(self, *args, **kwargs):
+        # Force re-evaluation of the node
+        return float("NaN")
+
+    def interpolate(self, image, deforum_frame_data):
+        global deforum_depth_algo
+
+        return_frames = []
+        pil_image = tensor2pil(image.clone().detach())
+        np_image = np.array(pil_image.convert("RGB"))
+        self.FILM_temp.append(np_image)
+        args = deforum_frame_data["args"]
+        anim_args = deforum_frame_data["anim_args"]
+        predict_depths = (
+                                 anim_args.animation_mode == '3D' and anim_args.use_depth_warping) or anim_args.save_depth_maps
+        predict_depths = predict_depths or (
+                anim_args.hybrid_composite and anim_args.hybrid_comp_mask_type in ['Depth', 'Video Depth'])
+
+        if "depth_model" not in deforum_models or deforum_depth_algo != anim_args.depth_algorithm:
+            self.vram_state = "high"
+            if "depth_model" in deforum_models:
+                deforum_models["depth_model"].to("cpu")
+                del deforum_models["depth_model"]
+                # torch_gc()
+
+            deforum_depth_algo = anim_args.depth_algorithm
+            if predict_depths:
+                keep_in_vram = True if self.vram_state == 'high' else False
+                # device = ('cpu' if cmd_opts.lowvram or cmd_opts.medvram else self.root.device)
+                # TODO Set device in root in webui
+                device = 'cuda'
+                deforum_models["depth_model"] = DepthModel("models/other", device,
+                                              keep_in_vram=keep_in_vram,
+                                              depth_algorithm=anim_args.depth_algorithm, Width=args.width,
+                                              Height=args.height,
+                                              midas_weight=anim_args.midas_weight)
+
+                # depth-based hybrid composite mask requires saved depth maps
+                if anim_args.hybrid_composite != 'None' and anim_args.hybrid_comp_mask_type == 'Depth':
+                    anim_args.save_depth_maps = True
+            else:
+                deforum_models["depth_model"] = None
+                anim_args.save_depth_maps = False
+        if deforum_models["depth_model"] != None and not predict_depths:
+            deforum_models["depth_model"] = None
+        if deforum_models["depth_model"] is not None:
+            deforum_models["depth_model"].to('cuda')
+        if "raft_model" not in deforum_models:
+            deforum_models["raft_model"] = RAFT()
+
+        if len(self.FILM_temp) == 2:
+
+            # with torch.inference_mode():
+            with torch.no_grad():
+                from .standalone_cadence import standalone_cadence
+                frames, _, _ = standalone_cadence(self.FILM_temp[0],
+                                            self.FILM_temp[1],
+                                            deforum_frame_data["frame_idx"],
+                                            anim_args.diffusion_cadence,
+                                            deforum_frame_data["args"],
+                                            deforum_frame_data["anim_args"],
+                                            deforum_frame_data["keys"],
+                                            deforum_models["raft_model"],
+                                            deforum_models["depth_model"]
+                                            )
+
+
+            # skip_first, skip_last = True, False
+            x = 0
+            for frame in frames:
+                # img = Image.fromarray(frame)
+                # img.save(f"cadence_{x}.png", "PNG")
+                # x += 1
+                tensor = pil2tensor(frame)
+
+
+                return_frames.append(tensor.squeeze(0))
+            self.FILM_temp = [self.FILM_temp[1]]
+        print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
+        if len(return_frames) > 0:
+            return_frames = torch.stack(return_frames, dim=0)
+            return return_frames.unsqueeze(0)
+        else:
+            return image.unsqueeze(0)
+
+
+    def fn(self, image, deforum_frame_data):
+        result = []
+
+        if image.shape[0] > 1:
+            for img in image:
+                interpolated_frames = self.interpolate(img.unsqueeze(0), deforum_frame_data)
+
+                for f in interpolated_frames:
+                    result.append(f)
+
+            ret = torch.stack(result, dim=0)
+        else:
+            ret = self.interpolate(image, deforum_frame_data)
+            print(ret.shape)
+        print("CADENCE NODE ", ret.shape)
+
+        return (ret,)
 
 
 
