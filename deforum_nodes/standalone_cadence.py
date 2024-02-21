@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 import PIL.Image
 
-def standalone_cadence(prev_img, img, frame_idx, cadence_frames, args, anim_args, keys, raft_model=None, depth_model=None):
+def standalone_cadence(img, prev_img, frame_idx, cadence_frames, args, anim_args, keys, raft_model=None, depth_model=None):
     if img is not None:
         if cadence_frames > 1:
             if isinstance(img, PIL.Image.Image):
@@ -44,9 +44,9 @@ def standalone_cadence(prev_img, img, frame_idx, cadence_frames, args, anim_args
                     cadence_flow, _, _ = anim_frame_warp(cadence_flow, args, anim_args, keys, tween_frame_idx, depth_model=depth_model, depth=depth, device='cuda', half_precision=True)
                     cadence_flow_inc = rel_flow_to_abs_flow(cadence_flow, args.width, args.height) * tween
                     if advance_prev:
-                        prev_img = image_transform_optical_flow(prev_img, cadence_flow_inc, 0.9)
+                        prev_img = image_transform_optical_flow(prev_img, cadence_flow_inc, 1)
                     if advance_next:
-                        img = image_transform_optical_flow(img, cadence_flow_inc, 0.9)
+                        img = image_transform_optical_flow(img, cadence_flow_inc, 1)
 
                 if prev_img is not None and tween < 1.0:
                     combined_img = prev_img * (1.0 - tween) + img * tween
