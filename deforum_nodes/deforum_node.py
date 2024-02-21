@@ -1481,9 +1481,9 @@ class DeforumCadenceNode:
                      }
                 }
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = ("IMAGE", "IMAGE")
     # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
-    FUNCTION = "interpolate"
+    FUNCTION = "fn"
     display_name = "Deforum Cadence Interpolation"
     CATEGORY = "deforum"
 
@@ -1569,9 +1569,9 @@ class DeforumCadenceNode:
         print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
         if len(return_frames) > 0:
             return_frames = torch.stack(return_frames, dim=0)
-            return return_frames.unsqueeze(0)
+            return return_frames
         else:
-            return image.unsqueeze(0)
+            return image
 
 
     def fn(self, image, deforum_frame_data):
@@ -1590,7 +1590,9 @@ class DeforumCadenceNode:
             print(ret.shape)
         print("CADENCE NODE ", ret.shape)
 
-        return (ret,)
+        last = ret[-1].unsqueeze(0)
+        print("LAST", last.shape)
+        return (ret, last,)
 
 
 
