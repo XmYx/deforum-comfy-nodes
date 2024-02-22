@@ -811,7 +811,7 @@ class DeforumIteratorNode:
             self.first_run = False
         else:
             self.frame_index += 1
-        return {"ui": {"counter":(self.frame_index,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
+        return {"ui": {"counter":(self.frame_index,), "max_frames":(anim_args.max_frames,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 
     def get_current_frame(self, args, anim_args, root, keys, frame_idx, areas=None):
