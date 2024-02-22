@@ -157,8 +157,29 @@ app.registerExtension({
                     if (w.name === "reset_counter") {
                         const counterWidget = w;
                         counterWidget.value = false;
+
                     }
                 }
+                const v = app.nodeOutputs?.[this.id + ""];
+                if (!this.flags.collapsed && v) {
+
+                    const counter = v["counter"]
+                    const max_frames = v["max_frames"]
+
+                    console.log("COUNTER")
+                    console.log(counter[0])
+                    console.log("MAX FRAMES")
+                    console.log(max_frames[0])
+
+                    if (counter[0] >= max_frames[0]) {
+                        //document.getElementById('autoQueueCheckbox').checked = false;
+                        if (document.getElementById('autoQueueCheckbox').checked === true) {
+                            document.getElementById('autoQueueCheckbox').click();
+                        }
+                    }
+                }
+
+
             return r
             }
 
