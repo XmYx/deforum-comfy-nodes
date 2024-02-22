@@ -867,6 +867,7 @@ class DeforumKSampler:
         # negative = deforum_frame_data.get("negative")
         # latent_image = deforum_frame_data.get("latent_image")
         denoise = deforum_frame_data.get("denoise", 1.0)
+        latent_image["samples"] = latent_image["samples"].float()
         #print("DENOISE", denoise)
         return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
                                denoise=denoise)
