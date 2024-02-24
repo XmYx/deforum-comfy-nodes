@@ -4,20 +4,42 @@ import cv2
 import numpy as np
 
 
+# def optical_flow_cadence(i1, i2, cadence, method="DIS Medium"):
+#     imgs = []
+#     if i1 is not None and i2 is not None:
+#         imgs.append(i1)
+#         flow = get_flow_from_images(i1, i2, method)
+#         i2 = image_transform_optical_flow(i2, -flow)
+#         for i in range(1, cadence):
+#             weight = i / cadence
+#             flow_inc = flow * weight
+#             img = cv2.addWeighted(i1, 1 - weight, i2, weight, 0)
+#             img = image_transform_optical_flow(img, flow_inc, cv2.BORDER_REPLICATE)
+#             imgs.append(img)
+#         imgs.append(i2)
+#     return imgs
+
+
 def optical_flow_cadence(i1, i2, cadence, method="DIS Medium"):
     imgs = []
     if i1 is not None and i2 is not None:
-        imgs.append(i1)
         flow = get_flow_from_images(i1, i2, method)
-        i2 = image_transform_optical_flow(i2, -flow)
-        for i in range(1, cadence - 1):
-            weight = i / cadence
-            flow_inc = flow * weight
-            img = cv2.addWeighted(i1, 1 - weight, i2, weight, 0)
-            img = image_transform_optical_flow(img, flow_inc, cv2.BORDER_REPLICATE)
-            imgs.append(img)
-    return imgs
+        # Warp i2 using the negative of the calculated flow to align it with i1
+        i2_warped = image_transform_optical_flow(i2, -flow)
 
+        for i in range(cadence):
+            weight = i / (cadence - 1)  # Adjust weight calculation to include both endpoints
+            # Directly interpolate between i1 and warped i2 for each frame
+            img = cv2.addWeighted(i1, 1 - weight, i2_warped, weight, 0)
+            flow_inc = flow * weight
+            img = image_transform_optical_flow(img, flow_inc, cv2.BORDER_REPLICATE)
+
+            imgs.append(img)
+
+        # Ensure the last frame is exactly i2, to avoid any discrepancies
+        #imgs[-1] = i2
+
+    return imgs
 
 def get_matrix_for_hybrid_motion(frame_idx, dimensions, inputfiles, hybrid_motion):
     img1 = cv2.cvtColor(get_resized_image_from_filename(str(inputfiles[frame_idx - 1]), dimensions), cv2.COLOR_BGR2GRAY)

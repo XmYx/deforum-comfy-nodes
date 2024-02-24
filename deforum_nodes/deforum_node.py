@@ -1478,15 +1478,15 @@ class DeforumSimpleInterpolationNode:
     def INPUT_TYPES(s):
         return {"required":
                     {"image": ("IMAGE",),
-                     "method": (["DIS Medium", "DIS Fast", "DIS UltraFast", "DenseRLOF", "SF", "Farneback Fine", "Normal"],),
+                     "method": (["DIS Medium", "DIS Fast", "DIS UltraFast", "Farneback Fine", "Normal"],), # "DenseRLOF", "SF",
                      "inter_amount": ("INT", {"default": 2, "min": 1, "max": 10000},),
                      "skip_first": ("BOOLEAN", {"default":False}),
                      "skip_last": ("BOOLEAN", {"default":False}),
                      }
                 }
 
-    RETURN_TYPES = ("IMAGE",)
-    # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
+    RETURN_TYPES = ("IMAGE", "IMAGE")
+    RETURN_NAMES = ("IMAGES", "LAST_IMAGE")
     FUNCTION = "fn"
     display_name = "Deforum Simple Interpolation"
     CATEGORY = "deforum"
@@ -1506,7 +1506,7 @@ class DeforumSimpleInterpolationNode:
             # with torch.inference_mode():
             # frames = self.model.inference(self.FILM_temp[0], self.FILM_temp[1], inter_frames=inter_frames)
             from .interp import optical_flow_cadence
-            frames = optical_flow_cadence(self.FILM_temp[0], self.FILM_temp[1], inter_frames + 3, method)
+            frames = optical_flow_cadence(self.FILM_temp[0], self.FILM_temp[1], inter_frames + 1, method)
             # skip_first, skip_last = True, False
             if skip_first:
                 frames.pop(0)
@@ -1538,8 +1538,9 @@ class DeforumSimpleInterpolationNode:
             ret = torch.stack(result, dim=0)
         else:
             ret = self.interpolate(image[0], method, inter_amount, skip_first, skip_last)
-        print("FILM NODE ", ret.shape)
-        return (ret,)
+        print(ret.shape)
+        print(ret[-1].unsqueeze(0).shape)
+        return (ret, ret[-1].unsqueeze(0),)
 
 
 class DeforumCadenceNode:
