@@ -1470,6 +1470,78 @@ class DeforumFILMInterpolationNode:
         print("FILM NODE ", ret.shape)
         return (ret,)
 
+class DeforumSimpleInterpolationNode:
+    def __init__(self):
+        self.FILM_temp = []
+        self.model = None
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"image": ("IMAGE",),
+                     "method": (["DIS Medium", "DIS Fast", "DIS UltraFast", "DenseRLOF", "SF", "Farneback Fine", "Normal"],),
+                     "inter_amount": ("INT", {"default": 2, "min": 1, "max": 10000},),
+                     "skip_first": ("BOOLEAN", {"default":False}),
+                     "skip_last": ("BOOLEAN", {"default":False}),
+                     }
+                }
+
+    RETURN_TYPES = ("IMAGE",)
+    # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
+    FUNCTION = "fn"
+    display_name = "Deforum Simple Interpolation"
+    CATEGORY = "deforum"
+    @classmethod
+    def IS_CHANGED(self, *args, **kwargs):
+        # Force re-evaluation of the node
+        return float("NaN")
+
+    def interpolate(self, image, method, inter_frames, skip_first, skip_last):
+
+        return_frames = []
+        pil_image = tensor2pil(image.clone().detach())
+        np_image = np.array(pil_image.convert("RGB"))
+        self.FILM_temp.append(np_image)
+        if len(self.FILM_temp) == 2:
+
+            # with torch.inference_mode():
+            # frames = self.model.inference(self.FILM_temp[0], self.FILM_temp[1], inter_frames=inter_frames)
+            from .interp import optical_flow_cadence
+            frames = optical_flow_cadence(self.FILM_temp[0], self.FILM_temp[1], inter_frames + 3, method)
+            # skip_first, skip_last = True, False
+            if skip_first:
+                frames.pop(0)
+            if skip_last:
+                frames.pop(-1)
+
+            for frame in frames:
+                tensor = pil2tensor(frame)[0]
+                return_frames.append(tensor)
+            self.FILM_temp = [self.FILM_temp[1]]
+        print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
+        if len(return_frames) > 0:
+            return_frames = torch.stack(return_frames, dim=0)
+            return return_frames
+        else:
+            return image.unsqueeze(0)
+
+
+    def fn(self, image, method, inter_amount, skip_first, skip_last):
+        result = []
+
+        if image.shape[0] > 1:
+            for img in image:
+                interpolated_frames = self.interpolate(img, method, inter_amount, skip_first, skip_last)
+
+                for f in interpolated_frames:
+                    result.append(f)
+
+            ret = torch.stack(result, dim=0)
+        else:
+            ret = self.interpolate(image[0], method, inter_amount, skip_first, skip_last)
+        print("FILM NODE ", ret.shape)
+        return (ret,)
+
+
 class DeforumCadenceNode:
     def __init__(self):
         self.FILM_temp = []
