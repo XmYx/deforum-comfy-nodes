@@ -219,7 +219,7 @@ class DeforumPromptNode(DeforumDataBase):
     RETURN_TYPES = (("deforum_data",))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum_data"
+    CATEGORY = f"deforum"
     display_name = "Deforum Prompt"
 
     @torch.inference_mode()
@@ -274,7 +274,7 @@ class DeforumAreaPromptNode(DeforumDataBase):
     RETURN_TYPES = (("deforum_data",))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum_data"
+    CATEGORY = f"deforum"
     display_name = "Deforum Area Prompt"
 
     @torch.inference_mode()
@@ -323,7 +323,7 @@ class DeforumSingleSampleNode:
     RETURN_TYPES = (("IMAGE",))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum_sampling"
+    CATEGORY = f"deforum"
     display_name = "Deforum Integrated Pipeline"
 
     @torch.inference_mode()
@@ -491,7 +491,7 @@ class DeforumCacheLatentNode:
 
     RETURN_TYPES = (("LATENT",))
     FUNCTION = "cache_it"
-    CATEGORY = f"deforum_sampling"
+    CATEGORY = f"deforum"
     display_name = "Deforum Cache Latent"
     OUTPUT_NODE = True
 
@@ -515,7 +515,7 @@ class DeforumGetCachedLatentNode:
 
     RETURN_TYPES = (("LATENT",))
     FUNCTION = "get_cached_latent"
-    CATEGORY = f"deforum_data"
+    CATEGORY = f"deforum"
     OUTPUT_NODE = True
     display_name = "Deforum Load Cached Latent"
 
@@ -537,7 +537,7 @@ class DeforumSeedNode:
         }
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum_data"
+    CATEGORY = f"deforum"
     RETURN_TYPES = (("INT",))
     display_name = "Deforum Seed Node"
 
@@ -613,7 +613,7 @@ class DeforumIteratorNode:
     RETURN_NAMES = (("deforum_frame_data", "latent", "positive_prompt", "negative_prompt"))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum_data"
+    CATEGORY = f"deforum"
     display_name = "Deforum Iterator Node"
     frame_index = 0
     seed = ""
@@ -853,7 +853,7 @@ class DeforumKSampler:
     RETURN_TYPES = ("LATENT",)
     FUNCTION = "sample"
     display_name = "Deforum KSampler"
-    CATEGORY = "sampling"
+    CATEGORY = "deforum"
 
     def sample(self, model, latent, positive, negative, deforum_frame_data):
         from nodes import common_ksampler
@@ -908,7 +908,7 @@ class DeforumFrameWarpNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
     display_name = "Deforum Frame Warp"
-    CATEGORY = "sampling"
+    CATEGORY = "deforum"
 
 
 
@@ -1023,7 +1023,7 @@ class DeforumColorMatchNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
     display_name = "Deforum Color Match"
-    CATEGORY = "sampling"
+    CATEGORY = "deforum"
 
     depth_model = None
     algo = ""
@@ -1064,7 +1064,7 @@ class DeforumAddNoiseNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
     display_name = "Deforum Add Noise"
-    CATEGORY = "sampling"
+    CATEGORY = "deforum"
 
     def fn(self, image, deforum_frame_data):
 
@@ -1139,7 +1139,7 @@ class DeforumHybridMotionNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
     display_name = "Deforum Hybrid Motion"
-    CATEGORY = "sampling"
+    CATEGORY = "deforum"
 
     def fn(self, image, hybrid_image, deforum_frame_data, hybrid_method):
         if self.raft_model is None:
@@ -1198,7 +1198,7 @@ class DeforumSetVAEDownscaleRatioNode:
     RETURN_TYPES = ("VAE",)
     FUNCTION = "fn"
     display_name = "Deforum Set VAE Downscale Ratio"
-    CATEGORY = "sampling"
+    CATEGORY = "deforum"
 
     def fn(self, vae, downscale_ratio):
         vae.downscale_ratio = downscale_ratio
@@ -1237,7 +1237,7 @@ class DeforumLoadVideo:
         return {"required": {
                     "video": (sorted(files),),},}
 
-    CATEGORY = "video"
+    CATEGORY = "deforum"
     display_name = "Deforum Load Video"
 
     RETURN_TYPES = ("IMAGE",)
@@ -1346,7 +1346,7 @@ class DeforumVideoSaveNode:
 
     FUNCTION = "fn"
     display_name = "Deforum Save Video"
-    CATEGORY = "sampling"
+    CATEGORY = "deforum"
     def add_image(self, image):
         pil_image = tensor2pil(image.unsqueeze(0))
         size = pil_image.size
@@ -1734,7 +1734,7 @@ class DeforumConditioningBlendNode:
     RETURN_NAMES = ("POSITIVE", "NEGATIVE")
     FUNCTION = "fn"
     display_name = "Deforum Blend Conditionings"
-    CATEGORY = "sampling"
+    CATEGORY = "deforum"
     def fn(self, clip, deforum_frame_data, blend_method):
         areas = deforum_frame_data.get("areas")
         negative_prompt = deforum_frame_data.get("negative_prompt", "")
@@ -1778,6 +1778,38 @@ class DeforumConditioningBlendNode:
         cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
         return [[cond, {"pooled_output": pooled}]]
 
+# class DeforumSD1_1_Node:
+#
+#     def __init__(self):
+#         self.pipe = None
+#
+#     @classmethod
+#     def INPUT_TYPES(s):
+#         return {"required":
+#                     {"prompt": ("STRING", {"forceInput": False, "multiline": True, "default": "0:'Cat Sushi'"}),
+#                      "steps": ("INT", {"default": 0, "min": 0, "max": 1000}),
+#                      "guidance_scale": ("FLOAT", {"default": 7.5, "min": 0, "max": 25.0}),
+#                      "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+#                      }
+#                 }
+#
+#     RETURN_TYPES = ("IMAGE",)
+#     FUNCTION = "generate"
+#     display_name = "Deforum 1.1 Node"
+#     CATEGORY = "deforum"
+#
+#     def generate(self, prompt, steps, guidance_scale, seed):
+#         if not self.pipe:
+#             from diffusers import StableDiffusionPipeline
+#             model_id = "CompVis/stable-diffusion-v1-1"
+#             device = "cuda"
+#             self.pipe = StableDiffusionPipeline.from_pretrained(model_id).to(device)
+#         image = self.pipe(prompt,
+#                           num_inference_steps=steps,
+#                           guidance_scale=guidance_scale,
+#                           generator=torch.manual_seed(seed)).images[0]
+#         t = pil2tensor(image)
+#         return (t,)
 
 # Create an empty dictionary for class mappings
 NODE_CLASS_MAPPINGS = {}
