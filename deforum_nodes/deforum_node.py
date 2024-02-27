@@ -880,7 +880,6 @@ def tensor2pil(image):
     else:
         return None
 
-
 # PIL to Tensor
 def pil2tensor(image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
@@ -905,7 +904,8 @@ class DeforumFrameWarpNode:
                      }
                 }
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = ("IMAGE","IMAGE")
+    RETURN_NAMES = ("IMAGE","DEPTH")
     FUNCTION = "fn"
     display_name = "Deforum Frame Warp"
     CATEGORY = "deforum"
@@ -970,19 +970,23 @@ class DeforumFrameWarpNode:
             warped_np_img, self.depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx,
                                                               depth_model=self.depth_model, depth=self.depth, device='cuda',
                                                               half_precision=True)
-            num_channels = len(self.depth.shape)
 
-            if num_channels <= 3:
-                depth_image = self.depth_model.to_image(self.depth.detach().cpu())
+            image = Image.fromarray(cv2.cvtColor(warped_np_img, cv2.COLOR_BGR2RGB))
+            tensor = pil2tensor(image)
+            if self.depth is not None:
+                num_channels = len(self.depth.shape)
+
+                if num_channels <= 3:
+                    depth_image = self.depth_model.to_image(self.depth.detach().cpu())
+                else:
+                    depth_image = self.depth_model.to_image(self.depth[0].detach().cpu())
+
+                ret_depth = pil2tensor(depth_image).detach().cpu()
             else:
-                depth_image = self.depth_model.to_image(self.depth[0].detach().cpu())
-
-            ret_depth = pil2tensor(depth_image).detach().cpu()
+                ret_depth = tensor
             # if gs.vram_state in ["low", "medium"] and self.depth_model is not None:
             #     self.depth_model.to('cpu')
-            image = Image.fromarray(cv2.cvtColor(warped_np_img, cv2.COLOR_BGR2RGB))
 
-            tensor = pil2tensor(image)
 
             # if mask is not None:
             #     mask = mask.detach().cpu()
