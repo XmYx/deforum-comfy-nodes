@@ -85,7 +85,7 @@ def get_node_params(input_params):
 
 class DeforumBaseParamsNode(DeforumDataBase):
     params = get_node_params(deforum_base_params)
-    display_name = "Deforum Base Parameters"
+    display_name = "Base Parameters"
 
     def __init__(self):
         super().__init__()
@@ -97,7 +97,7 @@ class DeforumBaseParamsNode(DeforumDataBase):
 
 class DeforumAnimParamsNode(DeforumDataBase):
     params = get_node_params(deforum_anim_params)
-    display_name = "Deforum Animation Parameters"
+    display_name = "Animation Parameters"
 
     def __init__(self):
         super().__init__()
@@ -109,7 +109,7 @@ class DeforumAnimParamsNode(DeforumDataBase):
 
 class DeforumTranslationParamsNode(DeforumDataBase):
     params = get_node_params(deforum_translation_params)
-    display_name = "Deforum Translate Parameters"
+    display_name = "Translate Parameters"
 
     def __init__(self):
         super().__init__()
@@ -121,7 +121,7 @@ class DeforumTranslationParamsNode(DeforumDataBase):
 
 class DeforumDepthParamsNode(DeforumDataBase):
     params = get_node_params(deforum_depth_params)
-    display_name = "Deforum Depth Parameters"
+    display_name = "Depth Parameters"
 
     def __init__(self):
         super().__init__()
@@ -133,7 +133,7 @@ class DeforumDepthParamsNode(DeforumDataBase):
 
 class DeforumNoiseParamsNode(DeforumDataBase):
     params = get_node_params(deforum_noise_params)
-    display_name = "Deforum Noise Parameters"
+    display_name = "Noise Parameters"
 
     def __init__(self):
         super().__init__()
@@ -145,7 +145,7 @@ class DeforumNoiseParamsNode(DeforumDataBase):
 
 class DeforumColorParamsNode(DeforumDataBase):
     params = get_node_params(deforum_color_coherence_params)
-    display_name = "Deforum ColorMatch Parameters"
+    display_name = "ColorMatch Parameters"
 
     def __init__(self):
         super().__init__()
@@ -157,7 +157,7 @@ class DeforumColorParamsNode(DeforumDataBase):
 
 class DeforumDiffusionParamsNode(DeforumDataBase):
     params = get_node_params(deforum_diffusion_schedule_params)
-    display_name = "Deforum Diffusion Parameters"
+    display_name = "Diffusion Parameters"
 
     def __init__(self):
         super().__init__()
@@ -169,7 +169,7 @@ class DeforumDiffusionParamsNode(DeforumDataBase):
 
 class DeforumCadenceParamsNode(DeforumDataBase):
     params = get_node_params(deforum_cadence_params)
-    display_name = "Deforum Cadence Parameters"
+    display_name = "Cadence Parameters"
 
     def __init__(self):
         super().__init__()
@@ -180,7 +180,7 @@ class DeforumCadenceParamsNode(DeforumDataBase):
 
 class DeforumHybridParamsNode(DeforumDataBase):
     params = get_node_params(deforum_hybrid_video_params)
-    display_name = "Deforum Hybrid Parameters"
+    display_name = "Hybrid Parameters"
 
     def __init__(self):
         super().__init__()
@@ -191,7 +191,7 @@ class DeforumHybridParamsNode(DeforumDataBase):
 
 class DeforumHybridScheduleNode(DeforumDataBase):
     params = get_node_params(deforum_hybrid_video_schedules)
-    display_name = "Deforum Hybrid Schedule"
+    display_name = "Hybrid Schedule"
 
     def __init__(self):
         super().__init__()
@@ -220,7 +220,7 @@ class DeforumPromptNode(DeforumDataBase):
     FUNCTION = "get"
     OUTPUT_NODE = True
     CATEGORY = f"deforum"
-    display_name = "Deforum Prompt"
+    display_name = "Prompt"
 
     @torch.inference_mode()
     def get(self, prompts, deforum_data=None):
@@ -275,7 +275,7 @@ class DeforumAreaPromptNode(DeforumDataBase):
     FUNCTION = "get"
     OUTPUT_NODE = True
     CATEGORY = f"deforum"
-    display_name = "Deforum Area Prompt"
+    display_name = "Area Prompt"
 
     @torch.inference_mode()
     def get(self, keyframe, mode, prompt, width, height, x, y, strength, deforum_data=None):
@@ -324,7 +324,7 @@ class DeforumSingleSampleNode:
     FUNCTION = "get"
     OUTPUT_NODE = True
     CATEGORY = f"deforum"
-    display_name = "Deforum Integrated Pipeline"
+    display_name = "Integrated Pipeline"
 
     @torch.inference_mode()
     def get(self, deforum_data, model, clip, vae, *args, **kwargs):
@@ -492,7 +492,7 @@ class DeforumCacheLatentNode:
     RETURN_TYPES = (("LATENT",))
     FUNCTION = "cache_it"
     CATEGORY = f"deforum"
-    display_name = "Deforum Cache Latent"
+    display_name = "Cache Latent"
     OUTPUT_NODE = True
 
     def cache_it(self, latent=None):
@@ -517,7 +517,7 @@ class DeforumGetCachedLatentNode:
     FUNCTION = "get_cached_latent"
     CATEGORY = f"deforum"
     OUTPUT_NODE = True
-    display_name = "Deforum Load Cached Latent"
+    display_name = "Load Cached Latent"
 
     def get_cached_latent(self):
         latent = deforum_cache.get("latent")
@@ -539,7 +539,7 @@ class DeforumSeedNode:
     OUTPUT_NODE = True
     CATEGORY = f"deforum"
     RETURN_TYPES = (("INT",))
-    display_name = "Deforum Seed Node"
+    display_name = "Seed Node"
 
     @torch.inference_mode()
     def get(self, seed, *args, **kwargs):
@@ -614,7 +614,7 @@ class DeforumIteratorNode:
     FUNCTION = "get"
     OUTPUT_NODE = True
     CATEGORY = f"deforum"
-    display_name = "Deforum Iterator Node"
+    display_name = "Iterator Node"
     frame_index = 0
     seed = ""
     seeds = []
@@ -852,7 +852,7 @@ class DeforumKSampler:
 
     RETURN_TYPES = ("LATENT",)
     FUNCTION = "sample"
-    display_name = "Deforum KSampler"
+    display_name = "KSampler"
     CATEGORY = "deforum"
 
     def sample(self, model, latent, positive, negative, deforum_frame_data):
@@ -907,7 +907,7 @@ class DeforumFrameWarpNode:
     RETURN_TYPES = ("IMAGE","IMAGE")
     RETURN_NAMES = ("IMAGE","DEPTH")
     FUNCTION = "fn"
-    display_name = "Deforum Frame Warp"
+    display_name = "Frame Warp"
     CATEGORY = "deforum"
 
 
@@ -1026,7 +1026,7 @@ class DeforumColorMatchNode:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
-    display_name = "Deforum Color Match"
+    display_name = "Color Match"
     CATEGORY = "deforum"
 
     depth_model = None
@@ -1067,7 +1067,7 @@ class DeforumAddNoiseNode:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
-    display_name = "Deforum Add Noise"
+    display_name = "Add Noise"
     CATEGORY = "deforum"
 
     def fn(self, image, deforum_frame_data):
@@ -1142,7 +1142,7 @@ class DeforumHybridMotionNode:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
-    display_name = "Deforum Hybrid Motion"
+    display_name = "Hybrid Motion"
     CATEGORY = "deforum"
 
     def fn(self, image, hybrid_image, deforum_frame_data, hybrid_method):
@@ -1201,7 +1201,7 @@ class DeforumSetVAEDownscaleRatioNode:
                 }
     RETURN_TYPES = ("VAE",)
     FUNCTION = "fn"
-    display_name = "Deforum Set VAE Downscale Ratio"
+    display_name = "Set VAE Downscale Ratio"
     CATEGORY = "deforum"
 
     def fn(self, vae, downscale_ratio):
@@ -1242,7 +1242,7 @@ class DeforumLoadVideo:
                     "video": (sorted(files),),},}
 
     CATEGORY = "deforum"
-    display_name = "Deforum Load Video"
+    display_name = "Load Video"
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "load_video_frame"
@@ -1365,7 +1365,7 @@ class DeforumVideoSaveNode:
     OUTPUT_NODE = True
 
     FUNCTION = "fn"
-    display_name = "Deforum Save Video"
+    display_name = "Save Video"
     CATEGORY = "deforum"
     def add_image(self, image):
         pil_image = tensor2pil(image.unsqueeze(0))
@@ -1437,7 +1437,7 @@ class DeforumFILMInterpolationNode:
     RETURN_TYPES = ("IMAGE",)
     # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
     FUNCTION = "fn"
-    display_name = "Deforum FILM Interpolation"
+    display_name = "FILM Interpolation"
     CATEGORY = "deforum"
     @classmethod
     def IS_CHANGED(self, *args, **kwargs):
@@ -1448,7 +1448,6 @@ class DeforumFILMInterpolationNode:
 
         if self.model is None:
             self.model = FilmModel()
-
             self.model.model.cuda()
 
         return_frames = []
@@ -1468,7 +1467,7 @@ class DeforumFILMInterpolationNode:
 
             for frame in frames:
                 tensor = pil2tensor(frame)[0]
-                return_frames.append(tensor)
+                return_frames.append(tensor.detach().cpu())
             self.FILM_temp = [self.FILM_temp[1]]
         print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
         if len(return_frames) > 0:
@@ -1512,7 +1511,7 @@ class DeforumSimpleInterpolationNode:
     RETURN_TYPES = ("IMAGE", "IMAGE")
     RETURN_NAMES = ("IMAGES", "LAST_IMAGE")
     FUNCTION = "fn"
-    display_name = "Deforum Simple Interpolation"
+    display_name = "Simple Interpolation"
     CATEGORY = "deforum"
     @classmethod
     def IS_CHANGED(self, *args, **kwargs):
@@ -1529,19 +1528,24 @@ class DeforumSimpleInterpolationNode:
 
             # with torch.inference_mode():
             # frames = self.model.inference(self.FILM_temp[0], self.FILM_temp[1], inter_frames=inter_frames)
-            from .interp import optical_flow_cadence
-            frames = optical_flow_cadence(self.FILM_temp[0], self.FILM_temp[1], inter_frames + 1, method)
-            # skip_first, skip_last = True, False
-            if skip_first:
-                frames.pop(0)
-            if skip_last:
-                frames.pop(-1)
 
-            for frame in frames:
-                tensor = pil2tensor(frame)[0]
-                return_frames.append(tensor)
+            if inter_frames > 1:
+                from .interp import optical_flow_cadence
+
+                frames = optical_flow_cadence(self.FILM_temp[0], self.FILM_temp[1], inter_frames + 1, method)
+                # skip_first, skip_last = True, False
+                if skip_first:
+                    frames.pop(0)
+                if skip_last:
+                    frames.pop(-1)
+
+                for frame in frames:
+                    tensor = pil2tensor(frame)[0]
+                    return_frames.append(tensor)
+            else:
+                return_frames = [i for i in pil2tensor(self.FILM_temp)[0]]
             self.FILM_temp = [self.FILM_temp[1]]
-        print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
+        print(f"[ Simple Interpolation Node: Created {len(return_frames)} frames ]")
         if len(return_frames) > 0:
             return_frames = torch.stack(return_frames, dim=0)
             return return_frames
@@ -1562,8 +1566,7 @@ class DeforumSimpleInterpolationNode:
             ret = torch.stack(result, dim=0)
         else:
             ret = self.interpolate(image[0], method, inter_amount, skip_first, skip_last)
-        print(ret.shape)
-        print(ret[-1].unsqueeze(0).shape)
+
         return (ret, ret[-1].unsqueeze(0),)
 
 
@@ -1582,7 +1585,7 @@ class DeforumCadenceNode:
     RETURN_TYPES = ("IMAGE", "IMAGE")
     # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
     FUNCTION = "fn"
-    display_name = "Deforum Cadence Interpolation"
+    display_name = "Cadence Interpolation"
     CATEGORY = "deforum"
 
     @classmethod
@@ -1685,11 +1688,8 @@ class DeforumCadenceNode:
             ret = torch.stack(result, dim=0)
         else:
             ret = self.interpolate(image, deforum_frame_data)
-            print(ret.shape)
-        print("CADENCE NODE ", ret.shape)
 
         last = ret[-1].unsqueeze(0)
-        print("LAST", last.shape)
         return (ret, last,)
 
 
@@ -1757,7 +1757,7 @@ class DeforumConditioningBlendNode:
     RETURN_TYPES = ("CONDITIONING", "CONDITIONING")
     RETURN_NAMES = ("POSITIVE", "NEGATIVE")
     FUNCTION = "fn"
-    display_name = "Deforum Blend Conditionings"
+    display_name = "Blend Conditionings"
     CATEGORY = "deforum"
     def fn(self, clip, deforum_frame_data, blend_method):
         areas = deforum_frame_data.get("areas")
@@ -1819,7 +1819,7 @@ class DeforumConditioningBlendNode:
 #
 #     RETURN_TYPES = ("IMAGE",)
 #     FUNCTION = "generate"
-#     display_name = "Deforum 1.1 Node"
+#     display_name = "1.1 Node"
 #     CATEGORY = "deforum"
 #
 #     def generate(self, prompt, steps, guidance_scale, seed):
@@ -1845,8 +1845,6 @@ deforum_node_module = importlib.import_module('deforum-comfy-nodes.deforum_nodes
 
 # Iterate through all classes defined in deforum_nodes.deforum_node
 for name, obj in inspect.getmembers(deforum_node_module):
-
-
     # Check if the member is a class
     if inspect.isclass(obj) and hasattr(obj, "INPUT_TYPES"):
         # Extract the class name and display name
@@ -1854,4 +1852,5 @@ for name, obj in inspect.getmembers(deforum_node_module):
         display_name = getattr(obj, "display_name", name)  # Use class attribute or default to class name
         # Add the class to the mappings
         NODE_CLASS_MAPPINGS[class_name] = obj
-        NODE_DISPLAY_NAME_MAPPINGS[name] = display_name
+        NODE_DISPLAY_NAME_MAPPINGS[name] = "(deforum) " + display_name
+print(NODE_DISPLAY_NAME_MAPPINGS)
