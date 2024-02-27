@@ -1327,6 +1327,20 @@ def find_next_index(output_dir, filename_prefix):
     return next_index
 
 
+import base64
+from io import BytesIO
+def tensor2pil(image):
+    if image is not None:
+        with torch.inference_mode():
+            return Image.fromarray(np.clip(255. * image.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
+    else:
+        return None
+
+def pil_image_to_base64(pil_image):
+    buffer = BytesIO()
+    pil_image.save(buffer, format="WEBP")  # Or JPEG
+    return base64.b64encode(buffer.getvalue()).decode()
+
 class DeforumVideoSaveNode:
     def __init__(self):
         self.output_dir = folder_paths.get_output_directory()
@@ -1336,16 +1350,18 @@ class DeforumVideoSaveNode:
     def INPUT_TYPES(s):
         return {"required":
                     {"image": ("IMAGE",),
-                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      "filename_prefix": ("STRING",{"default":"deforum_"}),
                      "fps": ("INT", {"default": 24, "min": 1, "max": 10000},),
                      "dump_by": (["max_frames", "per_N_frames"],),
                      "dump_every": ("INT", {"default": 0, "min": 0, "max": 4096},),
+                     "dump_now": ("BOOLEAN", {"default": False},),
+                     },
+                "optional":
+                    {"deforum_frame_data": ("DEFORUM_FRAME_DATA",),}
 
-                     }
-                }
+        }
 
-    RETURN_TYPES = ()
+    RETURN_TYPES = ("IMAGE",)
     OUTPUT_NODE = True
 
     FUNCTION = "fn"
@@ -1359,14 +1375,19 @@ class DeforumVideoSaveNode:
             self.images.clear()
         self.images.append(np.array(pil_image).astype(np.uint8))
 
-    def fn(self, image, deforum_frame_data, filename_prefix, fps, dump_by, dump_every):
+    def fn(self, image, filename_prefix, fps, dump_by, dump_every, dump_now, deforum_frame_data={}):
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
 
         counter = find_next_index(full_output_folder, filename_prefix)
 
-        frame_idx = deforum_frame_data["frame_idx"]
-        max_frames = deforum_frame_data["anim_args"].max_frames
+        #frame_idx = deforum_frame_data["frame_idx"]
+
+        anim_args = deforum_frame_data.get("anim_args")
+        if anim_args is not None:
+            max_frames = anim_args.max_frames
+        else:
+            max_frames = image.shape[0] + len(self.images) + 1
 
         if image.shape[0] > 1:
             for img in image:
@@ -1382,7 +1403,7 @@ class DeforumVideoSaveNode:
         else:
             dump = len(self.images) >= dump_every
 
-        if dump == True:  # frame_idx is 0-based
+        if dump or dump_now:  # frame_idx is 0-based
             if len(self.images) >= 2:
                 output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
                 writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=10, pixelformat='yuv420p')
@@ -1390,9 +1411,8 @@ class DeforumVideoSaveNode:
                 for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
                     writer.append_data(frame)
                 writer.close()
-
                 self.images = []  # Empty the list for next use
-        return (image,)
+        return {"ui": {"counter":(len(self.images),), "should_dump":(dump or dump_now,), "frames":([pil_image_to_base64(tensor2pil(i)) for i in image]), "fps":(fps,)}, "result": (image,)}
     @classmethod
     def IS_CHANGED(s, text, autorefresh):
         # Force re-evaluation of the node

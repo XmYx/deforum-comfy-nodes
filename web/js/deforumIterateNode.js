@@ -56,14 +56,157 @@ async function uploadFile(file) {
         alert(error);
     }
 }
+function fitHeight(node) {
+    node.setSize([node.size[0], node.computeSize([node.size[0], node.size[1]])[1]])
+    node?.graph?.setDirtyCanvas(true);
+}
+function addVideoPreview(nodeType) {
+    chainCallback(nodeType.prototype, "onNodeCreated", function() {
+        var element = document.createElement("div");
+        const previewNode = this;
+        var previewWidget = this.addDOMWidget("videopreview", "preview", element, {
+            serialize: false,
+            hideOnZoom: false,
+            getValue() {
+                return element.value;
+            },
+            setValue(v) {
+                element.value = v;
+            },
+        });
+        previewWidget.computeSize = function(width) {
+            if (this.aspectRatio && !this.parentEl.hidden) {
+                let height = (previewNode.size[0]-20)/ this.aspectRatio + 10;
+                if (!(height > 0)) {
+                    height = 0;
+                }
+                this.computedHeight = height + 10;
+                return [width, height];
+            }
+            return [width, -4];//no loaded src, widget should not display
+        }
+        //element.style['pointer-events'] = "none"
+        previewWidget.value = {hidden: false, paused: false, params: {}}
+        previewWidget.parentEl = document.createElement("div");
+        previewWidget.parentEl.className = "deforumVideoSavePreview";
+        previewWidget.parentEl.style['width'] = "100%"
+        element.appendChild(previewWidget.parentEl);
+        previewWidget.imgEl = document.createElement("img");
+        previewWidget.imgEl.style['width'] = "100%"
+        previewWidget.imgEl.hidden = true;
+        previewWidget.imgEl.onload = () => {
+            previewWidget.aspectRatio = previewWidget.imgEl.naturalWidth / previewWidget.imgEl.naturalHeight;
+            fitHeight(this);
+        };
+
+        // Add transport controls
+        const controls = document.createElement("div");
+        controls.style.display = "flex";
+        controls.style.justifyContent = "space-around";
+        previewWidget.parentEl.appendChild(controls);
+
+        // Play button
+        const playButton = document.createElement("button");
+        playButton.innerText = "Play";
+        playButton.onclick = () => {
+            if (!this.playing) {
+                this.startPlayback(this.playbackInterval);
+            }
+        };
+        controls.appendChild(playButton);
+
+        // Stop button
+        const stopButton = document.createElement("button");
+        stopButton.innerText = "Stop";
+        stopButton.onclick = () => {
+            this.stopPlayback();
+            // Reset frameIndex if needed
+            // frameIndex = 0; // Uncomment to reset frame index on stop
+        };
+        controls.appendChild(stopButton);
+
+        // Step Back button
+        const stepBackButton = document.createElement("button");
+        stepBackButton.innerText = "Step Back";
+        stepBackButton.onclick = () => {
+            if (frameIndex > 0) {
+                frameIndex -= 1;
+            } else {
+                frameIndex = cachedFrames.length - 1; // Wrap around to the last frame
+            }
+            updateFrame(frameIndex);
+        };
+        controls.appendChild(stepBackButton);
+
+        // Step Forward button
+        const stepForwardButton = document.createElement("button");
+        stepForwardButton.innerText = "Step Forward";
+        stepForwardButton.onclick = () => {
+            frameIndex = (frameIndex + 1) % cachedFrames.length;
+            updateFrame(frameIndex);
+        };
+        controls.appendChild(stepForwardButton);
+
+
+        previewWidget.parentEl.appendChild(previewWidget.imgEl)
+        let frameIndex = 0;
+        let cachedFrames = this.getCachedFrames(); // Assuming this method exists and retrieves an array of frame data
+
+        // Function to update frame view
+        function updateFrame(index) {
+            cachedFrames = previewNode  .getCachedFrames()
+            if (cachedFrames && cachedFrames.length > 0) {
+                previewWidget.imgEl.hidden = false;
+                previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[index];
+            }
+        }
+
+
+        this.playing = false;
+        this.playbackInterval = 80;
+        this.startPlayback = function(playbackInterval) {
+            if (this.playing) {
+                this.stopPlayback(); // Stop current playback if it's running
+            }
+
+            this.playbackInterval = playbackInterval;
+            const widget = this; // Capture 'this' to use inside setInterval function
+            this.imageSequenceInterval = setInterval(() => {
+                const cachedFrames = this.getCachedFrames();
+                console.log(cachedFrames.length)
+                //const displayFrames = cachedFrames.length > 0 ? cachedFrames : frames;
+                if (cachedFrames && cachedFrames.length > 0) {
+                    previewWidget.imgEl.hidden = false;
+                    previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[frameIndex];
+                    frameIndex = (frameIndex + 1) % cachedFrames.length;
+                }
+            }, this.playbackInterval); // Update frame every 80ms
+        };
+        // Function to stop playback
+        this.stopPlayback = function() {
+            if (this.imageSequenceInterval) {
+                clearInterval(this.imageSequenceInterval);
+                this.imageSequenceInterval = null; // Clear the interval ID
+                this.playing = false; // Mark as not playing
+            }
+        };
+        this.setPlaybackInterval = function(newInterval) {
+            this.playbackInterval = newInterval;
+            if (this.playing) {
+                this.stopPlayback();
+                this.startPlayback(newInterval); // Restart playback with new interval if it's currently playing
+            }
+        };
+
+    });
+}
+
+
 
 function addUploadWidget(nodeType, nodeData, widgetName, type="video") {
     chainCallback(nodeType.prototype, "onNodeCreated", function() {
         const pathWidget = this.widgets.find((w) => w.name === widgetName);
         const fileInput = document.createElement("input");
-//        chainCallback(this, "onRemoved", () => {
-//            fileInput?.remove();
-//        });
         if (type == "folder") {
             Object.assign(fileInput, {
                 type: "file",
@@ -136,6 +279,26 @@ function addUploadWidget(nodeType, nodeData, widgetName, type="video") {
     });
 }
 
+// Extend the node prototype to include frame caching capabilities
+function extendNodePrototypeWithFrameCaching(nodeType) {
+    nodeType.prototype.frameCache = []; // Initialize an empty cache
+
+    // Method to add frames to the cache
+    nodeType.prototype.cacheFrames = function(frames) {
+        this.frameCache = this.frameCache.concat(frames);
+    };
+
+    // Method to clear the frame cache
+    nodeType.prototype.clearFrameCache = function() {
+        this.frameCache = [];
+    };
+
+    // Method to get cached frames
+    nodeType.prototype.getCachedFrames = function() {
+        return this.frameCache;
+    };
+}
+
 
 app.registerExtension({
 	name: "deforum.deforumIterator",
@@ -165,11 +328,6 @@ app.registerExtension({
 
                     const counter = v["counter"]
                     const max_frames = v["max_frames"]
-
-                    console.log("COUNTER")
-                    console.log(counter[0])
-                    console.log("MAX FRAMES")
-                    console.log(max_frames[0])
 
                     if (counter[0] >= max_frames[0]) {
                         //document.getElementById('autoQueueCheckbox').checked = false;
@@ -201,8 +359,85 @@ app.registerExtension({
 				return r;
 			};
 		} else if (nodeType.comfyClass === "DeforumLoadVideo") {
-                console.log("FOUND")
                 addUploadWidget(nodeType, nodeData, "video");
+
+		} else if (nodeType.comfyClass === "DeforumVideoSaveNode") {
+            extendNodePrototypeWithFrameCaching(nodeType);
+            addVideoPreview(nodeType);
+            const onVideoSaveExecuted = nodeType.prototype.onExecuted
+            nodeType.prototype.onExecuted = function (message) {
+
+            const r = onVideoSaveExecuted ? onVideoSaveExecuted.apply(this, message) : undefined
+                for (const w of this.widgets || []) {
+                    if (w.name === "dump_now") {
+                        const dumpWidget = w;
+                        dumpWidget.value = false;
+                        this.shouldResetAnimation = true;
+                    }
+                }
+                const output = app.nodeOutputs?.[this.id + ""];
+                const should_reset = output["should_dump"]
+                const fps = output["fps"]
+                const millisecondsPerFrame = 1000 / fps[0];
+                console.log(millisecondsPerFrame)
+
+
+                if (should_reset === true) {
+                    this.clearFrameCache();
+                }
+
+                if (this.playing === false) {
+                    this.playing = true;
+                    this.cacheFrames(output["frames"]);
+                    this.startPlayback(millisecondsPerFrame);
+
+                } else {
+                    this.setPlaybackInterval(millisecondsPerFrame)
+                    this.cacheFrames(output["frames"]);
+                }
+
+            return r
+            }
+            const onVideoSaveForeground = nodeType.prototype.onDrawForeground;
+            nodeType.prototype.onDrawForeground = function (ctx) {
+                const r = onVideoSaveForeground?.apply?.(this, arguments);
+                const v = app.nodeOutputs?.[this.id + ""];
+                if (!this.flags.collapsed && v) {
+
+                    const text = v["counter"] + " cached frame(s)";
+                    ctx.save();
+
+                    // Set font for measuring text width and for drawing
+                    ctx.font = "bold 14px sans-serif";
+
+                    // Measure text to center it on the rectangle
+                    const sz = ctx.measureText(text);
+                    const textWidth = sz.width;
+                    const textHeight = 14; // Approximation based on font size
+
+                    // Rectangle dimensions and position
+                    const rectWidth = textWidth + 20; // Padding around text
+                    const rectHeight = textHeight + 10; // Padding around text
+                    const rectX = (this.size[0] - rectWidth) / 2;
+                    const rectY = LiteGraph.NODE_TITLE_HEIGHT - rectHeight / 2 - 15;
+
+                    // Draw rectangle
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.8)"; // Semi-transparent dark rectangle
+                    ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+
+                    // Draw text centered in the rectangle
+                    ctx.fillStyle = "white"; // White text color
+                    const textX = (this.size[0] - textWidth) / 2;
+                    const textY = LiteGraph.NODE_TITLE_HEIGHT + textHeight / 2 - 15; // Adjust based on the font size
+
+                    ctx.fillText(text, textX, textY);
+                    ctx.restore();
+
+
+                }
+
+                return r;
+            };
 
 		};
 	},
