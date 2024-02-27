@@ -57,7 +57,7 @@ async function uploadFile(file) {
     }
 }
 function fitHeight(node) {
-    node.setSize([node.size[0], node.computeSize([node.size[0], node.size[1]])[1]])
+    node.setSize([node.size[0], node.computeSize([node.size[0], node.size[1]])[1] + 20])
     node?.graph?.setDirtyCanvas(true);
 }
 function addVideoPreview(nodeType) {
@@ -173,7 +173,6 @@ function addVideoPreview(nodeType) {
             const widget = this; // Capture 'this' to use inside setInterval function
             this.imageSequenceInterval = setInterval(() => {
                 const cachedFrames = this.getCachedFrames();
-                console.log(cachedFrames.length)
                 //const displayFrames = cachedFrames.length > 0 ? cachedFrames : frames;
                 if (cachedFrames && cachedFrames.length > 0) {
                     previewWidget.imgEl.hidden = false;
@@ -312,10 +311,9 @@ app.registerExtension({
 	},
 	beforeRegisterNodeDef(nodeType, nodeData) {
 		if (nodeType.comfyClass === "DeforumIteratorNode") {
-            const onExecuted = nodeType.prototype.onExecuted
+            const onIteratorExecuted = nodeType.prototype.onExecuted
             nodeType.prototype.onExecuted = function (message) {
-
-            const r = onExecuted ? onExecuted.apply(this, message) : undefined
+                const r = onIteratorExecuted ? onIteratorExecuted.apply(this, message) : undefined
                 for (const w of this.widgets || []) {
                     if (w.name === "reset_counter") {
                         const counterWidget = w;
@@ -328,9 +326,7 @@ app.registerExtension({
 
                     const counter = v["counter"]
                     const max_frames = v["max_frames"]
-
                     if (counter[0] >= max_frames[0]) {
-                        //document.getElementById('autoQueueCheckbox').checked = false;
                         if (document.getElementById('autoQueueCheckbox').checked === true) {
                             document.getElementById('autoQueueCheckbox').click();
                         }
@@ -379,12 +375,8 @@ app.registerExtension({
                 const should_reset = output["should_dump"]
                 const fps = output["fps"]
                 const millisecondsPerFrame = 1000 / fps[0];
-                console.log(millisecondsPerFrame)
 
 
-                if (should_reset === true) {
-                    this.clearFrameCache();
-                }
 
                 if (this.playing === false) {
                     this.playing = true;
@@ -395,6 +387,13 @@ app.registerExtension({
                     this.setPlaybackInterval(millisecondsPerFrame)
                     this.cacheFrames(output["frames"]);
                 }
+
+                if (should_reset[0] === true) {
+                    this.stopPlayback();
+                    this.clearFrameCache();
+
+                }
+
 
             return r
             }
