@@ -811,6 +811,7 @@ class DeforumIteratorNode:
             self.first_run = False
         else:
             self.frame_index += 1
+        latent["samples"] = latent["samples"].float()
         return {"ui": {"counter":(self.frame_index,), "max_frames":(anim_args.max_frames,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 
@@ -863,14 +864,36 @@ class DeforumKSampler:
         cfg = deforum_frame_data.get("cfg", 7.5)
         sampler_name = deforum_frame_data.get("sampler_name", "euler_a")
         scheduler = deforum_frame_data.get("scheduler", "normal")
-        # positive = deforum_frame_data.get("positive")
-        # negative = deforum_frame_data.get("negative")
-        # latent_image = deforum_frame_data.get("latent_image")
         denoise = deforum_frame_data.get("denoise", 1.0)
         latent["samples"] = latent["samples"].float()
         #print("DENOISE", denoise)
         return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
                                denoise=denoise)
+
+
+class DeforumFrameDataExtract:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     }
+                }
+    RETURN_TYPES = ("INT", "INT", "FLOAT", "STRING", "STRING", "FLOAT")
+    RETURN_NAMES = ("seed", "steps", "cfg_scale", "sampler_name", "scheduler_name", "denoise")
+    FUNCTION = "get_data"
+    display_name = "Frame Data Extract"
+    CATEGORY = "deforum"
+
+    def get_data(self, deforum_frame_data):
+        from nodes import common_ksampler
+        seed = deforum_frame_data.get("seed", 0)
+        steps = deforum_frame_data.get("steps", 10)
+        cfg = deforum_frame_data.get("cfg", 7.5)
+        sampler_name = deforum_frame_data.get("sampler_name", "euler_a")
+        scheduler = deforum_frame_data.get("scheduler", "normal")
+        denoise = deforum_frame_data.get("denoise", 1.0)
+        #print("DENOISE", denoise)
+        return (seed, steps, cfg, sampler_name, scheduler, denoise,)
 
 
 def tensor2pil(image):
@@ -1023,7 +1046,10 @@ class DeforumColorMatchNode:
         return {"required":
                     {"image": ("IMAGE",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
-                     }
+                     "force_use_sample": ("BOOLEAN", {"default":False},)
+                     },
+                "optional":
+                    {"force_sample_image":("IMAGE",)}
                 }
 
     RETURN_TYPES = ("IMAGE",)
@@ -1036,12 +1062,18 @@ class DeforumColorMatchNode:
 
     color_match_sample = None
 
-    def fn(self, image, deforum_frame_data):
+    def fn(self, image, deforum_frame_data, force_use_sample, force_sample_image=None):
         if image is not None:
             anim_args = deforum_frame_data.get("anim_args")
             image = np.array(tensor2pil(image))
             # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
+            frame_idx = deforum_frame_data.get("frame_idx", 0)
+            if frame_idx == 0 and not force_use_sample:
+                self.color_match_sample = image.copy()
+                return (pil2tensor(image),)
+            if force_use_sample:
+                if force_sample_image is not None:
+                    self.color_match_sample = np.array(tensor2pil(force_sample_image)).copy()
             if anim_args.color_coherence != 'None' and self.color_match_sample is not None:
                 image = maintain_colors(image, self.color_match_sample, anim_args.color_coherence)
             print(f"[ Deforum Color Coherence: {anim_args.color_coherence} ]")

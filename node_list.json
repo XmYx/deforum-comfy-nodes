@@ -1,0 +1,33 @@
+{
+    "DeforumBaseParamsNode": "",
+    "DeforumAnimParamsNode": "",
+    "DeforumTranslationParamsNode": "",
+    "DeforumDepthParamsNode": "",
+    "DeforumNoiseParamsNode": "",
+    "DeforumColorParamsNode": "",
+    "DeforumDiffusionParamsNode": "",
+    "DeforumCadenceParamsNode": "",
+    "DeforumHybridParamsNode": "",
+    "DeforumHybridScheduleNode": "",
+    "DeforumPromptNode": "",
+    "DeforumAreaPromptNode": "",
+    "DeforumSingleSampleNode": "",
+    "DeforumCacheLatentNode": "",
+    "DeforumGetCachedLatentNode": "",
+    "DeforumSeedNode": "",
+    "DeforumIteratorNode": "",
+    "DeforumKSampler": "",
+    "DeforumFrameWarpNode": "",
+    "DeforumColorMatchNode": "",
+    "DeforumAddNoiseNode": "",
+    "DeforumHybridMotionNode": "",
+    "DeforumSetVAEDownscaleRatioNode": "",
+    "DeforumLoadVideo": "",
+    "DeforumVideoSaveNode": "",
+    "DeforumFILMInterpolationNode": "",
+    "DeforumSimpleInterpolationNode": "",
+    "DeforumCadenceNode": "",
+    "DeforumConditioningBlendNode": ""
+}
+
+
