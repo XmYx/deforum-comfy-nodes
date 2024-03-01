@@ -27,6 +27,9 @@ def new_standalone_cadence(args, anim_args, root, keys, frame_idx, depth_model, 
     # emit in-between frames
     if turbo_steps > 1:
         tween_frame_start_idx = max(start_frame, frame_idx - turbo_steps)
+
+        # print("CADENCE DEBUG", start_frame, frame_idx, tween_frame_start_idx, range(tween_frame_start_idx, frame_idx))
+
         cadence_flow = None
         for tween_frame_idx in range(tween_frame_start_idx, frame_idx):
             # update progress during cadence

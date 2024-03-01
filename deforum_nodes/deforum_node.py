@@ -813,7 +813,7 @@ class DeforumIteratorNode:
         #if anim_args.diffusion_cadence > 1:
         # global turbo_prev_img, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
         if anim_args.diffusion_cadence > 1:
-            self.frame_index += anim_args.diffusion_cadence if not self.first_run else 0# if anim_args.diffusion_cadence == 1
+            self.frame_index += anim_args.diffusion_cadence# if not self.first_run else 0# if anim_args.diffusion_cadence == 1
 
             # if turbo_steps > 1:
             # turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx
@@ -1645,7 +1645,7 @@ class DeforumCadenceNode:
         return_frames = []
         pil_image = tensor2pil(image.clone().detach())
         np_image = np.array(pil_image.convert("RGB"))
-        self.FILM_temp.append(np_image)
+        # self.FILM_temp.append(np_image)
         args = deforum_frame_data["args"]
         anim_args = deforum_frame_data["anim_args"]
         predict_depths = (
@@ -1688,7 +1688,7 @@ class DeforumCadenceNode:
         # if len(self.FILM_temp) == 2:
         #global turbo_prev_image, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
         standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx
-        standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]
+        standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"] + 1
 
 
         # with torch.inference_mode():
@@ -1714,7 +1714,7 @@ class DeforumCadenceNode:
 
 
         # skip_first, skip_last = True, False
-        x = 0
+        # x = 0
         for frame in frames:
             # img = Image.fromarray(frame)
             # img.save(f"cadence_{x}.png", "PNG")
