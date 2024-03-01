@@ -138,19 +138,19 @@ def clone_or_pull_repo(repo_url: str, repo_dir: str) -> None:
 def install():
     repositories = [
         "https://github.com/ceruleandeep/ComfyUI-LLaVA-Captioner.git",
-        "https://github.com/rgthree/rgthree-comfy",
-        "https://github.com/a1lazydog/ComfyUI-AudioScheduler",
-        "https://github.com/cubiq/ComfyUI_IPAdapter_plus",
-        "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite",
-        "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet",
-        "https://github.com/WASasquatch/was-node-suite-comfyui",
-        "https://github.com/11cafe/comfyui-workspace-manager",
-        "https://github.com/cubiq/ComfyUI_essentials",
-        "https://github.com/FizzleDorf/ComfyUI_FizzNodes",
-        "https://github.com/ltdrdata/ComfyUI-Impact-Pack",
-        "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation",
-        "https://github.com/Fannovel16/ComfyUI-Video-Matting",
-        "https://github.com/crystian/ComfyUI-Crystools"
+        "https://github.com/rgthree/rgthree-comfy.git",
+        "https://github.com/a1lazydog/ComfyUI-AudioScheduler.git",
+        "https://github.com/cubiq/ComfyUI_IPAdapter_plus.git",
+        "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git",
+        "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git",
+        "https://github.com/WASasquatch/was-node-suite-comfyui.git",
+        "https://github.com/11cafe/comfyui-workspace-manager.git",
+        "https://github.com/cubiq/ComfyUI_essentials.git",
+        "https://github.com/FizzleDorf/ComfyUI_FizzNodes.git",
+        "https://github.com/ltdrdata/ComfyUI-Impact-Pack.git",
+        "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git",
+        "https://github.com/Fannovel16/ComfyUI-Video-Matting.git",
+        "https://github.com/crystian/ComfyUI-Crystools.git"
         # Add more repositories as needed
     ]
     comfyui_path = find_path("ComfyUI")
