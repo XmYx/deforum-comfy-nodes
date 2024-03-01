@@ -1889,10 +1889,10 @@ class DeforumAmplitudeToKeyframeSeriesNode:
         return {"required":
                     {"type_name": (schedule_types,),
                      "amplitude": ("AMPLITUDE",),
-                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      },
                 "optional":
                     {
+                        "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                         "math": ("STRING", {"default":"/1000"})
                     }
                 }
@@ -1928,7 +1928,7 @@ class DeforumAmplitudeToKeyframeSeriesNode:
         # Force re-evaluation of the node
         return float("NaN")
 
-    def convert(self, type_name, amplitude, deforum_frame_data, math="x/100"):
+    def convert(self, type_name, amplitude, deforum_frame_data={}, math="x/100"):
 
 
         # Apply the math expression to each element of the amplitude series
@@ -1943,7 +1943,32 @@ class DeforumAmplitudeToKeyframeSeriesNode:
 
         if "keys" in deforum_frame_data:
             setattr(deforum_frame_data["keys"], f"{type_name}_series", modified_amplitude_series)
-        return (deforum_frame_data,modified_amplitude_list,)
+        return (deforum_frame_data, modified_amplitude_list,)
+
+
+class DeforumAmplitudeToString:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"amplitude": ("AMPLITUDE",),
+                     },
+                }
+
+    RETURN_TYPES = ("STRING",)
+    # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
+    FUNCTION = "convert"
+    display_name = "Amplitude to String"
+    CATEGORY = "deforum"
+
+
+    @classmethod
+    def IS_CHANGED(self, *args, **kwargs):
+        # Force re-evaluation of the node
+        return float("NaN")
+
+    def convert(self, amplitude):
+
+        return (str(amplitude),)
 
 
 
