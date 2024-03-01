@@ -148,14 +148,14 @@ def new_standalone_cadence(args, anim_args, root, keys, frame_idx, depth_model, 
             #     img = do_overlay_mask(args, anim_args, img, tween_frame_idx, True)
 
             # get prev_img during cadence
-            prev_img = img
+            #prev_img = img
 
             # current image update for cadence frames (left commented because it doesn't currently update the preview)
             # state.current_image = Image.fromarray(cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB))
 
             # saving cadence frames
-            filename = f"{root.timestring}_{tween_frame_idx:09}.png"
-            cv2.imwrite(os.path.join("cadence_test", filename), img)
+            #filename = f"{root.timestring}_{tween_frame_idx:09}.png"
+            #cv2.imwrite(os.path.join("cadence_test", filename), img)
             imgs.append(img)
     return imgs
 

@@ -1688,7 +1688,7 @@ class DeforumCadenceNode:
         # if len(self.FILM_temp) == 2:
         #global turbo_prev_image, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
         standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx
-        standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"] + 1
+        standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]
 
 
         # with torch.inference_mode():
