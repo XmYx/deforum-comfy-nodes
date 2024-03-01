@@ -165,7 +165,8 @@ def install():
 
 
 try:
-    install()
+    print("")
+    #install()
 
 except Exception as e:
     print("[ERROR] deforum-comfy-nodes: Recommended Node package(s) installation failed.")
