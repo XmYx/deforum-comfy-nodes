@@ -17,6 +17,24 @@ To install Deforum for ComfyUI we will clone this repo into the `custom_nodes` f
 git clone https://github.com/XmYx/deforum-comfy-nodes.git
 ```
 
+## Recommended Custom Nodes
+Here is a list of extra custom nodes that greatly improves the experience of using Deforum.
+```bash
+https://github.com/rgthree/rgthree-comfy
+https://github.com/a1lazydog/ComfyUI-AudioScheduler
+https://github.com/cubiq/ComfyUI_IPAdapter_plus
+https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet
+https://github.com/WASasquatch/was-node-suite-comfyui
+https://github.com/11cafe/comfyui-workspace-manager
+https://github.com/cubiq/ComfyUI_essentials
+https://github.com/FizzleDorf/ComfyUI_FizzNodes
+https://github.com/ltdrdata/ComfyUI-Impact-Pack
+https://github.com/Fannovel16/ComfyUI-Frame-Interpolation
+https://github.com/Fannovel16/ComfyUI-Video-Matting
+https://github.com/crystian/ComfyUI-Crystools
+```
+
 ## Usage
 
 1. Launch ComfyUI
