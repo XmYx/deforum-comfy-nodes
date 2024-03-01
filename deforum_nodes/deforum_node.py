@@ -58,6 +58,9 @@ deforum_cache = {}
 deforum_models = {}
 video_extensions = ['webm', 'mp4', 'mkv', 'gif']
 deforum_depth_algo = ""
+
+from .standalone_cadence import new_standalone_cadence
+
 def parse_widget(widget_info: dict) -> tuple:
     parsed_widget = None
     t = widget_info["type"]
@@ -680,6 +683,9 @@ class DeforumIteratorNode:
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
         if self.frame_index > anim_args.max_frames or reset_counter:
+            from . import standalone_cadence
+            standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = None, 0
+            standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = None, 0
             self.reset_counter = False
             # self.reset_iteration()
             self.frame_index = 0
@@ -805,9 +811,15 @@ class DeforumIteratorNode:
             gen_args["denoise"] = keys.strength_schedule_series[0]
 
         #if anim_args.diffusion_cadence > 1:
-
+        # global turbo_prev_img, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
         if anim_args.diffusion_cadence > 1:
             self.frame_index += anim_args.diffusion_cadence if not self.first_run else 0# if anim_args.diffusion_cadence == 1
+
+            # if turbo_steps > 1:
+            # turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx
+            # turbo_next_image, turbo_next_frame_idx = opencv_image, self.frame_index
+                # frame_idx += turbo_steps
+
             self.first_run = False
         else:
             self.frame_index += 1
@@ -1628,7 +1640,8 @@ class DeforumCadenceNode:
 
     def interpolate(self, image, deforum_frame_data):
         global deforum_depth_algo
-
+        #global turbo_prev_image, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
+        from . import standalone_cadence# import turbo_prev_image, turbo_next_image, turbo_next_frame_idx, turbo_prev_frame_idx
         return_frames = []
         pil_image = tensor2pil(image.clone().detach())
         np_image = np.array(pil_image.convert("RGB"))
@@ -1672,34 +1685,45 @@ class DeforumCadenceNode:
         if "raft_model" not in deforum_models:
             deforum_models["raft_model"] = RAFT()
 
-        if len(self.FILM_temp) == 2:
+        # if len(self.FILM_temp) == 2:
+        #global turbo_prev_image, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
+        standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx
+        standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]
 
-            # with torch.inference_mode():
-            with torch.no_grad():
-                from .standalone_cadence import standalone_cadence
-                frames, _, _ = standalone_cadence(self.FILM_temp[0],
-                                            self.FILM_temp[1],
-                                            deforum_frame_data["frame_idx"],
-                                            anim_args.diffusion_cadence,
-                                            deforum_frame_data["args"],
+
+        # with torch.inference_mode():
+        with torch.no_grad():
+
+            # frames, _, _ = standalone_cadence(self.FILM_temp[0],
+            #                             self.FILM_temp[1],
+            #                             deforum_frame_data["frame_idx"],
+            #                             anim_args.diffusion_cadence,
+            #                             deforum_frame_data["args"],
+            #                             deforum_frame_data["anim_args"],
+            #                             deforum_frame_data["keys"],
+            #                             deforum_models["raft_model"],
+            #                             deforum_models["depth_model"]
+            #                             )
+            frames = new_standalone_cadence(deforum_frame_data["args"],
                                             deforum_frame_data["anim_args"],
+                                            deforum_frame_data["root"],
                                             deforum_frame_data["keys"],
-                                            deforum_models["raft_model"],
-                                            deforum_models["depth_model"]
-                                            )
+                                            deforum_frame_data["frame_idx"],
+                                            deforum_models["depth_model"],
+                                            deforum_models["raft_model"])
 
 
-            # skip_first, skip_last = True, False
-            x = 0
-            for frame in frames:
-                # img = Image.fromarray(frame)
-                # img.save(f"cadence_{x}.png", "PNG")
-                # x += 1
-                tensor = pil2tensor(frame)
+        # skip_first, skip_last = True, False
+        x = 0
+        for frame in frames:
+            # img = Image.fromarray(frame)
+            # img.save(f"cadence_{x}.png", "PNG")
+            # x += 1
+            tensor = pil2tensor(frame)
 
 
-                return_frames.append(tensor.squeeze(0))
-            self.FILM_temp = [self.FILM_temp[1]]
+            return_frames.append(tensor.squeeze(0))
+            #self.FILM_temp = [self.FILM_temp[1]]
         print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
         if len(return_frames) > 0:
             return_frames = torch.stack(return_frames, dim=0)
