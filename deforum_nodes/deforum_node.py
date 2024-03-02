@@ -539,6 +539,69 @@ class DeforumGetCachedLatentNode:
         return (latent,)
 
 
+
+class DeforumCacheImageNode:
+    @classmethod
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Force re-evaluation of the node
+        # if autorefresh == "Yes":
+        return float("NaN")
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "cache_index": ("INT", {"default":0, "min": 0, "max": 16, "step": 1})
+            }
+        }
+
+    RETURN_TYPES = (("IMAGE",))
+    FUNCTION = "cache_it"
+    CATEGORY = f"deforum"
+    display_name = "Cache Image"
+    OUTPUT_NODE = True
+
+    def cache_it(self, image=None, cache_index=0):
+        global deforum_cache
+        print("DEFORUM CACHING IMAGE ON SLOT", cache_index)
+        if "image" not in deforum_cache:
+
+            deforum_cache["image"] = {}
+
+        deforum_cache["image"][cache_index] = image
+
+        return (image,)
+
+
+class DeforumGetCachedImageNode:
+
+    @classmethod
+    def IS_CHANGED(cls, text, autorefresh):
+        # Force re-evaluation of the node
+        if autorefresh == "Yes":
+            return float("NaN")
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+
+            "cache_index": ("INT", {"default": 0, "min": 0, "max": 16, "step": 1})
+
+        }}
+
+    RETURN_TYPES = (("IMAGE",))
+    FUNCTION = "get_cached_latent"
+    CATEGORY = f"deforum"
+    OUTPUT_NODE = True
+    display_name = "Load Cached Image"
+
+    def get_cached_latent(self, cache_index=0):
+        img_dict = deforum_cache.get("image", {})
+        image = img_dict.get(cache_index)
+        return (image,)
+
+
 class DeforumSeedNode:
     @classmethod
     def IS_CHANGED(cls, *args, **kwargs):
@@ -790,6 +853,8 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent or not hasattr(self, "rng"):
+            global deforum_cache
+            deforum_cache.clear()
             if latent_type == "stable_diffusion":
                 channels = 4
                 compression = 8
@@ -808,8 +873,6 @@ class DeforumIteratorNode:
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
         else:
-
-
             if latent_type == "stable_diffusion" and slerp_strength > 0:
                 args.height, args.width = latent["samples"].shape[2] * 8, latent["samples"].shape[3] * 8
                 l = self.rng.next().clone().to(comfy.model_management.intermediate_device())
@@ -954,18 +1017,19 @@ class DeforumFrameWarpNode:
         return {"required":
                     {"image": ("IMAGE",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     "warp_depth_image": ("BOOLEAN",{"default":False}),
                      }
                 }
 
-    RETURN_TYPES = ("IMAGE","IMAGE")
-    RETURN_NAMES = ("IMAGE","DEPTH")
+    RETURN_TYPES = ("IMAGE","IMAGE","IMAGE")
+    RETURN_NAMES = ("IMAGE","DEPTH", "WARPED_DEPTH")
     FUNCTION = "fn"
     display_name = "Frame Warp"
     CATEGORY = "deforum"
 
 
 
-    def fn(self, image, deforum_frame_data):
+    def fn(self, image, deforum_frame_data, warp_depth_image):
         from deforum.models import DepthModel
         from deforum.utils.deforum_framewarp_utils import anim_frame_warp
         np_image = None
@@ -983,6 +1047,7 @@ class DeforumFrameWarpNode:
             anim_args = data.get("anim_args")
             keys = data.get("keys")
             frame_idx = data.get("frame_idx")
+            print(keys.translation_z_series[frame_idx])
 
             # print(keys.translation_z_series[frame_idx])
 
@@ -1022,8 +1087,9 @@ class DeforumFrameWarpNode:
                 self.depth_model = None
             if self.depth_model is not None:
                 self.depth_model.to('cuda')
+            prev_depth = self.depth
             warped_np_img, self.depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx,
-                                                              depth_model=self.depth_model, depth=self.depth, device='cuda',
+                                                              depth_model=self.depth_model, depth=prev_depth, device='cuda',
                                                               half_precision=True)
 
             image = Image.fromarray(cv2.cvtColor(warped_np_img, cv2.COLOR_BGR2RGB))
@@ -1035,10 +1101,20 @@ class DeforumFrameWarpNode:
                     depth_image = self.depth_model.to_image(self.depth.detach().cpu())
                 else:
                     depth_image = self.depth_model.to_image(self.depth[0].detach().cpu())
-
                 ret_depth = pil2tensor(depth_image).detach().cpu()
+                if warp_depth_image:
+                    depth_image, _, _ = anim_frame_warp(np.array(depth_image), args, anim_args, keys, frame_idx,
+                                                                      depth_model=self.depth_model, depth=prev_depth,
+                                                                      device='cuda',
+                                                                      half_precision=True)
+                    warped_depth_image = Image.fromarray(depth_image)
+                    warped_ret = pil2tensor(warped_depth_image).detach().cpu()
+                else:
+                    warped_ret = ret_depth
+
             else:
                 ret_depth = tensor
+                warped_ret = tensor
             # if gs.vram_state in ["low", "medium"] and self.depth_model is not None:
             #     self.depth_model.to('cpu')
 
@@ -1063,10 +1139,10 @@ class DeforumFrameWarpNode:
             #                                     antialiasing=True, by_convs=True, scale_tolerance=None,
             #                                     max_numerator=10, pad_mode='reflect')
             # print(mask.shape)
-            return (tensor, ret_depth,)
+            return (tensor, ret_depth,warped_ret,)
             # return [data, tensor, mask, ret_depth, self.depth_model]
         else:
-            return (image, image,)
+            return (image, image,image,)
 
 
 class DeforumColorMatchNode:
@@ -2027,6 +2103,38 @@ class DeforumAmplitudeToString:
     def convert(self, amplitude):
 
         return (str(amplitude),)
+
+
+class DeforumControlNetApply:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"conditioning": ("CONDITIONING", ),
+                             "control_net": ("CONTROL_NET", ),
+                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01})
+                             },
+                "optional": {"image": ("IMAGE",)}
+                }
+    RETURN_TYPES = ("CONDITIONING",)
+    FUNCTION = "apply_controlnet"
+    display_name = "Apply ControlNet [safe]"
+
+    CATEGORY = "deforum"
+
+    def apply_controlnet(self, conditioning, control_net, strength, image=None):
+        if strength == 0 or image is None:
+            return (conditioning, )
+        c = []
+        control_hint = image.movedim(-1,1)
+        for t in conditioning:
+            n = [t[0], t[1].copy()]
+            c_net = control_net.copy().set_cond_hint(control_hint, strength)
+            if 'control' in t[1]:
+                c_net.set_previous_controlnet(t[1]['control'])
+            n[1]['control'] = c_net
+            n[1]['control_apply_to_uncond'] = True
+            c.append(n)
+        return (c, )
+
 
 
 
