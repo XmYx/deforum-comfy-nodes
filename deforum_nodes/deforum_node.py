@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 import torch
 from PIL import Image
+from einops import rearrange, repeat
 
 from deforum import DeforumAnimationPipeline, ImageRNGNoise, FilmModel
 from deforum.generators.deforum_flow_generator import get_flow_from_images
@@ -542,10 +543,10 @@ class DeforumGetCachedLatentNode:
 
 class DeforumCacheImageNode:
     @classmethod
-    def IS_CHANGED(cls, *args, **kwargs):
+    def IS_CHANGED(cls, text, autorefresh):
         # Force re-evaluation of the node
-        # if autorefresh == "Yes":
-        return float("NaN")
+        if autorefresh == "Yes":
+            return float("NaN")
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -564,13 +565,9 @@ class DeforumCacheImageNode:
 
     def cache_it(self, image=None, cache_index=0):
         global deforum_cache
-        print("DEFORUM CACHING IMAGE ON SLOT", cache_index)
         if "image" not in deforum_cache:
-
             deforum_cache["image"] = {}
-
-        deforum_cache["image"][cache_index] = image
-
+        deforum_cache["image"][cache_index] = image.clone()
         return (image,)
 
 
@@ -1012,13 +1009,18 @@ class DeforumFrameWarpNode:
         self.depth_model = None
         self.depth = None
         self.algo = ""
+        self.depth_min, self.depth_max = 1000, -1000
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
                     {"image": ("IMAGE",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      "warp_depth_image": ("BOOLEAN",{"default":False}),
-                     }
+                     },
+                "optional":
+                    {
+                        "depth_image":("IMAGE",),
+                    }
                 }
 
     RETURN_TYPES = ("IMAGE","IMAGE","IMAGE")
@@ -1029,7 +1031,7 @@ class DeforumFrameWarpNode:
 
 
 
-    def fn(self, image, deforum_frame_data, warp_depth_image):
+    def fn(self, image, deforum_frame_data, warp_depth_image, depth_image=None):
         from deforum.models import DepthModel
         from deforum.utils.deforum_framewarp_utils import anim_frame_warp
         np_image = None
@@ -1058,6 +1060,9 @@ class DeforumFrameWarpNode:
             predict_depths = predict_depths or (
                     anim_args.hybrid_composite and anim_args.hybrid_comp_mask_type in ['Depth', 'Video Depth'])
 
+
+            if depth_image is not None:
+                predict_depths = False
             if self.depth_model == None or self.algo != anim_args.depth_algorithm:
                 self.vram_state = "high"
                 if self.depth_model is not None:
@@ -1087,27 +1092,37 @@ class DeforumFrameWarpNode:
                 self.depth_model = None
             if self.depth_model is not None:
                 self.depth_model.to('cuda')
-            prev_depth = self.depth
-            warped_np_img, self.depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx,
-                                                              depth_model=self.depth_model, depth=prev_depth, device='cuda',
-                                                              half_precision=True)
+            #print(depth_image.shape)
+            if depth_image is not None:
 
+                depth_image = comfy.utils.common_upscale(depth_image.permute(0,3,1,2), args.width, args.height, upscale_method="bislerp", crop="disabled")
+                depth_image = depth_image.permute(0,2,3,1) * 255.0
+
+                if depth_image.dim() > 2:
+
+                    depth_image = depth_image[0].mean(dim=-1)  # Take the mean across the color channels
+
+            warped_np_img, depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx,
+                                                              depth_model=self.depth_model, depth=depth_image, device='cuda',
+                                                              half_precision=True)
             image = Image.fromarray(cv2.cvtColor(warped_np_img, cv2.COLOR_BGR2RGB))
             tensor = pil2tensor(image)
-            if self.depth is not None:
-                num_channels = len(self.depth.shape)
+            if depth is not None:
+                num_channels = len(depth.shape)
 
                 if num_channels <= 3:
-                    depth_image = self.depth_model.to_image(self.depth.detach().cpu())
+                    depth_image_pil = self.to_image(depth.detach().cpu())
                 else:
-                    depth_image = self.depth_model.to_image(self.depth[0].detach().cpu())
-                ret_depth = pil2tensor(depth_image).detach().cpu()
+                    depth_image_pil = self.to_image(depth[0].detach().cpu())
+
+
+                ret_depth = pil2tensor(depth_image_pil).detach().cpu()
                 if warp_depth_image:
-                    depth_image, _, _ = anim_frame_warp(np.array(depth_image), args, anim_args, keys, frame_idx,
-                                                                      depth_model=self.depth_model, depth=prev_depth,
+                    warped_depth, _, _ = anim_frame_warp(np.array(depth_image_pil), args, anim_args, keys, frame_idx,
+                                                                      depth_model=self.depth_model, depth=depth_image,
                                                                       device='cuda',
                                                                       half_precision=True)
-                    warped_depth_image = Image.fromarray(depth_image)
+                    warped_depth_image = Image.fromarray(warped_depth)
                     warped_ret = pil2tensor(warped_depth_image).detach().cpu()
                 else:
                     warped_ret = ret_depth
@@ -1115,6 +1130,8 @@ class DeforumFrameWarpNode:
             else:
                 ret_depth = tensor
                 warped_ret = tensor
+            self.depth = depth
+
             # if gs.vram_state in ["low", "medium"] and self.depth_model is not None:
             #     self.depth_model.to('cpu')
 
@@ -1143,7 +1160,13 @@ class DeforumFrameWarpNode:
             # return [data, tensor, mask, ret_depth, self.depth_model]
         else:
             return (image, image,image,)
-
+    def to_image(self, depth: torch.Tensor):
+        depth = depth.cpu().numpy()
+        depth = np.expand_dims(depth, axis=0) if len(depth.shape) == 2 else depth
+        self.depth_min, self.depth_max = min(self.depth_min, depth.min()), max(self.depth_max, depth.max())
+        denom = max(1e-8, self.depth_max - self.depth_min)
+        temp = rearrange((depth - self.depth_min) / denom * 255, 'c h w -> h w c')
+        return Image.fromarray(repeat(temp, 'h w 1 -> h w c', c=3).astype(np.uint8))
 
 class DeforumColorMatchNode:
 
