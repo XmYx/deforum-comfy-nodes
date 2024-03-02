@@ -488,7 +488,8 @@ class DeforumCacheLatentNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "latent": ("LATENT",)
+                "latent": ("LATENT",),
+                "cache_index": ("INT", {"default":0, "min": 0, "max": 16, "step": 1})
             }
         }
 
@@ -498,9 +499,15 @@ class DeforumCacheLatentNode:
     display_name = "Cache Latent"
     OUTPUT_NODE = True
 
-    def cache_it(self, latent=None):
+    def cache_it(self, latent=None, cache_index=0):
         global deforum_cache
-        deforum_cache["latent"] = latent
+
+        if "latent" not in deforum_cache:
+
+            deforum_cache["latent"] = {}
+
+        deforum_cache["latent"][cache_index] = latent
+
         return (latent,)
 
 
@@ -514,7 +521,11 @@ class DeforumGetCachedLatentNode:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {}}
+        return {"required": {
+
+            "cache_index": ("INT", {"default": 0, "min": 0, "max": 16, "step": 1})
+
+        }}
 
     RETURN_TYPES = (("LATENT",))
     FUNCTION = "get_cached_latent"
@@ -522,8 +533,9 @@ class DeforumGetCachedLatentNode:
     OUTPUT_NODE = True
     display_name = "Load Cached Latent"
 
-    def get_cached_latent(self):
-        latent = deforum_cache.get("latent")
+    def get_cached_latent(self, cache_index=0):
+        latent_dict = deforum_cache.get("latent", {})
+        latent = latent_dict.get(cache_index)
         return (latent,)
 
 
@@ -586,6 +598,9 @@ class DeforumIteratorNode:
 
     def __init__(self):
         self.first_run = True
+        self.frame_index = 0
+        self.seed = ""
+        self.seeds = []
 
     @classmethod
     def IS_CHANGED(cls, *args, **kwargs):
@@ -618,9 +633,7 @@ class DeforumIteratorNode:
     OUTPUT_NODE = True
     CATEGORY = f"deforum"
     display_name = "Iterator Node"
-    frame_index = 0
-    seed = ""
-    seeds = []
+
 
     @torch.inference_mode()
     def get(self, deforum_data, latent_type, latent=None, init_latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, *args, **kwargs):
@@ -890,8 +903,8 @@ class DeforumFrameDataExtract:
                     {"deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      }
                 }
-    RETURN_TYPES = ("INT", "INT", "FLOAT", "STRING", "STRING", "FLOAT")
-    RETURN_NAMES = ("seed", "steps", "cfg_scale", "sampler_name", "scheduler_name", "denoise")
+    RETURN_TYPES = ("INT","INT", "INT", "FLOAT", "STRING", "STRING", "FLOAT", "FLOAT")
+    RETURN_NAMES = ("frame_idx", "seed", "steps", "cfg_scale", "sampler_name", "scheduler_name", "denoise", "subseed_strength")
     FUNCTION = "get_data"
     display_name = "Frame Data Extract"
     CATEGORY = "deforum"
@@ -904,8 +917,13 @@ class DeforumFrameDataExtract:
         sampler_name = deforum_frame_data.get("sampler_name", "euler_a")
         scheduler = deforum_frame_data.get("scheduler", "normal")
         denoise = deforum_frame_data.get("denoise", 1.0)
+
+        keys = deforum_frame_data.get("keys")
+        frame_idx = deforum_frame_data.get("frame_idx")
+        subseed_str = keys.subseed_strength_schedule_series[frame_idx]
+
         #print("DENOISE", denoise)
-        return (seed, steps, cfg, sampler_name, scheduler, denoise,)
+        return (frame_idx, seed, steps, cfg, sampler_name, scheduler, denoise,subseed_str,)
 
 
 def tensor2pil(image):
@@ -1053,6 +1071,11 @@ class DeforumFrameWarpNode:
 
 class DeforumColorMatchNode:
 
+    def __init__(self):
+        self.depth_model = None
+        self.algo = ""
+        self.color_match_sample = None
+
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
@@ -1069,10 +1092,7 @@ class DeforumColorMatchNode:
     display_name = "Color Match"
     CATEGORY = "deforum"
 
-    depth_model = None
-    algo = ""
 
-    color_match_sample = None
 
     def fn(self, image, deforum_frame_data, force_use_sample, force_sample_image=None):
         if image is not None:
@@ -1732,22 +1752,34 @@ class DeforumCadenceNode:
         else:
             return image
 
-
     def fn(self, image, deforum_frame_data):
         result = []
 
+        # Check if there are multiple images in the batch
         if image.shape[0] > 1:
             for img in image:
+                # Ensure img has batch dimension of 1 for interpolation
                 interpolated_frames = self.interpolate(img.unsqueeze(0), deforum_frame_data)
 
+                # Collect all interpolated frames
                 for f in interpolated_frames:
                     result.append(f)
-
+            # Stack all results into a single tensor, preserving color channels
             ret = torch.stack(result, dim=0)
         else:
+            # Directly interpolate if only one image is present
             ret = self.interpolate(image, deforum_frame_data)
 
-        last = ret[-1].unsqueeze(0)
+        # The issue might be with how the last frame is being extracted or processed.
+        # Ensure the last frame has the correct shape and color channels.
+        # Adding unsqueeze(0) to keep the batch dimension consistent.
+        last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
+
+        # Ensure the color information is consistent (RGB channels)
+        if last.shape[1] != 3:
+            # This is just a placeholder check; you might need a different check or fix based on your specific context.
+            print("Warning: The last frame does not have 3 color channels. Check your interpolate function.")
+
         return (ret, last,)
 
 
@@ -1799,10 +1831,11 @@ def blend_tensors(obj1, obj2, blend_value, blend_method="linear"):
     return [[blended_cond, {"pooled_output": blended_pooled}]]
 
 class DeforumConditioningBlendNode:
-    prompt = None
-    n_prompt = None
-    cond = None
-    n_cond = None
+    def __init__(self):
+        self.prompt = None
+        self.n_prompt = None
+        self.cond = None
+        self.n_cond = None
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
@@ -1994,6 +2027,7 @@ class DeforumAmplitudeToString:
     def convert(self, amplitude):
 
         return (str(amplitude),)
+
 
 
 
