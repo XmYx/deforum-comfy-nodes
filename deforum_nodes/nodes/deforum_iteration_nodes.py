@@ -112,7 +112,7 @@ class DeforumIteratorNode:
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
         if self.frame_index > anim_args.max_frames or reset_counter:
-            from . import standalone_cadence
+            from ..modules.standalone_cadence import standalone_cadence
             standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = None, 0
             standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = None, 0
             self.reset_counter = False
@@ -206,7 +206,8 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent or not hasattr(self, "rng"):
-            from .deforum_cache_nodes import deforum_cache
+            from ..modules.deforum_constants import deforum_cache
+            global deforum_cache
             deforum_cache.clear()
             if latent_type == "stable_diffusion":
                 channels = 4
