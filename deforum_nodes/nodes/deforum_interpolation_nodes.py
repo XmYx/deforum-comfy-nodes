@@ -3,7 +3,7 @@ import numpy as np
 
 from deforum import FilmModel
 from deforum.models import DepthModel, RAFT
-from ..modules import standalone_cadence
+from ..modules.standalone_cadence import CandenceInterpolator
 from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor
 
 from ..modules.deforum_constants import deforum_cache, deforum_models, deforum_depth_algo
@@ -226,15 +226,16 @@ class DeforumCadenceNode:
             deforum_models["raft_model"] = RAFT()
 
         if deforum_frame_data["frame_idx"] == 0:
+            self.interpolator = CandenceInterpolator()
             deforum_frame_data["frame_idx"] += anim_args.diffusion_cadence
-        standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx
-        standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]
+        self.interpolator.turbo_prev_image, self.interpolator.turbo_prev_frame_idx = self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx
+        self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]
 
         # with torch.inference_mode():
         with torch.no_grad():
 
-            from ..modules.standalone_cadence import new_standalone_cadence
-            frames = new_standalone_cadence(deforum_frame_data["args"],
+            # from ..modules.standalone_cadence import new_standalone_cadence
+            frames = self.interpolator.new_standalone_cadence(deforum_frame_data["args"],
                                             deforum_frame_data["anim_args"],
                                             deforum_frame_data["root"],
                                             deforum_frame_data["keys"],

@@ -112,9 +112,9 @@ class DeforumIteratorNode:
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
         if self.frame_index > anim_args.max_frames or reset_counter:
-            from . import standalone_cadence
-            standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = None, 0
-            standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = None, 0
+            # from . import standalone_cadence
+            # standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = None, 0
+            # standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = None, 0
             self.reset_counter = False
             # self.reset_iteration()
             self.frame_index = 0
@@ -242,7 +242,7 @@ class DeforumIteratorNode:
         #if anim_args.diffusion_cadence > 1:
         # global turbo_prev_img, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
         if anim_args.diffusion_cadence > 1:
-            self.frame_index += anim_args.diffusion_cadence if not self.first_run else 0# if anim_args.diffusion_cadence == 1
+            self.frame_index += anim_args.diffusion_cadence# if not self.first_run else 0# if anim_args.diffusion_cadence == 1
 
             # if turbo_steps > 1:
             # turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx
