@@ -95,7 +95,7 @@ class DeforumVideoSaveNode:
     def INPUT_TYPES(s):
         return {"required":
                     {"image": ("IMAGE",),
-                     "filename_prefix": ("STRING",{"default":"deforum_"}),
+                     "filename_prefix": ("STRING",{"default":"Deforum"}),
                      "fps": ("INT", {"default": 24, "min": 1, "max": 10000},),
                      "dump_by": (["max_frames", "per_N_frames"],),
                      "dump_every": ("INT", {"default": 0, "min": 0, "max": 4096},),
