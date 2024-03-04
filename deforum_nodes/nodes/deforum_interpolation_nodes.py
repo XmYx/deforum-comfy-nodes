@@ -283,8 +283,8 @@ class DeforumCadenceNode:
         last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
 
         # Ensure the color information is consistent (RGB channels)
-        if last.shape[1] != 3:
-            # This is just a placeholder check; you might need a different check or fix based on your specific context.
-            print("Warning: The last frame does not have 3 color channels. Check your interpolate function.")
+        # if last.shape[1] != 3:
+        #     # This is just a placeholder check; you might need a different check or fix based on your specific context.
+        #     print("Warning: The last frame does not have 3 color channels. Check your interpolate function.")
 
         return (ret, last,)

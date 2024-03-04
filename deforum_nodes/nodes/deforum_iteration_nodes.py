@@ -253,6 +253,10 @@ class DeforumIteratorNode:
         else:
             self.frame_index += 1
         latent["samples"] = latent["samples"].float()
+
+        gen_args["sampler_name"] = deforum_data.get("sampler_name", "euler_a")
+        gen_args["scheduler"] = deforum_data.get("scheduler", "normal")
+
         return {"ui": {"counter":(self.frame_index,), "max_frames":(anim_args.max_frames,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 
