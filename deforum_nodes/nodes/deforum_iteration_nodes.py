@@ -112,9 +112,9 @@ class DeforumIteratorNode:
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
         if self.frame_index > anim_args.max_frames or reset_counter:
-            from ..modules.standalone_cadence import standalone_cadence
-            standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = None, 0
-            standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = None, 0
+            # from . import standalone_cadence
+            # standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = None, 0
+            # standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = None, 0
             self.reset_counter = False
             # self.reset_iteration()
             self.frame_index = 0
@@ -206,8 +206,7 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent or not hasattr(self, "rng"):
-            from ..modules.deforum_constants import deforum_cache
-            global deforum_cache
+            from .deforum_cache_nodes import deforum_cache
             deforum_cache.clear()
             if latent_type == "stable_diffusion":
                 channels = 4
@@ -243,7 +242,7 @@ class DeforumIteratorNode:
         #if anim_args.diffusion_cadence > 1:
         # global turbo_prev_img, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
         if anim_args.diffusion_cadence > 1:
-            self.frame_index += anim_args.diffusion_cadence if not self.first_run else 0# if anim_args.diffusion_cadence == 1
+            self.frame_index += anim_args.diffusion_cadence# if not self.first_run else 0# if anim_args.diffusion_cadence == 1
 
             # if turbo_steps > 1:
             # turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx

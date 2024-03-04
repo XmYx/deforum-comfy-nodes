@@ -441,3 +441,172 @@ app.registerExtension({
 		};
 	},
 });
+class FloatingConsole {
+    constructor() {
+        this.element = document.createElement('div');
+        this.element.id = 'floating-console';
+        this.titleBar = this.createTitleBar();
+        this.contentContainer = this.createContentContainer();
+
+        this.element.appendChild(this.titleBar);
+        this.element.appendChild(this.contentContainer);
+
+        document.body.appendChild(this.element);
+
+        this.dragging = false;
+        this.prevX = 0;
+        this.prevY = 0;
+
+        this.setupStyles();
+        this.addEventListeners();
+        this.addMenuButton();
+    }
+
+    setupStyles() {
+        Object.assign(this.element.style, {
+            position: 'fixed',
+            bottom: '10px',
+            right: '10px',
+            width: '300px',
+            maxHeight: '600px',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            borderRadius: '5px',
+            zIndex: '1000',
+            display: 'none', // Consider starting visible for debugging
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            resize: 'both',
+        });
+
+        // Ensure the content container allows for scrolling overflow content
+        Object.assign(this.contentContainer.style, {
+            overflowY: 'auto',
+            maxHeight: '565px', // Adjust based on titleBar height to prevent overflow
+        });
+        this.adjustContentContainerSize();
+    }
+    adjustContentContainerSize() {
+        // Calculate available height for content container
+        const titleBarHeight = this.titleBar.offsetHeight;
+        const consoleHeight = this.element.offsetHeight;
+        const availableHeight = consoleHeight - titleBarHeight;
+
+        // Update content container's maxHeight to fill available space
+        this.contentContainer.style.maxHeight = `${availableHeight}px`;
+    }
+    createTitleBar() {
+        const bar = document.createElement('div');
+        bar.textContent = 'Console';
+        Object.assign(bar.style, {
+            padding: '5px',
+            cursor: 'move',
+            backgroundColor: '#333',
+            borderTopLeftRadius: '5px',
+            borderTopRightRadius: '5px',
+            userSelect: 'none',
+        });
+        return bar;
+    }
+
+    createContentContainer() {
+        const container = document.createElement('div');
+        return container;
+    }
+
+    addEventListeners() {
+        this.titleBar.addEventListener('mousedown', (e) => {
+            // Mark as dragging
+            this.dragging = true;
+
+            // Record the initial mouse position
+            this.prevX = e.clientX;
+            this.prevY = e.clientY;
+
+            if (!this.element.style.left || !this.element.style.top) {
+                // Calculate initial left and top based on current position
+                const rect = this.element.getBoundingClientRect();
+                this.element.style.right = ''; // Clear 'right' since we're switching to 'left/top' positioning
+                this.element.style.bottom = ''; // Clear 'bottom' as well
+
+                // Set initial left and top based on the element's current position
+                this.element.style.left = `${rect.left}px`;
+                this.element.style.top = `${rect.top}px`;
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!this.dragging) return;
+            const dx = e.clientX - this.prevX;
+            const dy = e.clientY - this.prevY;
+
+            const { style } = this.element;
+            style.left = `${parseInt(style.left || 0, 10) + dx}px`;
+            style.top = `${parseInt(style.top || 0, 10) + dy}px`;
+
+            this.prevX = e.clientX;
+            this.prevY = e.clientY;
+        });
+
+        document.addEventListener('mouseup', () => {
+            this.dragging = false;
+            this.adjustContentContainerSize();
+        });
+    }
+
+    addMenuButton() {
+        const menu = document.querySelector(".comfy-menu");
+        // Create and append the toggle button for the floating console
+        const consoleToggleButton = document.createElement("button");
+        consoleToggleButton.textContent = "Toggle Console";
+        consoleToggleButton.onclick = () => {
+            // Check if the console is currently visible and toggle accordingly
+            if (floatingConsole.isVisible()) {
+                floatingConsole.hide();
+                consoleToggleButton.textContent = "Show Console"; // Update button text
+            } else {
+                floatingConsole.show();
+                consoleToggleButton.textContent = "Hide Console"; // Update button text
+            }
+        }
+        menu.append(consoleToggleButton);
+    }
+
+    show() {
+        this.element.style.display = 'block';
+    }
+
+    hide() {
+        this.element.style.display = 'none';
+    }
+
+    isVisible() {
+        return this.element.style.display !== 'none';
+    }
+
+    log(message) {
+        const msgElement = document.createElement('div');
+        msgElement.textContent = message;
+        this.contentContainer.appendChild(msgElement);
+        this.contentContainer.scrollTop = this.contentContainer.scrollHeight; // Auto-scroll to bottom
+    }
+
+    clear() {
+        this.contentContainer.innerHTML = '';
+    }
+}
+
+// Instantiate the floating console
+const floatingConsole = new FloatingConsole();
+
+// Extend the app plugin to handle console_output events
+app.registerExtension({
+    name: "consoleOutput",
+    init() {
+        api.addEventListener('console_output', (event) => {
+            floatingConsole.log(event.detail.message);
+        });
+    }
+});
+
+
