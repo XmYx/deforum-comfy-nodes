@@ -11,8 +11,6 @@ from ..modules.deforum_comfyui_helpers import tensor2np, tensor2pil, pil2tensor
 from ..modules.deforum_constants import deforum_cache, deforum_models, deforum_depth_algo
 
 
-
-
 class DeforumApplyFlowNode:
     methods = ['RAFT', 'DIS Medium', 'DIS Fine', 'Farneback']
     @classmethod
@@ -50,11 +48,10 @@ class DeforumApplyFlowNode:
             flow = get_flow_from_images(self.image_cache[0], self.image_cache[1], flow_method, deforum_models["raft_model"])
             img = image_transform_optical_flow(tensor2np(image), flow, flow_factor)
             ret = pil2tensor(img)
-            self.image_cache = [img]
+            self.image_cache = [self.image_cache[1]]
+            return (ret,)
         else:
-            ret = image
-        return (ret,)
-
+            return (image,)
 
 
 class DeforumHybridMotionNode:
