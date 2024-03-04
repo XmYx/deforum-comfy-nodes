@@ -152,8 +152,7 @@ class DeforumVideoSaveNode:
             if len(self.images) >= 2:
                 if not skip_save:
                     output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
-                    writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=10, pixelformat='yuv420p')
-
+                    writer = imageio.get_writer(output_path, fps=fps, codec='libx265', quality=10, pixelformat='yuv420p', format='mp4')
                     for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
                         writer.append_data(frame)
                     writer.close()
@@ -173,3 +172,4 @@ class DeforumVideoSaveNode:
         # Force re-evaluation of the node
         if autorefresh == "Yes":
             return float("NaN")
+
