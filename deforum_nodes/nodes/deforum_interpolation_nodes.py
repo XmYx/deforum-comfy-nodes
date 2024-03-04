@@ -3,7 +3,7 @@ import numpy as np
 
 from deforum import FilmModel
 from deforum.models import DepthModel, RAFT
-from ..modules.standalone_cadence import CandenceInterpolator
+from ..modules.standalone_cadence import CadenceInterpolator
 from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor
 
 from ..modules.deforum_constants import deforum_models, deforum_depth_algo
@@ -226,8 +226,8 @@ class DeforumCadenceNode:
         if "raft_model" not in deforum_models:
             deforum_models["raft_model"] = RAFT()
 
-        if deforum_frame_data["frame_idx"] == 0:
-            self.interpolator = CandenceInterpolator()
+        if deforum_frame_data["frame_idx"] == 0 or not hasattr(self, "interpolator"):
+            self.interpolator = CadenceInterpolator()
             deforum_frame_data["frame_idx"] += anim_args.diffusion_cadence
         self.interpolator.turbo_prev_image, self.interpolator.turbo_prev_frame_idx = self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx
         self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]

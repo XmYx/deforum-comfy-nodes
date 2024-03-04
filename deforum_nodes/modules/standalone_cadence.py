@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 import PIL.Image
 
-class CandenceInterpolator:
+class CadenceInterpolator:
     def __init__(self):
         self.turbo_prev_image, self.turbo_prev_frame_idx = None, 0
         self.turbo_next_image, self.turbo_next_frame_idx = None, 0
