@@ -97,6 +97,10 @@ class DeforumVideoSaveNode:
                     {"image": ("IMAGE",),
                      "filename_prefix": ("STRING",{"default":"Deforum"}),
                      "fps": ("INT", {"default": 24, "min": 1, "max": 10000},),
+                     "codec": (["libx265", "libx264", "libvpx-vp9", "libaom-av1", "mpeg4", "libvpx"],),
+                     "pixel_format": (["yuv420p", "yuv422p", "yuv444p", "yuvj420p", "yuvj422p", "yuvj444p", "rgb24", "rgba", "nv12", "nv21"],),
+                     "format": (["mp4", "mov", "gif", "avi"],),
+                     "quality": ("INT", {"default": 10, "min": 1, "max": 10},),
                      "dump_by": (["max_frames", "per_N_frames"],),
                      "dump_every": ("INT", {"default": 0, "min": 0, "max": 4096},),
                      "dump_now": ("BOOLEAN", {"default": False},),
@@ -121,7 +125,7 @@ class DeforumVideoSaveNode:
             self.images.clear()
         self.images.append(np.array(pil_image).astype(np.uint8))
 
-    def fn(self, image, filename_prefix, fps, dump_by, dump_every, dump_now, skip_save, deforum_frame_data={}):
+    def fn(self, image, filename_prefix, fps, codec, pixel_format, format, quality, dump_by, dump_every, dump_now, skip_save, deforum_frame_data={}):
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
         counter = find_next_index(full_output_folder, filename_prefix)
@@ -151,9 +155,9 @@ class DeforumVideoSaveNode:
         if dump or dump_now:  # frame_idx is 0-based
             if len(self.images) >= 2:
                 if not skip_save:
-                    output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
-                    writer = imageio.get_writer(output_path, fps=fps, codec='libx265', quality=10, pixelformat='yuv420p', format='mp4')
-                    for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
+                    output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{format}")
+                    writer = imageio.get_writer(output_path, fps=fps, codec=codec, quality=quality, pixelformat=pixel_format, format=format)
+                    for frame in tqdm(self.images, desc=f"Saving {format} (imageio)"):
                         writer.append_data(frame)
                     writer.close()
 
