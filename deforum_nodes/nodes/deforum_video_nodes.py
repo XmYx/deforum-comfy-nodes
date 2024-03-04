@@ -97,6 +97,7 @@ class DeforumVideoSaveNode:
                      "dump_by": (["max_frames", "per_N_frames"],),
                      "dump_every": ("INT", {"default": 0, "min": 0, "max": 4096},),
                      "dump_now": ("BOOLEAN", {"default": False},),
+                     "skip_save": ("BOOLEAN", {"default": False},),
                      },
                 "optional":
                     {"deforum_frame_data": ("DEFORUM_FRAME_DATA",),}
@@ -117,12 +118,12 @@ class DeforumVideoSaveNode:
             self.images.clear()
         self.images.append(np.array(pil_image).astype(np.uint8))
 
-    def fn(self, image, filename_prefix, fps, dump_by, dump_every, dump_now, deforum_frame_data={}):
+    def fn(self, image, filename_prefix, fps, dump_by, dump_every, dump_now, skip_save, deforum_frame_data={}):
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
         counter = find_next_index(full_output_folder, filename_prefix)
 
-        #frame_idx = deforum_frame_data["frame_idx"]
+        #frame_idx = deforum_frame_data.get["frame_idx"]
 
         anim_args = deforum_frame_data.get("anim_args")
         if anim_args is not None:
@@ -146,14 +147,16 @@ class DeforumVideoSaveNode:
 
         if dump or dump_now:  # frame_idx is 0-based
             if len(self.images) >= 2:
-                output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
-                writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=10, pixelformat='yuv420p')
+                if not skip_save:
+                    output_path = os.path.join(full_output_folder, f"{filename}_{counter}.mp4")
+                    writer = imageio.get_writer(output_path, fps=fps, codec='libx264', quality=10, pixelformat='yuv420p')
 
-                for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
-                    writer.append_data(frame)
-                writer.close()
+                    for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
+                        writer.append_data(frame)
+                    writer.close()
+                ret = self.images
                 self.images = []  # Empty the list for next use
-        return {"ui": {"counter":(len(self.images),), "should_dump":(dump or dump_now,), "frames":([pil_image_to_base64(tensor2pil(i)) for i in image]), "fps":(fps,)}, "result": (image,)}
+        return {"ui": {"counter":(len(self.images),), "should_dump":(dump or dump_now,), "frames":([pil_image_to_base64(tensor2pil(i)) for i in image]), "fps":(fps,)}, "result": (None if not dump else ret,)}
     @classmethod
     def IS_CHANGED(s, text, autorefresh):
         # Force re-evaluation of the node
