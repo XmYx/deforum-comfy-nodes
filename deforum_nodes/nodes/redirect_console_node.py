@@ -2,8 +2,8 @@ import sys
 import asyncio
 
 console_redirected = None
-# stdout_backup = sys.stdout
-# stderr_backup = sys.stderr
+stdout_backup = sys.stdout
+stderr_backup = sys.stderr
 class StreamToWebSocket:
     def __init__(self, original_stream, server, stream_type='stdout'):
         self.original_stream = original_stream
@@ -57,14 +57,14 @@ class DeforumRedirectConsole:
                     console_redirected = True
                 except:
                     pass
-            # else:
-            #     sys.stdout = stdout_backup
-            #     sys.stderr = stderr_backup
+            else:
+                sys.stdout = stdout_backup
+                sys.stderr = stderr_backup
         else:
-            # if console_redirected:
-            #     sys.stdout = stdout_backup
-            #     sys.stderr = stderr_backup
-            console_redirected = False
+            if console_redirected:
+                sys.stdout = stdout_backup
+                sys.stderr = stderr_backup
+                console_redirected = False
         return (console_redirected,)
 
 

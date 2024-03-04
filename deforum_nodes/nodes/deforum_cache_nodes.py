@@ -91,7 +91,7 @@ class DeforumCacheImageNode:
             deforum_cache["image"] = {}
         deforum_cache["image"][cache_index] = image.clone()
 
-        print("IMAGE ON INDEX", cache_index, deforum_cache["image"][cache_index])
+        # print("IMAGE ON INDEX", cache_index, deforum_cache["image"][cache_index])
 
 
         return (image,)
@@ -124,6 +124,6 @@ class DeforumGetCachedImageNode:
         img_dict = deforum_cache.get("image", {})
         image = img_dict.get(cache_index)
 
-        print("IMAGE ON INDEX", cache_index, image)
+        # print("IMAGE ON INDEX", cache_index, image)
 
         return (image,)
