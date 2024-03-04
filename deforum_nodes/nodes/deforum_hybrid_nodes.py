@@ -8,7 +8,8 @@ from deforum.models import RAFT
 from deforum.utils.image_utils import image_transform_optical_flow
 
 from ..modules.deforum_comfyui_helpers import tensor2np, tensor2pil, pil2tensor
-from ..modules.deforum_constants import deforum_cache, deforum_models, deforum_depth_algo
+from ..modules.deforum_constants import deforum_models, deforum_depth_algo
+from .deforum_cache_nodes import deforum_cache
 
 
 class DeforumApplyFlowNode:

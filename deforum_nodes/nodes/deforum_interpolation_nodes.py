@@ -6,7 +6,8 @@ from deforum.models import DepthModel, RAFT
 from ..modules.standalone_cadence import CandenceInterpolator
 from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor
 
-from ..modules.deforum_constants import deforum_cache, deforum_models, deforum_depth_algo
+from ..modules.deforum_constants import deforum_models, deforum_depth_algo
+from .deforum_cache_nodes import deforum_cache
 
 # deforum_models = {}
 # deforum_depth_algo = ""
