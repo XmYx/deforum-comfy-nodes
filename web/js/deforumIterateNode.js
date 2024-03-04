@@ -318,7 +318,9 @@ app.registerExtension({
                     if (w.name === "reset_counter") {
                         const counterWidget = w;
                         counterWidget.value = false;
-
+                    } else if (w.name === "reset_latent") {
+                        const resetWidget = w;
+                        resetWidget.value = false;
                     }
                 }
                 const v = app.nodeOutputs?.[this.id + ""];
