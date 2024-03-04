@@ -64,6 +64,7 @@ function addVideoPreview(nodeType) {
     chainCallback(nodeType.prototype, "onNodeCreated", function() {
         var element = document.createElement("div");
         const previewNode = this;
+        previewNode.size[1] += 45;
         var previewWidget = this.addDOMWidget("videopreview", "preview", element, {
             serialize: false,
             hideOnZoom: false,
@@ -94,10 +95,7 @@ function addVideoPreview(nodeType) {
         previewWidget.imgEl = document.createElement("img");
         previewWidget.imgEl.style['width'] = "100%"
         previewWidget.imgEl.hidden = true;
-        previewWidget.imgEl.onload = () => {
-            previewWidget.aspectRatio = previewWidget.imgEl.naturalWidth / previewWidget.imgEl.naturalHeight;
-            fitHeight(this);
-        };
+
 
         // Add transport controls
         const controls = document.createElement("div");
@@ -151,7 +149,10 @@ function addVideoPreview(nodeType) {
         previewWidget.parentEl.appendChild(previewWidget.imgEl)
         let frameIndex = 0;
         let cachedFrames = this.getCachedFrames(); // Assuming this method exists and retrieves an array of frame data
-
+        previewWidget.imgEl.onload = () => {
+            previewWidget.aspectRatio = previewWidget.imgEl.naturalWidth / previewWidget.imgEl.naturalHeight;
+            fitHeight(this);
+        };
         // Function to update frame view
         function updateFrame(index) {
             cachedFrames = previewNode  .getCachedFrames()
