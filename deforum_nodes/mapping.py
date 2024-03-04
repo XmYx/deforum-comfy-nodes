@@ -4,8 +4,10 @@ import inspect
 """
 NODE CLASS IMPORTS
 """
-
+from .nodes.deforum_audiosync_nodes import *
 from .nodes.deforum_cache_nodes import *
+from .nodes.deforum_cnet_nodes import *
+from .nodes.deforum_cond_nodes import *
 from .nodes.deforum_data_nodes import *
 from .nodes.deforum_framewarp_node import *
 from .nodes.deforum_hybrid_nodes import *
@@ -14,11 +16,11 @@ from .nodes.deforum_image_nodes import *
 from .nodes.deforum_iteration_nodes import *
 from .nodes.deforum_legacy_nodes import *
 from .nodes.deforum_prompt_nodes import *
+from .nodes.redirect_console_node import DeforumRedirectConsole
 from .nodes.deforum_sampler_nodes import *
 from .nodes.deforum_video_nodes import *
-from .nodes.deforum_cond_nodes import *
-from .nodes.deforum_audiosync_nodes import *
-from .nodes.deforum_cnet_nodes import *
+
+
 
 # Create an empty dictionary for class mappings
 NODE_CLASS_MAPPINGS = {}
