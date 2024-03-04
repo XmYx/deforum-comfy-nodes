@@ -3,12 +3,15 @@ import os
 import cv2
 import imageio
 import numpy as np
+import torch
 from tqdm import tqdm
 
 import folder_paths
 from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor, find_next_index, pil_image_to_base64
 
 video_extensions = ['webm', 'mp4', 'mkv', 'gif']
+
+
 
 class DeforumLoadVideo:
 
@@ -144,7 +147,7 @@ class DeforumVideoSaveNode:
             dump = len(self.images) >= max_frames
         else:
             dump = len(self.images) >= dump_every
-
+        # print("DEFORUM VIDEO SAVE NODE", dump_now)
         if dump or dump_now:  # frame_idx is 0-based
             if len(self.images) >= 2:
                 if not skip_save:
@@ -154,7 +157,15 @@ class DeforumVideoSaveNode:
                     for frame in tqdm(self.images, desc="Saving MP4 (imageio)"):
                         writer.append_data(frame)
                     writer.close()
-                ret = self.images
+
+                # ret = []
+                # for i in self.images:
+                #     ret.append(pil2tensor(i)[0])
+                ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
+                # print(ret.shape)
+
+
+                # ret = torch.stack([pil2tensor(i) for i in self.images], dim=0)
                 self.images = []  # Empty the list for next use
         return {"ui": {"counter":(len(self.images),), "should_dump":(dump or dump_now,), "frames":([pil_image_to_base64(tensor2pil(i)) for i in image]), "fps":(fps,)}, "result": (None if not dump else ret,)}
     @classmethod
