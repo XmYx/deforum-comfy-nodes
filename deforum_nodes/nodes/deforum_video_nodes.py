@@ -144,7 +144,7 @@ class DeforumVideoSaveNode:
         else:
             self.add_image(image[0])
 
-        print(f"[DEFORUM VIDEO SAVE NODE] holding {len(self.images)} images")
+        print(f"[deforum] Video Save node holding {len(self.images)} images")
         # When the current frame index reaches the last frame, save the video
 
         if dump_by == "max_frames":
@@ -156,6 +156,9 @@ class DeforumVideoSaveNode:
             if len(self.images) >= 2:
                 if not skip_save:
                     output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{format}")
+
+                    print("[deforum] Will save as:", output_path)
+
                     writer = imageio.get_writer(output_path, fps=fps, codec=codec, quality=quality, pixelformat=pixel_format, format=format)
                     for frame in tqdm(self.images, desc=f"Saving {format} (imageio)"):
                         writer.append_data(frame)

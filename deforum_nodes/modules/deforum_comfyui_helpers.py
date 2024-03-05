@@ -132,7 +132,7 @@ def find_next_index(output_dir, filename_prefix, format):
     """
     # Compile a regular expression pattern to match the filenames
     # This assumes the index is at the end of the filename, before the .mp4 extension
-    pattern = re.compile(rf"^{re.escape(filename_prefix)}_(\d+)\.{format}$")
+    pattern = re.compile(rf"^{re.escape(filename_prefix)}_(\d+)\.{format.lower()}$")
 
     max_index = -1
     for filename in os.listdir(output_dir):
@@ -146,6 +146,8 @@ def find_next_index(output_dir, filename_prefix, format):
 
     # The next index is one more than the highest index found
     next_index = max_index + 1
+
+
     return next_index
 
 import torch.nn.functional as F

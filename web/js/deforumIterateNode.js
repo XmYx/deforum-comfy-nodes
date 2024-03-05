@@ -372,6 +372,10 @@ app.registerExtension({
                         const dumpWidget = w;
                         dumpWidget.value = false;
                         this.shouldResetAnimation = true;
+                    } else if (w.name === "skip_save") {
+                        const saveWidget = w;
+                        saveWidget.value = false;
+
                     }
                 }
                 const output = app.nodeOutputs?.[this.id + ""];
