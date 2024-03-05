@@ -206,8 +206,12 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent or not hasattr(self, "rng"):
-            from .deforum_cache_nodes import deforum_cache
-            deforum_cache.clear()
+            from . import deforum_cache_nodes
+            deforum_cache_nodes.deforum_cache.clear()
+            deforum_cache_nodes.deforum_cache = {}
+
+
+
             if latent_type == "stable_diffusion":
                 channels = 4
                 compression = 8

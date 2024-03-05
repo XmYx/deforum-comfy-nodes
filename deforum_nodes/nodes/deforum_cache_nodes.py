@@ -113,7 +113,8 @@ class DeforumGetCachedImageNode:
 
         }}
 
-    RETURN_TYPES = (("IMAGE",))
+    RETURN_TYPES = (("IMAGE","MASK"))
+    RETURN_NAMES = ("IMAGE","MASK")
     FUNCTION = "get_cached_latent"
     CATEGORY = f"deforum"
     OUTPUT_NODE = True
@@ -123,7 +124,9 @@ class DeforumGetCachedImageNode:
         global deforum_cache
         img_dict = deforum_cache.get("image", {})
         image = img_dict.get(cache_index)
-
+        mask = None
+        if image is not None:
+            mask = image[:, :, :, 0]
         # print("IMAGE ON INDEX", cache_index, image)
 
-        return (image,)
+        return (image,mask,)
