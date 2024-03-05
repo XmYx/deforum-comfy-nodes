@@ -128,7 +128,7 @@ class DeforumVideoSaveNode:
     def fn(self, image, filename_prefix, fps, codec, pixel_format, format, quality, dump_by, dump_every, dump_now, skip_save, deforum_frame_data={}):
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
-        counter = find_next_index(full_output_folder, filename_prefix)
+        counter = find_next_index(full_output_folder, filename_prefix, format)
 
         #frame_idx = deforum_frame_data.get["frame_idx"]
 

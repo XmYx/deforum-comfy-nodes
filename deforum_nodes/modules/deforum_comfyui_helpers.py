@@ -119,7 +119,7 @@ def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
     else:
         raise ValueError("Invalid mode specified. Choose among 'fixed', 'random', 'ladder', 'incrementing', 'decrementing'.")
 
-def find_next_index(output_dir, filename_prefix):
+def find_next_index(output_dir, filename_prefix, format):
     """
     Finds the next index for an MP4 file given an output directory and a filename prefix.
 
@@ -132,7 +132,7 @@ def find_next_index(output_dir, filename_prefix):
     """
     # Compile a regular expression pattern to match the filenames
     # This assumes the index is at the end of the filename, before the .mp4 extension
-    pattern = re.compile(rf"^{re.escape(filename_prefix)}_(\d+)\.mp4$")
+    pattern = re.compile(rf"^{re.escape(filename_prefix)}_(\d+)\.{format}$")
 
     max_index = -1
     for filename in os.listdir(output_dir):
