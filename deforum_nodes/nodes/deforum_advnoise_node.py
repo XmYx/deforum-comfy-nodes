@@ -8,7 +8,38 @@ import pywt
 import torch.nn.functional as F
 from opensimplex import OpenSimplex
 
+"""
+Noise types to implement:
 
+Dithering Noise: Introduces a monochrome or color dithering effect that simulates more colors in images with limited palettes. This can create a retro, pixelated look or be used to prevent banding in gradients.
+
+JPEG Compression Noise: Simulates the artifacts introduced by JPEG compression, such as blockiness and loss of detail, which can be relevant for training models to be robust against compression artifacts.
+
+Moire Pattern Noise: Simulates the moiré pattern, an interference pattern that can occur when an image with repetitive details is digitized. This is particularly relevant for document scanning and OCR applications.
+
+Defocus Blur Noise: Simulates the effect of an out-of-focus lens, which can be used to generate data for depth estimation or autofocus algorithms.
+
+Lens Distortion Noise: Introduces barrel or pincushion distortion to simulate lens imperfections, useful for calibration and correction algorithms.
+
+Chromatic Aberration: Simulates the color fringing around high-contrast edges caused by lens dispersion, adding realism to synthetic images or for artistic effects.
+
+Color Shift Noise: Randomly shifts the color balance of the image, simulating white balance inaccuracies or artistic color grading.
+
+Speckle Noise in Color: While speckle noise is typically applied in a monochromatic context, it can be adapted to color images to simulate sensor noise in color imaging devices.
+
+Atmospheric Turbulence Noise: Simulates the effect of atmospheric distortion, relevant for images taken over long distances in outdoor environments, like satellite or surveillance imagery.
+
+Halftone Pattern Noise: Simulates the halftone dots used in printed media, which can be useful for preparing models that need to understand scanned printed documents or for creating retro effects.
+
+Holographic Interference Noise: Simulates the pattern seen in holograms, which could be interesting for security feature recognition or artistic effects.
+
+Color Quantization Noise: While quantization was mentioned, specifically focusing on reducing the color depth of an image can simulate older digital or printed media.
+
+Film Grain: Simulates the random texture characteristic of film photography, adding a nostalgic or artistic quality to digital images.
+
+Pattern Overlay Noise: Overlaying a fixed pattern, such as a grid or text watermark, to simulate watermarked paper or screen overlays.
+
+"""
 
 class AddAdvancedNoiseNode:
     """
