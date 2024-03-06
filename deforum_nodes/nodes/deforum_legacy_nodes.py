@@ -136,6 +136,9 @@ class DeforumSingleSampleNode:
 
         self.deforum.datacallback = datacallback
         deforum_data["turbo_steps"] = deforum_data.get("diffusion_cadence", 0)
+        deforum_data["store_frames_in_ram"] = True
+        deforum_data["skip_video_creation"] = True
+        
         animation = self.deforum(**deforum_data)
 
         results = []
