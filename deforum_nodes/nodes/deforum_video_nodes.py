@@ -151,6 +151,8 @@ class DeforumVideoSaveNode:
             dump = len(self.images) >= max_frames
         else:
             dump = len(self.images) >= dump_every
+
+
         # print("DEFORUM VIDEO SAVE NODE", dump_now)
         if dump or dump_now:  # frame_idx is 0-based
             if len(self.images) >= 2:
@@ -173,6 +175,14 @@ class DeforumVideoSaveNode:
 
                 # ret = torch.stack([pil2tensor(i) for i in self.images], dim=0)
                 self.images = []  # Empty the list for next use
+
+        if deforum_frame_data.get("reset", None):
+            if image.shape[0] > 1:
+                for img in image:
+                    self.add_image(img)
+            else:
+                self.add_image(image[0])
+
         return {"ui": {"counter":(len(self.images),), "should_dump":(dump or dump_now,), "frames":([pil_image_to_base64(tensor2pil(i)) for i in image]), "fps":(fps,)}, "result": (None if not dump else ret,)}
     @classmethod
     def IS_CHANGED(s, text, autorefresh):

@@ -22,6 +22,9 @@ class DeforumApplyFlowNode:
                 "flow_image": ("IMAGE",),
                 "flow_method": ([cls.methods]),
                 "flow_factor": ("FLOAT", {"default": 0.8, "min": 0, "max": 1.0}),
+            },
+            "optional":{
+                "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
             }
         }
 
@@ -34,15 +37,17 @@ class DeforumApplyFlowNode:
     def __init__(self):
         self.image_cache = []
 
-    def apply_flow(self, image, flow_image, flow_method, flow_factor):
+    def apply_flow(self, image, flow_image, flow_method, flow_factor, deforum_frame_data={}):
         global deforum_models
         if "raft_model" not in deforum_models:
             deforum_models["raft_model"] = RAFT()
+
+        if deforum_frame_data.get("reset", None):
+            self.image_cache.clear()
         if flow_image is not None:
             temp_np = tensor2np(flow_image)
         else:
             temp_np = tensor2np(image)
-
         self.image_cache.append(temp_np)
 
         if len(self.image_cache) >= 2:
