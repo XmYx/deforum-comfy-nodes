@@ -246,7 +246,7 @@ class DeforumIteratorNode:
         #if anim_args.diffusion_cadence > 1:
         # global turbo_prev_img, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
         if anim_args.diffusion_cadence > 1:
-            self.frame_index += anim_args.diffusion_cadence# if not self.first_run else 0# if anim_args.diffusion_cadence == 1
+            self.frame_index += anim_args.diffusion_cadence if not self.first_run else 0# if anim_args.diffusion_cadence == 1
 
             # if turbo_steps > 1:
             # turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx
@@ -255,7 +255,9 @@ class DeforumIteratorNode:
 
             self.first_run = False
         else:
-            self.frame_index += 1
+            self.frame_index += 1 if not self.first_run else 0
+            self.first_run = False
+
         latent["samples"] = latent["samples"].float()
 
         gen_args["sampler_name"] = deforum_data.get("sampler_name", "euler_a")

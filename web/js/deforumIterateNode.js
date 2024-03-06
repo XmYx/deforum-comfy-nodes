@@ -398,6 +398,7 @@ app.registerExtension({
                 if (should_reset[0] === true) {
                     this.stopPlayback();
                     this.clearFrameCache();
+                    this.cacheFrames(output["frames"]);
 
                 }
 

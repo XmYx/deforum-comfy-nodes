@@ -37,7 +37,7 @@ class DeforumColorMatchNode:
             # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             frame_idx = deforum_frame_data.get("frame_idx", 0)
             if frame_idx == 0 and not force_use_sample:
-                self.color_match_sample = image.copy()
+                self.color_match_sample = None
                 return (pil2tensor(image),)
             if force_use_sample:
                 if force_sample_image is not None:
