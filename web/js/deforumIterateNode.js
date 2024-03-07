@@ -367,14 +367,22 @@ app.registerExtension({
             nodeType.prototype.onExecuted = function (message) {
 
             const r = onVideoSaveExecuted ? onVideoSaveExecuted.apply(this, message) : undefined
+
+                let swapSkipSave = false;
                 for (const w of this.widgets || []) {
                     if (w.name === "dump_now") {
                         const dumpWidget = w;
+                        if (dumpWidget.value === true) {
+                            swapSkipSave = true
+                        }
                         dumpWidget.value = false;
                         this.shouldResetAnimation = true;
                     } else if (w.name === "skip_save") {
                         const saveWidget = w;
-                        saveWidget.value = false;
+                        if (swapSkipSave === true) {
+                            saveWidget.value = false;
+                        }
+
 
                     }
                 }

@@ -28,7 +28,7 @@ from .nodes.redirect_console_node import DeforumRedirectConsole
 from .nodes.deforum_sampler_nodes import *
 from .nodes.deforum_video_nodes import *
 
-
+from . import exec_hijack
 
 # Create an empty dictionary for class mappings
 NODE_CLASS_MAPPINGS = {}

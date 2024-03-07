@@ -153,7 +153,7 @@ class DeforumVideoSaveNode:
             dump = len(self.images) >= dump_every
         if deforum_frame_data.get("reset", None):
             dump = True
-        ret = image
+        ret = "skip"
         # print("DEFORUM VIDEO SAVE NODE", dump_now)
         if dump or dump_now:  # frame_idx is 0-based
             if len(self.images) >= 2:
