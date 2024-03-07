@@ -40,6 +40,7 @@ class DeforumIteratorNode:
                 "slerp_strength": ("FLOAT", {"default": 0.1, "min": 0, "max": 1.0}),
                 "reset_counter":("BOOLEAN", {"default": False},),
                 "reset_latent":("BOOLEAN", {"default": False},),
+                "enable_autoqueue":("BOOLEAN", {"default": False},),
             }
         }
 
@@ -52,7 +53,7 @@ class DeforumIteratorNode:
 
 
     @torch.inference_mode()
-    def get(self, deforum_data, latent_type, latent=None, init_latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, *args, **kwargs):
+    def get(self, deforum_data, latent_type, latent=None, init_latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, enable_autoqueue=False, *args, **kwargs):
         root_dict = RootArgs()
         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
         anim_args_dict = {key: value["value"] for key, value in DeforumAnimArgs().items()}
@@ -259,11 +260,11 @@ class DeforumIteratorNode:
             self.first_run = False
 
         latent["samples"] = latent["samples"].float()
-
+        enable_autoqueue = enable_autoqueue if self.frame_index == 0 else False
         gen_args["sampler_name"] = deforum_data.get("sampler_name", "euler_a")
         gen_args["scheduler"] = deforum_data.get("scheduler", "normal")
         gen_args["reset"] = reset_latent or reset_counter
-        return {"ui": {"counter":(self.frame_index,), "max_frames":(anim_args.max_frames,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
+        return {"ui": {"counter":(self.frame_index,), "max_frames":(anim_args.max_frames,), "enable_autoqueue":(enable_autoqueue,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 
     def get_current_frame(self, args, anim_args, root, keys, frame_idx, areas=None):

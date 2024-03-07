@@ -329,11 +329,25 @@ app.registerExtension({
 
                     const counter = v["counter"]
                     const max_frames = v["max_frames"]
+                    const enableAutorun = v["enable_autoqueue"][0]
+
+
+
                     if (counter[0] >= max_frames[0]) {
                         if (document.getElementById('autoQueueCheckbox').checked === true) {
                             document.getElementById('autoQueueCheckbox').click();
                         }
                     }
+
+                    if (enableAutorun === true) {
+                        if (document.getElementById('autoQueueCheckbox').checked === false) {
+                            document.getElementById('autoQueueCheckbox').click();
+                            document.getElementById('extraOptions').style.display = 'block';
+                        }
+                    }
+
+
+
                 }
 
 
