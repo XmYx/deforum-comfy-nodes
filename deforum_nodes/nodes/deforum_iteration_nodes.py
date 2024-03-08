@@ -11,6 +11,9 @@ import comfy
 
 from ..modules.deforum_comfyui_helpers import get_current_keys, generate_seed_list
 
+
+
+
 class DeforumIteratorNode:
     def __init__(self):
         self.first_run = True
@@ -54,6 +57,7 @@ class DeforumIteratorNode:
 
     @torch.inference_mode()
     def get(self, deforum_data, latent_type, latent=None, init_latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, enable_autoqueue=False, *args, **kwargs):
+        # global deforum_cache
         root_dict = RootArgs()
         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
         anim_args_dict = {key: value["value"] for key, value in DeforumAnimArgs().items()}
@@ -122,6 +126,9 @@ class DeforumIteratorNode:
             # .should_run = False
             # return [None]
             self.first_run = True
+
+
+
 
         # else:
         args.scale = keys.cfg_scale_schedule_series[self.frame_index]
@@ -207,9 +214,14 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
 
         if latent is None or reset_latent or not hasattr(self, "rng"):
-            from . import deforum_cache_nodes
-            deforum_cache_nodes.deforum_cache.clear()
-            deforum_cache_nodes.deforum_cache = {}
+            print("[ RESETTING DEFORUM ]")
+
+            from ..mapping import gs
+
+            gs.deforum_cache.clear()
+            gs.deforum_cache = {}
+            gs.reset = True
+
 
 
 
@@ -258,6 +270,8 @@ class DeforumIteratorNode:
         else:
             self.frame_index += 1 if not self.first_run else 0
             self.first_run = False
+            from ..mapping import gs
+            gs.reset = False if not self.first_run else True
 
         latent["samples"] = latent["samples"].float()
         enable_autoqueue = enable_autoqueue if self.frame_index == 0 else False

@@ -1,6 +1,7 @@
-deforum_cache = {}
+
 
 class DeforumCacheLatentNode:
+
     @classmethod
     def IS_CHANGED(cls, text, autorefresh):
         # Force re-evaluation of the node
@@ -23,13 +24,13 @@ class DeforumCacheLatentNode:
     OUTPUT_NODE = True
 
     def cache_it(self, latent=None, cache_index=0):
-        global deforum_cache
+        from ..mapping import gs
+        from ..mapping import gs
+        if "latent" not in gs.deforum_cache:
 
-        if "latent" not in deforum_cache:
+            gs.deforum_cache["latent"] = {}
 
-            deforum_cache["latent"] = {}
-
-        deforum_cache["latent"][cache_index] = latent
+        gs.deforum_cache["latent"][cache_index] = latent
 
         return (latent,)
 
@@ -57,7 +58,9 @@ class DeforumGetCachedLatentNode:
     display_name = "Load Cached Latent"
 
     def get_cached_latent(self, cache_index=0):
-        latent_dict = deforum_cache.get("latent", {})
+        from ..mapping import gs
+
+        latent_dict = gs.deforum_cache.get("latent", {})
         latent = latent_dict.get(cache_index)
         return (latent,)
 
@@ -86,10 +89,12 @@ class DeforumCacheImageNode:
     OUTPUT_NODE = True
 
     def cache_it(self, image=None, cache_index=0):
-        global deforum_cache
-        if "image" not in deforum_cache:
-            deforum_cache["image"] = {}
-        deforum_cache["image"][cache_index] = image.clone()
+
+        from ..mapping import gs
+
+        if "image" not in gs.deforum_cache:
+            gs.deforum_cache["image"] = {}
+        gs.deforum_cache["image"][cache_index] = image.clone()
 
         # print("IMAGE ON INDEX", cache_index, deforum_cache["image"][cache_index])
 
@@ -121,8 +126,11 @@ class DeforumGetCachedImageNode:
     display_name = "Load Cached Image"
 
     def get_cached_latent(self, cache_index=0):
-        global deforum_cache
-        img_dict = deforum_cache.get("image", {})
+        #global deforum_cache
+
+        from ..mapping import gs
+        # print("GETTING LATENT, SHOULD BE NONE", gs.deforum_cache)
+        img_dict = gs.deforum_cache.get("image", {})
         image = img_dict.get(cache_index)
         mask = None
         if image is not None:

@@ -6,11 +6,14 @@ from deforum.models import DepthModel, RAFT
 from ..modules.standalone_cadence import CadenceInterpolator
 from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor
 
-from ..modules.deforum_constants import deforum_models, deforum_depth_algo
-from .deforum_cache_nodes import deforum_cache
+# from ..modules.deforum_constants import deforum_models, deforum_depth_algo
+# from .deforum_cache_nodes import deforum_cache
 
 # deforum_models = {}
 # deforum_depth_algo = ""
+
+from ..mapping import gs
+
 
 class DeforumFILMInterpolationNode:
     def __init__(self):
@@ -183,7 +186,7 @@ class DeforumCadenceNode:
         return float("NaN")
 
     def interpolate(self, image, deforum_frame_data):
-        global deforum_depth_algo, deforum_models
+        #global deforum_depth_algo, deforum_models
         # import turbo_prev_image, turbo_next_image, turbo_next_frame_idx, turbo_prev_frame_idx
         return_frames = []
         pil_image = tensor2pil(image.clone().detach())
@@ -195,11 +198,11 @@ class DeforumCadenceNode:
         predict_depths = predict_depths or (
                 anim_args.hybrid_composite and anim_args.hybrid_comp_mask_type in ['Depth', 'Video Depth'])
 
-        if "depth_model" not in deforum_models or deforum_depth_algo != anim_args.depth_algorithm:
+        if "depth_model" not in gs.deforum_models or gs.deforum_depth_algo != anim_args.depth_algorithm:
             self.vram_state = "high"
-            if "depth_model" in deforum_models:
-                deforum_models["depth_model"].to("cpu")
-                del deforum_models["depth_model"]
+            if "depth_model" in gs.deforum_models:
+                gs.deforum_models["depth_model"].to("cpu")
+                del gs.deforum_models["depth_model"]
 
             deforum_depth_algo = anim_args.depth_algorithm
             if predict_depths:
@@ -207,7 +210,7 @@ class DeforumCadenceNode:
                 # device = ('cpu' if cmd_opts.lowvram or cmd_opts.medvram else self.root.device)
                 # TODO Set device in root in webui
                 device = 'cuda'
-                deforum_models["depth_model"] = DepthModel("models/other", device,
+                gs.deforum_models["depth_model"] = DepthModel("models/other", device,
                                               keep_in_vram=keep_in_vram,
                                               depth_algorithm=anim_args.depth_algorithm, Width=args.width,
                                               Height=args.height,
@@ -217,14 +220,14 @@ class DeforumCadenceNode:
                 if anim_args.hybrid_composite != 'None' and anim_args.hybrid_comp_mask_type == 'Depth':
                     anim_args.save_depth_maps = True
             else:
-                deforum_models["depth_model"] = None
+                gs.deforum_models["depth_model"] = None
                 anim_args.save_depth_maps = False
-        if deforum_models["depth_model"] != None and not predict_depths:
-            deforum_models["depth_model"] = None
-        if deforum_models["depth_model"] is not None:
-            deforum_models["depth_model"].to('cuda')
-        if "raft_model" not in deforum_models:
-            deforum_models["raft_model"] = RAFT()
+        if gs.deforum_models["depth_model"] != None and not predict_depths:
+            gs.deforum_models["depth_model"] = None
+        if gs.deforum_models["depth_model"] is not None:
+            gs.deforum_models["depth_model"].to('cuda')
+        if "raft_model" not in gs.deforum_models:
+            gs.deforum_models["raft_model"] = RAFT()
 
         if deforum_frame_data["frame_idx"] == 0 or not hasattr(self, "interpolator"):
             self.interpolator = CadenceInterpolator()
@@ -241,8 +244,8 @@ class DeforumCadenceNode:
                                             deforum_frame_data["root"],
                                             deforum_frame_data["keys"],
                                             deforum_frame_data["frame_idx"],
-                                            deforum_models["depth_model"],
-                                            deforum_models["raft_model"])
+                                            gs.deforum_models["depth_model"],
+                                            gs.deforum_models["raft_model"])
 
 
 

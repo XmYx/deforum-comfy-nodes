@@ -1,5 +1,11 @@
 import importlib
 import inspect
+"""
+DEFORUM STORAGE IMPORT
+"""
+from .modules.deforum_constants import DeforumStorage
+
+gs = DeforumStorage()
 
 """
 NODE CLASS IMPORTS

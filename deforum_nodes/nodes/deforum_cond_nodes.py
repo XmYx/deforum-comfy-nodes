@@ -76,8 +76,10 @@ class DeforumInpaintModelConditioning:
                     "pixels": ("IMAGE",),
                     "mask": ("MASK",),
                     "latent": ("LATENT",),
+                    "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
 
-                    }
+                }
+
                              }
 
     RETURN_TYPES = ("CONDITIONING","CONDITIONING","LATENT")
@@ -86,9 +88,10 @@ class DeforumInpaintModelConditioning:
 
     display_name = "InpaintModelConditioning [safe]"
     CATEGORY = "deforum"
-    def encode(self, positive, negative, vae, pixels, mask, latent):
+    def encode(self, positive, negative, vae, pixels, mask, latent, deforum_frame_data={}):
+        reset = deforum_frame_data.get("reset", False)
 
-        if pixels is not None and mask is not None:
+        if (pixels is not None and mask is not None) and not reset:
             x = (pixels.shape[1] // 8) * 8
             y = (pixels.shape[2] // 8) * 8
             mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])), size=(pixels.shape[1], pixels.shape[2]), mode="bilinear")

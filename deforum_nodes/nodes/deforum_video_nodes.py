@@ -136,7 +136,7 @@ class DeforumVideoSaveNode:
         if anim_args is not None:
             max_frames = anim_args.max_frames
         else:
-            max_frames = image.shape[0] + len(self.images) + 1
+            max_frames = image.shape[0] + len(self.images) + 2
         if not deforum_frame_data.get("reset", None):
             if image.shape[0] > 1:
                 for img in image:
@@ -148,7 +148,7 @@ class DeforumVideoSaveNode:
         # When the current frame index reaches the last frame, save the video
 
         if dump_by == "max_frames":
-            dump = len(self.images) >= max_frames
+            dump = len(self.images) >= max_frames + 1
         else:
             dump = len(self.images) >= dump_every
         if deforum_frame_data.get("reset", None):

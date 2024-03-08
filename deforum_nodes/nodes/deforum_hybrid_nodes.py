@@ -8,8 +8,9 @@ from deforum.models import RAFT
 from deforum.utils.image_utils import image_transform_optical_flow
 
 from ..modules.deforum_comfyui_helpers import tensor2np, tensor2pil, pil2tensor
-from ..modules.deforum_constants import deforum_models, deforum_depth_algo
-from .deforum_cache_nodes import deforum_cache
+# from ..modules.deforum_constants import deforum_models, deforum_depth_algo
+
+from ..mapping import gs
 
 
 class DeforumApplyFlowNode:
@@ -38,9 +39,9 @@ class DeforumApplyFlowNode:
         self.image_cache = []
 
     def apply_flow(self, image, flow_image, flow_method, flow_factor, deforum_frame_data={}):
-        global deforum_models
-        if "raft_model" not in deforum_models:
-            deforum_models["raft_model"] = RAFT()
+        # global deforum_models
+        if "raft_model" not in gs.deforum_models:
+            gs.deforum_models["raft_model"] = RAFT()
 
         if deforum_frame_data.get("reset", None):
             self.image_cache.clear()
@@ -51,7 +52,7 @@ class DeforumApplyFlowNode:
         self.image_cache.append(temp_np)
 
         if len(self.image_cache) >= 2:
-            flow = get_flow_from_images(self.image_cache[0], self.image_cache[1], flow_method, deforum_models["raft_model"])
+            flow = get_flow_from_images(self.image_cache[0], self.image_cache[1], flow_method, gs.deforum_models["raft_model"])
             img = image_transform_optical_flow(tensor2np(image), flow, flow_factor)
             ret = pil2tensor(img)
             self.image_cache = [self.image_cache[1]]
