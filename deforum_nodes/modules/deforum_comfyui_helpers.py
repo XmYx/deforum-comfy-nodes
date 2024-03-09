@@ -106,7 +106,8 @@ def tensor_to_webp_base64(tensor):
         np_image = np_image.transpose(1, 2, 0)
     np_image = cv2.cvtColor(np_image, cv2.COLOR_BGR2RGB)
     # Encode the numpy array to WEBP using OpenCV
-    _, encoded_image = cv2.imencode('.webp', np_image)
+    compression_quality = 80
+    _, encoded_image = cv2.imencode('.webp', np_image, [cv2.IMWRITE_WEBP_QUALITY, compression_quality])
     # Convert the encoded image to base64
     base64_str = base64.b64encode(encoded_image).decode()
     return base64_str

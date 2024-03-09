@@ -28,23 +28,27 @@ class DeforumLoadVideo:
                 if len(file_parts) > 1 and (file_parts[-1] in video_extensions):
                     files.append(f)
         return {"required": {
-                    "video": (sorted(files),),},}
+                    "video": (sorted(files),),
+                    "reset": ("BOOLEAN", {"default": False},),
+
+        },}
 
     CATEGORY = "deforum"
     display_name = "Load Video"
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = ("IMAGE","INT","INT")
+    RETURN_NAMES = ("IMAGE","FRAME_IDX","MAX_FRAMES")
     FUNCTION = "load_video_frame"
 
     def __init__(self):
         self.cap = None
         self.current_frame = None
 
-    def load_video_frame(self, video):
+    def load_video_frame(self, video, reset):
         video_path = folder_paths.get_annotated_filepath(video)
 
         # Initialize or reset video capture
-        if self.cap is None or self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.video_path != video_path:
+        if self.cap is None or self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.video_path != video_path or reset:
             try:
                 self.cap.release()
             except:
@@ -72,7 +76,7 @@ class DeforumLoadVideo:
             frame = np.array(frame).astype(np.float32)
             frame = pil2tensor(frame)  # Convert to torch tensor
 
-        return (frame,)
+        return (frame,self.current_frame,self.cap.get(cv2.CAP_PROP_POS_FRAMES),)
 
     @classmethod
     def IS_CHANGED(cls, text, autorefresh):
