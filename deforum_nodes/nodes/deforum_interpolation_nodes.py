@@ -201,7 +201,10 @@ class DeforumCadenceNode:
         if "depth_model" not in gs.deforum_models or gs.deforum_depth_algo != anim_args.depth_algorithm:
             self.vram_state = "high"
             if "depth_model" in gs.deforum_models:
-                gs.deforum_models["depth_model"].to("cpu")
+                try:
+                    gs.deforum_models["depth_model"].to("cpu")
+                except:
+                    pass
                 del gs.deforum_models["depth_model"]
 
             deforum_depth_algo = anim_args.depth_algorithm
@@ -228,13 +231,17 @@ class DeforumCadenceNode:
             gs.deforum_models["depth_model"].to('cuda')
         if "raft_model" not in gs.deforum_models:
             gs.deforum_models["raft_model"] = RAFT()
-
-        if deforum_frame_data["frame_idx"] == 0 or not hasattr(self, "interpolator"):
+        first_gen = False
+        if deforum_frame_data.get("reset") or not hasattr(self, "interpolator"):
             self.interpolator = CadenceInterpolator()
-            deforum_frame_data["frame_idx"] += anim_args.diffusion_cadence
-        self.interpolator.turbo_prev_image, self.interpolator.turbo_prev_frame_idx = self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx
-        self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]
-
+            #deforum_frame_data["frame_idx"] += anim_args.diffusion_cadence
+            first_gen = True
+        if self.interpolator.turbo_next_image is not None:
+            self.interpolator.turbo_prev_image, self.interpolator.turbo_prev_frame_idx = self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx
+        self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"] - 1
+        if first_gen:
+            self.interpolator.turbo_prev_image = np_image
+            return image
         # with torch.inference_mode():
         with torch.no_grad():
 
