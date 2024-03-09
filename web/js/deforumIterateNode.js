@@ -407,21 +407,21 @@ app.registerExtension({
 
 
 
-                if (this.playing === false) {
-                    this.playing = true;
-                    this.cacheFrames(output["frames"]);
-                    this.startPlayback(millisecondsPerFrame);
+                if (output && "frames" in output) { // Safely check if 'frames' is a key in 'output'
+                    if (this.playing === false) {
+                        this.playing = true;
+                        this.cacheFrames(output["frames"]);
+                        this.startPlayback(millisecondsPerFrame);
+                    } else {
+                        this.setPlaybackInterval(millisecondsPerFrame);
+                        this.cacheFrames(output["frames"]);
+                    }
 
-                } else {
-                    this.setPlaybackInterval(millisecondsPerFrame)
-                    this.cacheFrames(output["frames"]);
-                }
-
-                if (should_reset[0] === true) {
-                    this.stopPlayback();
-                    this.clearFrameCache();
-                    this.cacheFrames(output["frames"]);
-
+                    if (should_reset[0] === true) {
+                        this.stopPlayback();
+                        this.clearFrameCache();
+                        this.cacheFrames(output["frames"]);
+                    }
                 }
 
 

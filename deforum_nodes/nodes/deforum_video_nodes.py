@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm
 
 import folder_paths
-from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor, find_next_index, pil_image_to_base64
+from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor, find_next_index, pil_image_to_base64, tensor_to_webp_base64
 
 video_extensions = ['webm', 'mp4', 'mkv', 'gif']
 
@@ -105,6 +105,7 @@ class DeforumVideoSaveNode:
                      "dump_every": ("INT", {"default": 0, "min": 0, "max": 4096},),
                      "dump_now": ("BOOLEAN", {"default": False},),
                      "skip_save": ("BOOLEAN", {"default": False},),
+                     "enable_preview": ("BOOLEAN", {"default": True},),
                      },
                 "optional":
                     {"deforum_frame_data": ("DEFORUM_FRAME_DATA",),}
@@ -118,20 +119,32 @@ class DeforumVideoSaveNode:
     display_name = "Save Video"
     CATEGORY = "deforum"
     def add_image(self, image):
-        pil_image = tensor2pil(image.unsqueeze(0))
-        size = pil_image.size
-        if size != self.size:
-            self.size = size
-            self.images.clear()
-        self.images.append(np.array(pil_image).astype(np.uint8))
 
-    def fn(self, image, filename_prefix, fps, codec, pixel_format, format, quality, dump_by, dump_every, dump_now, skip_save, deforum_frame_data={}):
+        self.images.append(image)
+
+        # pil_image = tensor2pil(image.unsqueeze(0))
+        # size = pil_image.size
+        # if size != self.size:
+        #     self.size = size
+        #     self.images.clear()
+        # self.images.append(np.array(pil_image).astype(np.uint8))
+    def fn(self,
+           image,
+           filename_prefix,
+           fps,
+           codec,
+           pixel_format,
+           format,
+           quality,
+           dump_by,
+           dump_every,
+           dump_now,
+           skip_save,
+           enable_preview,
+           deforum_frame_data={}):
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
         counter = find_next_index(full_output_folder, filename_prefix, format)
-
-        #frame_idx = deforum_frame_data.get["frame_idx"]
-
         anim_args = deforum_frame_data.get("anim_args")
         if anim_args is not None:
             max_frames = anim_args.max_frames
@@ -143,7 +156,6 @@ class DeforumVideoSaveNode:
                     self.add_image(img)
             else:
                 self.add_image(image[0])
-
         print(f"[deforum] Video Save node holding {len(self.images)} images")
         # When the current frame index reaches the last frame, save the video
 
@@ -164,7 +176,7 @@ class DeforumVideoSaveNode:
 
                     writer = imageio.get_writer(output_path, fps=fps, codec=codec, quality=quality, pixelformat=pixel_format, format=format)
                     for frame in tqdm(self.images, desc=f"Saving {format} (imageio)"):
-                        writer.append_data(frame)
+                        writer.append_data(np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
                     writer.close()
 
                 # ret = []
@@ -183,8 +195,19 @@ class DeforumVideoSaveNode:
                     self.add_image(img)
             else:
                 self.add_image(image[0])
+        if enable_preview:
 
-        return {"ui": {"counter":(len(self.images),), "should_dump":(dump or dump_now,), "frames":([pil_image_to_base64(tensor2pil(i)) for i in image]), "fps":(fps,)}, "result": (ret,)}
+            ui_ret = {"counter":(len(self.images),),
+                      "should_dump":(dump or dump_now,),
+                      "frames":([tensor_to_webp_base64(i) for i in image]),
+                      "fps":(fps,)}
+        else:
+            ui_ret = {"counter":(len(self.images),),
+                      "should_dump":(dump or dump_now,),
+                      # "frames":([tensor_to_webp_base64(i) for i in image]),
+                      "fps":(fps,)}
+
+        return {"ui": ui_ret, "result": (ret,)}
     @classmethod
     def IS_CHANGED(s, text, autorefresh):
         # Force re-evaluation of the node

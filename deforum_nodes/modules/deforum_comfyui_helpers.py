@@ -5,6 +5,7 @@ import random
 import re
 from io import BytesIO
 
+import cv2
 import numexpr
 import numpy as np
 import pandas as pd
@@ -92,6 +93,24 @@ def pil_image_to_base64(pil_image):
     pil_image.save(buffer, format="WEBP")  # Or JPEG
     return base64.b64encode(buffer.getvalue()).decode()
 
+
+def tensor_to_webp_base64(tensor):
+    # Ensure tensor is in CPU and detach it from the computation graph
+    tensor = tensor.clone().detach().cpu()
+    # Convert tensor to a numpy array with value range [0, 255]
+    # Transpose the tensor to have the channel in the correct order (H, W, C)
+    np_image = (tensor.numpy().squeeze() * 255).clip(0, 255).astype(np.uint8)
+    if np_image.ndim == 2:  # if it's a grayscale image, convert to RGB
+        np_image = cv2.cvtColor(np_image, cv2.COLOR_GRAY2RGB)
+    elif np_image.shape[0] == 3:  # Convert CHW to HWC
+        np_image = np_image.transpose(1, 2, 0)
+    np_image = cv2.cvtColor(np_image, cv2.COLOR_BGR2RGB)
+    # Encode the numpy array to WEBP using OpenCV
+    _, encoded_image = cv2.imencode('.webp', np_image)
+    # Convert the encoded image to base64
+    base64_str = base64.b64encode(encoded_image).decode()
+    return base64_str
+
 def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
     """
     Generates a list of seed integers compatible with PyTorch in various manners.
@@ -112,7 +131,7 @@ def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
     elif mode == 'ladder':
         # Generate a ladder sequence where the sequence is repeated after reaching the max_frames
         return [(start_seed + i // 2 * step if i % 2 == 0 else start_seed + (i // 2 + 1) * step) % (2**32) for i in range(max_frames)]
-    elif mode == 'incrementing':
+    elif mode == 'incrementing' or 'iter':
         return [(start_seed + i * step) % (2**32) for i in range(max_frames)]
     elif mode == 'decrementing':
         return [(start_seed - i * step) % (2**32) for i in range(max_frames)]
