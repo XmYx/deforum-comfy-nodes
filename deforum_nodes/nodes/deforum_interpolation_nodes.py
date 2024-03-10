@@ -1,3 +1,4 @@
+import cv2
 import torch
 import numpy as np
 
@@ -65,7 +66,7 @@ class DeforumFILMInterpolationNode:
                 tensor = pil2tensor(frame)[0]
                 return_frames.append(tensor.detach().cpu())
             self.FILM_temp = [self.FILM_temp[1]]
-        print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
+        print(f"[deforum] FILM: {len(return_frames)} frames")
         if len(return_frames) > 0:
             return_frames = torch.stack(return_frames, dim=0)
             return return_frames
@@ -138,7 +139,7 @@ class DeforumSimpleInterpolationNode:
             else:
                 return_frames = [i for i in pil2tensor(self.FILM_temp)[0]]
             self.FILM_temp = [self.FILM_temp[1]]
-        print(f"[ Simple Interpolation Node: Created {len(return_frames)} frames ]")
+        print(f"[deforum] Simple Interpolation {len(return_frames)} frames")
         if len(return_frames) > 0:
             return_frames = torch.stack(return_frames, dim=0)
             return return_frames
@@ -172,6 +173,7 @@ class DeforumCadenceNode:
         return {"required":
                     {"image": ("IMAGE",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
+                     "depth_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                      }
                 }
 
@@ -185,12 +187,18 @@ class DeforumCadenceNode:
         # Force re-evaluation of the node
         return float("NaN")
 
-    def interpolate(self, image, deforum_frame_data):
+    def interpolate(self, image, deforum_frame_data, depth_strength):
         #global deforum_depth_algo, deforum_models
         # import turbo_prev_image, turbo_next_image, turbo_next_frame_idx, turbo_prev_frame_idx
         return_frames = []
         pil_image = tensor2pil(image.clone().detach())
-        np_image = np.array(pil_image.convert("RGB"))
+        # Convert PIL image to RGB NumPy array and cast to np.float32
+        np_image = np.array(pil_image.convert("RGB")).astype(np.uint8)
+
+        # Convert from RGB to BGR for OpenCV compatibility
+        #np_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+        np_image = cv2.normalize(np_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+        np_image = np_image.astype(np.uint8)
         args = deforum_frame_data["args"]
         anim_args = deforum_frame_data["anim_args"]
         predict_depths = (
@@ -252,31 +260,29 @@ class DeforumCadenceNode:
                                             deforum_frame_data["keys"],
                                             deforum_frame_data["frame_idx"],
                                             gs.deforum_models["depth_model"],
-                                            gs.deforum_models["raft_model"])
+                                            gs.deforum_models["raft_model"],
+                                            depth_strength)
 
 
 
         for frame in frames:
-
             tensor = pil2tensor(frame)
-
-
             return_frames.append(tensor.squeeze(0))
-        print(f"[ FILM NODE: Created {len(return_frames)} frames ]")
+        print(f"[deforum] [rbn] Cadence: {len(return_frames)} frames")
         if len(return_frames) > 0:
             return_frames = torch.stack(return_frames, dim=0)
             return return_frames
         else:
             return image
 
-    def fn(self, image, deforum_frame_data):
+    def fn(self, image, deforum_frame_data, depth_strength):
         result = []
 
         # Check if there are multiple images in the batch
         if image.shape[0] > 1:
             for img in image:
                 # Ensure img has batch dimension of 1 for interpolation
-                interpolated_frames = self.interpolate(img.unsqueeze(0), deforum_frame_data)
+                interpolated_frames = self.interpolate(img.unsqueeze(0), deforum_frame_data, depth_strength)
 
                 # Collect all interpolated frames
                 for f in interpolated_frames:
@@ -285,16 +291,7 @@ class DeforumCadenceNode:
             ret = torch.stack(result, dim=0)
         else:
             # Directly interpolate if only one image is present
-            ret = self.interpolate(image, deforum_frame_data)
+            ret = self.interpolate(image, deforum_frame_data, depth_strength)
 
-        # The issue might be with how the last frame is being extracted or processed.
-        # Ensure the last frame has the correct shape and color channels.
-        # Adding unsqueeze(0) to keep the batch dimension consistent.
         last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
-
-        # Ensure the color information is consistent (RGB channels)
-        # if last.shape[1] != 3:
-        #     # This is just a placeholder check; you might need a different check or fix based on your specific context.
-        #     print("Warning: The last frame does not have 3 color channels. Check your interpolate function.")
-
         return (ret, last,)

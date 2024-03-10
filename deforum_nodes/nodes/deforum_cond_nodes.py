@@ -30,7 +30,6 @@ class DeforumConditioningBlendNode:
         if not areas:
             prompt = deforum_frame_data.get("prompt", "")
             next_prompt = deforum_frame_data.get("next_prompt", None)
-            print(f"[ Deforum Conds: {prompt}, {negative_prompt} ]")
             cond = self.get_conditioning(prompt=prompt, clip=clip)
             # image = self.getInputData(2)
             # controlnet = self.getInputData(3)
@@ -41,7 +40,7 @@ class DeforumConditioningBlendNode:
                 if next_prompt != prompt and prompt_blend != 0.0 and next_prompt is not None:
                     next_cond = self.get_conditioning(prompt=next_prompt, clip=clip)
                     cond = blend_tensors(cond[0], next_cond[0], prompt_blend, blend_method)
-                    print(f"[ Deforum Cond Blend: {next_prompt}, {prompt_blend} ]")
+                    print(f"[deforum] Blending next prompt: {next_prompt}, with alpha: {prompt_blend} ]")
         else:
             from nodes import ConditioningSetArea
             area_setter = ConditioningSetArea()

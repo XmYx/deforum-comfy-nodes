@@ -113,7 +113,7 @@ class DeforumIteratorNode:
 
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
-        if self.frame_index > anim_args.max_frames or reset_counter:
+        if self.frame_index >= anim_args.max_frames or reset_counter:
             # from . import standalone_cadence
             # standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = None, 0
             # standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = None, 0
@@ -146,8 +146,6 @@ class DeforumIteratorNode:
         self.seeds.append(self.seed)
 
         blend_value = 0.0
-
-        # print(frame, anim_args.diffusion_cadence, node.deforum.prompt_series)
 
         next_frame = self.frame_index + anim_args.diffusion_cadence
         next_prompt = None
@@ -207,11 +205,12 @@ class DeforumIteratorNode:
         gen_args["frame_index"] = self.frame_index
         gen_args["max_frames"] = anim_args.max_frames
 
-        seeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, seed, args.seed_iter_N)
-        subseeds = generate_seed_list(anim_args.max_frames, args.seed_behavior, subseed, args.seed_iter_N)
-
+        seeds = generate_seed_list(anim_args.max_frames + 1, args.seed_behavior, seed, args.seed_iter_N)
+        subseeds = generate_seed_list(anim_args.max_frames + 1, args.seed_behavior, subseed, args.seed_iter_N)
+        if reset_counter:
+            print("[deforum] RESET COUNTER")
         if latent is None or reset_latent or not hasattr(self, "rng"):
-            print("[ RESETTING DEFORUM ]")
+            print("[deforum] RESET LATENT"  )
 
             from ..mapping import gs
 
@@ -230,6 +229,8 @@ class DeforumIteratorNode:
                 compression = 42
             if init_latent is not None:
                 args.height, args.width = init_latent["samples"].shape[2] * 8, init_latent["samples"].shape[3] * 8
+
+
             self.rng = ImageRNGNoise((channels, args.height // compression, args.width // compression),
                                      [seeds[self.frame_index]], [subseeds[self.frame_index]],
                                      0.6, 1024, 1024)
@@ -245,7 +246,7 @@ class DeforumIteratorNode:
                 l = self.rng.next().clone().to(comfy.model_management.intermediate_device())
                 s = latent["samples"].clone().to(comfy.model_management.intermediate_device())
                 latent = {"samples":slerp(slerp_strength, s, l)}
-        print(f"[ Deforum Iterator: {self.frame_index} / {anim_args.max_frames} {self.seed}]")
+        print(f"[deforum] Frame: {self.frame_index} of {anim_args.max_frames}")
         gen_args["noise"] = self.rng
         gen_args["seed"] = int(seed)
 
@@ -269,7 +270,8 @@ class DeforumIteratorNode:
             self.first_run = False
             from ..mapping import gs
             gs.reset = False if not self.first_run else True
-
+        if self.frame_index > anim_args.max_frames:
+            self.frame_index = anim_args.max_frames
         latent["samples"] = latent["samples"].float()
         enable_autoqueue = enable_autoqueue if self.frame_index == 0 else False
         gen_args["sampler_name"] = deforum_data.get("sampler_name", "euler_a")

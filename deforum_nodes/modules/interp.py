@@ -45,7 +45,7 @@ def get_matrix_for_hybrid_motion(frame_idx, dimensions, inputfiles, hybrid_motio
     img1 = cv2.cvtColor(get_resized_image_from_filename(str(inputfiles[frame_idx - 1]), dimensions), cv2.COLOR_BGR2GRAY)
     img2 = cv2.cvtColor(get_resized_image_from_filename(str(inputfiles[frame_idx]), dimensions), cv2.COLOR_BGR2GRAY)
     matrix = get_transformation_matrix_from_images(img1, img2, hybrid_motion)
-    print(f"Calculating {hybrid_motion} RANSAC matrix for frames {frame_idx} to {frame_idx + 1}")
+    print(f"[deforum] Calculating {hybrid_motion} RANSAC matrix for frames {frame_idx} to {frame_idx + 1}")
     return matrix
 
 
@@ -58,13 +58,13 @@ def get_matrix_for_hybrid_motion_prev(frame_idx, dimensions, inputfiles, prev_im
         prev_img_gray = cv2.cvtColor(prev_img, cv2.COLOR_BGR2GRAY)
         img = cv2.cvtColor(get_resized_image_from_filename(str(inputfiles[frame_idx]), dimensions), cv2.COLOR_BGR2GRAY)
         matrix = get_transformation_matrix_from_images(prev_img_gray, img, hybrid_motion)
-        print(f"Calculating {hybrid_motion} RANSAC matrix for frames {frame_idx} to {frame_idx + 1}")
+        print(f"[deforum] Calculating {hybrid_motion} RANSAC matrix for frames {frame_idx} to {frame_idx + 1}")
         return matrix
 
 
 def get_flow_for_hybrid_motion(frame_idx, dimensions, inputfiles, hybrid_frame_path, method,
                                do_flow_visualization=False):
-    print(f"Calculating {method} optical flow for frames {frame_idx} to {frame_idx + 1}")
+    print(f"[deforum] Calculating {method} optical flow for frames {frame_idx} to {frame_idx + 1}")
     i1 = get_resized_image_from_filename(str(inputfiles[frame_idx]), dimensions)
     i2 = get_resized_image_from_filename(str(inputfiles[frame_idx + 1]), dimensions)
     flow = get_flow_from_images(i1, i2, method)
@@ -75,7 +75,7 @@ def get_flow_for_hybrid_motion(frame_idx, dimensions, inputfiles, hybrid_frame_p
 
 def get_flow_for_hybrid_motion_prev(frame_idx, dimensions, inputfiles, hybrid_frame_path, prev_img, method,
                                     do_flow_visualization=False):
-    print(f"Calculating {method} optical flow for frames {frame_idx} to {frame_idx + 1}")
+    print(f"[deforum] Calculating {method} optical flow for frames {frame_idx} to {frame_idx + 1}")
     # first handle invalid images from cadence by returning default matrix
     height, width = prev_img.shape[:2]
     if height == 0 or width == 0:
@@ -86,6 +86,21 @@ def get_flow_for_hybrid_motion_prev(frame_idx, dimensions, inputfiles, hybrid_fr
         flow = get_flow_from_images(i1, i2, method)
     if do_flow_visualization:
         save_flow_visualization(frame_idx, dimensions, flow, inputfiles, hybrid_frame_path)
+    return flow
+
+def get_flow_for_hybrid_motion_prev_imgs(frame_idx, dimensions, current_img, prev_img, method,
+                                    do_flow_visualization=False):
+    print(f"[deforum] Calculating {method} optical flow for frames {frame_idx} to {frame_idx + 1}")
+    # first handle invalid images from cadence by returning default matrix
+    height, width = prev_img.shape[:2]
+    if height == 0 or width == 0:
+        flow = get_hybrid_motion_default_flow(dimensions)
+    else:
+        i1 = prev_img.astype(np.uint8)
+        i2 = current_img.astype(np.uint8)
+        flow = get_flow_from_images(i1, i2, method)
+    # if do_flow_visualization:
+    #     save_flow_visualization(frame_idx, dimensions, flow, inputfiles, hybrid_frame_path)
     return flow
 
 
@@ -234,7 +249,7 @@ def save_flow_visualization(frame_idx, dimensions, flow, inputfiles, hybrid_fram
     flow_img = draw_flow_lines_in_grid_in_color(flow_img, flow)
     flow_img = cv2.cvtColor(flow_img, cv2.COLOR_BGR2RGB)
     cv2.imwrite(flow_img_file, flow_img)
-    print(f"Saved optical flow visualization: {flow_img_file}")
+    print(f"[deforum] Saved optical flow visualization: {flow_img_file}")
 
 
 def draw_flow_lines_in_grid_in_color(img, flow, step=8, magnitude_multiplier=1, min_magnitude=1, max_magnitude=10000):

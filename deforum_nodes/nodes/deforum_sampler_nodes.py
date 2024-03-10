@@ -24,6 +24,7 @@ class DeforumKSampler:
         sampler_name = deforum_frame_data.get("sampler_name", "euler_a")
         scheduler = deforum_frame_data.get("scheduler", "normal")
         denoise = deforum_frame_data.get("denoise", 1.0)
+
         latent["samples"] = latent["samples"].float()
         return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
                                denoise=denoise)

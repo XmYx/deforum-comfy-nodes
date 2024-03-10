@@ -52,9 +52,6 @@ class DeforumFrameWarpNode:
             anim_args = data.get("anim_args")
             keys = data.get("keys")
             frame_idx = data.get("frame_idx")
-            print(keys.translation_z_series[frame_idx])
-
-            # print(keys.translation_z_series[frame_idx])
 
             if frame_idx == 0:
                 self.depth = None
@@ -95,7 +92,6 @@ class DeforumFrameWarpNode:
                 self.depth_model = None
             if self.depth_model is not None:
                 self.depth_model.to('cuda')
-            #print(depth_image.shape)
             if depth_image is not None:
 
                 depth_image = comfy.utils.common_upscale(depth_image.permute(0,3,1,2), args.width, args.height, upscale_method="bislerp", crop="disabled")
@@ -147,8 +143,7 @@ class DeforumFrameWarpNode:
             #     mask[mask < 1e-05] = 0
             #     mask = mask[0].unsqueeze(0)
 
-            # print(mask)
-            # print(mask.shape)
+
 
             # from ai_nodes.ainodes_engine_base_nodes.ainodes_backend.resizeRight import resizeright
             # from ai_nodes.ainodes_engine_base_nodes.ainodes_backend.resizeRight import interp_methods
@@ -158,7 +153,6 @@ class DeforumFrameWarpNode:
             #                                     interp_method=interp_methods.lanczos3, support_sz=None,
             #                                     antialiasing=True, by_convs=True, scale_tolerance=None,
             #                                     max_numerator=10, pad_mode='reflect')
-            # print(mask.shape)
             return (tensor, ret_depth,warped_ret,)
             # return [data, tensor, mask, ret_depth, self.depth_model]
         else:

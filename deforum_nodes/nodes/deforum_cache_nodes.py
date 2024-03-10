@@ -89,15 +89,13 @@ class DeforumCacheImageNode:
     OUTPUT_NODE = True
 
     def cache_it(self, image=None, cache_index=0):
-
+        print("CACHING IMAGE")
         from ..mapping import gs
 
         if "image" not in gs.deforum_cache:
             gs.deforum_cache["image"] = {}
+
         gs.deforum_cache["image"][cache_index] = image.clone()
-
-        # print("IMAGE ON INDEX", cache_index, deforum_cache["image"][cache_index])
-
 
         return (image,)
 
@@ -126,15 +124,10 @@ class DeforumGetCachedImageNode:
     display_name = "Load Cached Image"
 
     def get_cached_latent(self, cache_index=0):
-        #global deforum_cache
-
         from ..mapping import gs
-        # print("GETTING LATENT, SHOULD BE NONE", gs.deforum_cache)
         img_dict = gs.deforum_cache.get("image", {})
         image = img_dict.get(cache_index)
         mask = None
         if image is not None:
             mask = image[:, :, :, 0]
-        # print("IMAGE ON INDEX", cache_index, image)
-
         return (image,mask,)

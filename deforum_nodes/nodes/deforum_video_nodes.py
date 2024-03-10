@@ -123,15 +123,8 @@ class DeforumVideoSaveNode:
     display_name = "Save Video"
     CATEGORY = "deforum"
     def add_image(self, image):
-
         self.images.append(image)
 
-        # pil_image = tensor2pil(image.unsqueeze(0))
-        # size = pil_image.size
-        # if size != self.size:
-        #     self.size = size
-        #     self.images.clear()
-        # self.images.append(np.array(pil_image).astype(np.uint8))
     def fn(self,
            image,
            filename_prefix,
@@ -160,7 +153,7 @@ class DeforumVideoSaveNode:
                     self.add_image(img)
             else:
                 self.add_image(image[0])
-        print(f"[deforum] Video Save node holding {len(self.images)} images")
+        print(f"[deforum] Video Save node cached {len(self.images)} frames")
         # When the current frame index reaches the last frame, save the video
 
         if dump_by == "max_frames":
@@ -170,27 +163,21 @@ class DeforumVideoSaveNode:
         if deforum_frame_data.get("reset", None):
             dump = True
         ret = "skip"
-        # print("DEFORUM VIDEO SAVE NODE", dump_now)
         if dump or dump_now:  # frame_idx is 0-based
             if len(self.images) >= 2:
                 if not skip_save:
                     output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{format}")
 
-                    print("[deforum] Will save as:", output_path)
+                    print("[deforum] Saving video:", output_path)
 
                     writer = imageio.get_writer(output_path, fps=fps, codec=codec, quality=quality, pixelformat=pixel_format, format=format)
                     for frame in tqdm(self.images, desc=f"Saving {format} (imageio)"):
                         writer.append_data(np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
                     writer.close()
 
-                # ret = []
-                # for i in self.images:
-                #     ret.append(pil2tensor(i)[0])
+
                 ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
-                # print(ret.shape)
 
-
-                # ret = torch.stack([pil2tensor(i) for i in self.images], dim=0)
             self.images = []  # Empty the list for next use
 
         if deforum_frame_data.get("reset", None):

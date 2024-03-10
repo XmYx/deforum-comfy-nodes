@@ -21,6 +21,7 @@ from .nodes.deforum_interpolation_nodes import *
 from .nodes.deforum_image_nodes import *
 from .nodes.deforum_iteration_nodes import *
 from .nodes.deforum_legacy_nodes import *
+from .nodes.deforum_logic_nodes import *
 try:
     from .nodes.deforum_noise_nodes import AddCustomNoiseNode
 except:
@@ -32,6 +33,7 @@ except:
 from .nodes.deforum_prompt_nodes import *
 from .nodes.redirect_console_node import DeforumRedirectConsole
 from .nodes.deforum_sampler_nodes import *
+from .nodes.deforum_schedule_visualizer import *
 from .nodes.deforum_video_nodes import *
 
 from . import exec_hijack

@@ -44,7 +44,7 @@ class DeforumColorMatchNode:
                     self.color_match_sample = np.array(tensor2pil(force_sample_image)).copy()
             if anim_args.color_coherence != 'None' and self.color_match_sample is not None:
                 image = maintain_colors(image, self.color_match_sample, anim_args.color_coherence)
-            print(f"[ Deforum Color Coherence: {anim_args.color_coherence} ]")
+            print(f"[deforum] ColorMatch: {anim_args.color_coherence}")
             if self.color_match_sample is None:
                 self.color_match_sample = image.copy()
             if anim_args.color_force_grayscale:
@@ -117,7 +117,7 @@ class DeforumAddNoiseNode:
                                       anim_args.perlin_persistence),
                                      root.noise_mask, args.invert_mask)
             # image = Image.fromarray(noised_image)
-            print(f"[ Deforum Adding Noise: {noise} {anim_args.noise_type}]")
+            print(f"[deforum] Adding Noise {noise} {anim_args.noise_type}")
             image = pil2tensor(noised_image).detach().cpu()
 
             return (image,)

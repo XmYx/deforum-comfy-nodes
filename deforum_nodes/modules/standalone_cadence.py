@@ -2,10 +2,11 @@ import os
 
 import cv2
 import numpy as np
-from deforum.generators.deforum_flow_generator import rel_flow_to_abs_flow, abs_flow_to_rel_flow, get_flow_from_images
+from deforum.generators.deforum_flow_generator import rel_flow_to_abs_flow, abs_flow_to_rel_flow, get_flow_from_images, \
+    get_flow_for_hybrid_motion_prev_imgs
 from deforum.utils.deforum_framewarp_utils import anim_frame_warp
-from deforum.utils.image_utils import image_transform_optical_flow
-
+from deforum.utils.deforum_hybrid_animation import get_matrix_for_hybrid_motion_prev_imgs
+from deforum.utils.image_utils import image_transform_optical_flow, image_transform_ransac
 import cv2
 import numpy as np
 import PIL.Image
@@ -16,9 +17,15 @@ class CadenceInterpolator:
         self.turbo_next_image, self.turbo_next_frame_idx = None, 0
         self.start_frame = 0
         self.depth = None
+        self.prev_img = None
+        self.prev_flow = None
 
-    def new_standalone_cadence(self, args, anim_args, root, keys, frame_idx, depth_model, raft_model):
+    def new_standalone_cadence(self, args, anim_args, root, keys, frame_idx, depth_model, raft_model, depth_strength=1.0):
         # global self.turbo_prev_image, self.turbo_next_image, self.turbo_prev_frame_idx, self.turbo_next_frame_idx, self.start_frame, self.depth
+        if not hasattr(self, 'prev_flow'):
+            self.prev_flow = None
+        self.prev_img = self.turbo_prev_image
+        goal_img = self.turbo_next_image
         turbo_steps = int(anim_args.diffusion_cadence)
         cadence_flow_factor = keys.cadence_flow_factor_schedule_series[frame_idx]
         imgs = []
@@ -40,6 +47,9 @@ class CadenceInterpolator:
                 if anim_args.animation_mode in ['2D', '3D'] and anim_args.optical_flow_cadence != 'None':
                     if keys.strength_schedule_series[tween_frame_start_idx] > 0:
                         if cadence_flow is None and self.turbo_prev_image is not None and self.turbo_next_image is not None:
+
+                            print("BOTH IMAGES AVAILABLE")
+
                             cadence_flow = get_flow_from_images(self.turbo_prev_image, self.turbo_next_image,
                                                                 anim_args.optical_flow_cadence, raft_model) / 2
                             self.turbo_next_image = image_transform_optical_flow(self.turbo_next_image, -cadence_flow, 1)
@@ -52,11 +62,11 @@ class CadenceInterpolator:
                 #     params_string = None
     
                 print(
-                    f"Creating in-between {'' if cadence_flow is None else anim_args.optical_flow_cadence + ' optical flow '}cadence frame: {tween_frame_idx}; tween:{tween:0.2f};")
+                    f"[deforum] Creating in-between {'' if cadence_flow is None else anim_args.optical_flow_cadence + ' optical flow '}cadence frame: {tween_frame_idx}; tween:{tween:0.2f};")
     
                 if depth_model is not None:
                     assert (self.turbo_next_image is not None)
-                    self.depth = depth_model.predict(self.turbo_next_image, anim_args.midas_weight, root.half_precision)
+                    self.depth = depth_model.predict(self.turbo_next_image, anim_args.midas_weight, root.half_precision) * depth_strength
     
                 if advance_prev:
                     self.turbo_prev_image, _, _ = anim_frame_warp(self.turbo_prev_image, args, anim_args, keys, tween_frame_idx,
@@ -71,8 +81,8 @@ class CadenceInterpolator:
                 # if tween_frame_idx > 0:
                 #     if anim_args.hybrid_motion in ['Affine', 'Perspective']:
                 #         if anim_args.hybrid_motion_use_prev_img:
-                #             matrix = get_matrix_for_hybrid_motion_prev(tween_frame_idx - 1, (args.W, args.H), inputfiles,
-                #                                                        prev_img, anim_args.hybrid_motion)
+                #             matrix = get_matrix_for_hybrid_motion_prev_imgs(tween_frame_idx - 1, (args.width, args.height),
+                #                                                        goal_img, self.prev_img, anim_args.hybrid_motion)
                 #             if advance_prev:
                 #                 self.turbo_prev_image = image_transform_ransac(self.turbo_prev_image, matrix, anim_args.hybrid_motion)
                 #             if advance_next:
@@ -86,19 +96,20 @@ class CadenceInterpolator:
                 #                 self.turbo_next_image = image_transform_ransac(self.turbo_next_image, matrix, anim_args.hybrid_motion)
                 #     if anim_args.hybrid_motion in ['Optical Flow']:
                 #         if anim_args.hybrid_motion_use_prev_img:
-                #             flow = get_flow_for_hybrid_motion_prev(tween_frame_idx - 1, (args.W, args.H), inputfiles,
-                #                                                    hybrid_frame_path, prev_flow, prev_img,
+                #             flow = get_flow_for_hybrid_motion_prev_imgs(tween_frame_idx - 1, (args.width, args.height), goal_img.astype(np.uint8), self.prev_flow, self.prev_img.astype(np.uint8),
                 #                                                    anim_args.hybrid_flow_method, raft_model,
                 #                                                    anim_args.hybrid_flow_consistency,
                 #                                                    anim_args.hybrid_consistency_blur,
                 #                                                    anim_args.hybrid_comp_save_extra_frames)
                 #             if advance_prev:
                 #                 self.turbo_prev_image = image_transform_optical_flow(self.turbo_prev_image, flow,
-                #                                                                 hybrid_comp_schedules['flow_factor'])
+                #                                                                 #hybrid_comp_schedules['flow_factor'])
+                #                                                                 0.6)
                 #             if advance_next:
                 #                 self.turbo_next_image = image_transform_optical_flow(self.turbo_next_image, flow,
-                #                                                                 hybrid_comp_schedules['flow_factor'])
-                #             prev_flow = flow
+                #                                                                 #hybrid_comp_schedules['flow_factor'])
+                #                                                                 0.6)
+                #             self.prev_flow = flow
                 #         else:
                 #             flow = get_flow_for_hybrid_motion(tween_frame_idx - 1, (args.W, args.H), inputfiles,
                 #                                               hybrid_frame_path, prev_flow, anim_args.hybrid_flow_method,
@@ -144,8 +155,7 @@ class CadenceInterpolator:
                 #     img = do_overlay_mask(args, anim_args, img, tween_frame_idx, True)
     
                 # get prev_img during cadence
-                #prev_img = img
-    
+                self.prev_img = img
                 # current image update for cadence frames (left commented because it doesn't currently update the preview)
                 # state.current_image = Image.fromarray(cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB))
     

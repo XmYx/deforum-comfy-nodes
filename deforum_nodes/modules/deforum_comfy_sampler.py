@@ -101,7 +101,6 @@ def sample_deforum(
         cnet_image = torch.from_numpy(np.array(cnet_image).astype(np.float32) / 255.0).unsqueeze(0)
 
     if init_image is None or reset_noise:
-        print(reset_noise, strength)
         strength = 1.0
         if latent is None:
 
@@ -135,7 +134,7 @@ def sample_deforum(
         from nodes import ConditioningSetArea
         area_setter = ConditioningSetArea()
         for area in areas:
-            print("AREA TO USE", area)
+            print("[deforum] Area Prompt:", area)
             prompt = area.get("prompt", None)
             if prompt:
 
@@ -162,7 +161,6 @@ def sample_deforum(
     #steps = int((strength) * steps) if (strength != 1.0 or not reset_noise) else steps
     last_step = steps# if last_step is None else last_step
 
-    print(seed, strength, sampler_name, scheduler, scale)
 
     sample = common_ksampler_with_custom_noise(model=model,
                                                seed=seed,
@@ -195,7 +193,6 @@ def sample_deforum(
         else:
             return image
     else:
-        print("decoding multi images")
         images = []
         x_samples = vae.decode_tiled(sample[0]["samples"])
         for sample in x_samples:

@@ -147,5 +147,4 @@ class DeforumFrameDataExtract:
         frame_idx = deforum_frame_data.get("frame_idx")
         subseed_str = keys.subseed_strength_schedule_series[frame_idx]
 
-        #print("DENOISE", denoise)
         return (frame_idx, seed, steps, cfg, sampler_name, scheduler, denoise,subseed_str,)
