@@ -89,7 +89,6 @@ class DeforumCacheImageNode:
     OUTPUT_NODE = True
 
     def cache_it(self, image=None, cache_index=0):
-        print("CACHING IMAGE")
         from ..mapping import gs
 
         if "image" not in gs.deforum_cache:

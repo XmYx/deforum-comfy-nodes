@@ -81,8 +81,9 @@ class DeforumAmplitudeToKeyframeSeriesNode:
                      },
                 "optional":
                     {
-                        "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
-                        "math": ("STRING", {"default":"x/1000"})
+                        "max_frames": ("INT",{"deafult":500, "min":1, "max":16500, "step":1},),
+                        "math": ("STRING", {"default":"x/1000"}),
+                        "deforum_frame_data": ("DEFORUM_FRAME_DATA",)
                     }
                 }
 
@@ -93,6 +94,7 @@ class DeforumAmplitudeToKeyframeSeriesNode:
     CATEGORY = "deforum"
     def safe_eval(self, expr, t, x, max_f):
         # Allowed functions and variables
+        # Allowed functions and variables now include 'min' and 'max'
         allowed_locals = {
             "sin": math.sin,
             "cos": math.cos,
@@ -101,9 +103,11 @@ class DeforumAmplitudeToKeyframeSeriesNode:
             "exp": math.exp,
             "log": math.log,
             "abs": math.fabs,
+            "min": min,
+            "max": max,
             "t": t,  # Current frame index
             "x": x,  # Current amplitude value
-            "max_f": max_f,  # Current amplitude value
+            "max_f": max_f,  # Max frames
         }
 
         # Evaluate the expression safely
@@ -119,13 +123,12 @@ class DeforumAmplitudeToKeyframeSeriesNode:
         # Force re-evaluation of the node
         return float("NaN")
 
-    def convert(self, type_name, amplitude, deforum_frame_data={}, math="x/100"):
-        max_f = deforum_frame_data.get('max_frames', 100)
+    def convert(self, type_name, amplitude, max_frames=1500, math="x/100", deforum_frame_data={}):
+        max_f = int(max_frames)
 
         # Apply the math expression to each element of the amplitude series
-        frame_index = deforum_frame_data.get("frame_idx", 0)
+        frame_index = 0
         modified_amplitude_list = []
-
         # Apply the math expression to each element of the amplitude list
         for x in amplitude:
             modified_value = self.safe_eval(math, frame_index, x, max_f)

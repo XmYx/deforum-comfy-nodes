@@ -48,8 +48,6 @@ class CadenceInterpolator:
                     if keys.strength_schedule_series[tween_frame_start_idx] > 0:
                         if cadence_flow is None and self.turbo_prev_image is not None and self.turbo_next_image is not None:
 
-                            print("BOTH IMAGES AVAILABLE")
-
                             cadence_flow = get_flow_from_images(self.turbo_prev_image, self.turbo_next_image,
                                                                 anim_args.optical_flow_cadence, raft_model) / 2
                             self.turbo_next_image = image_transform_optical_flow(self.turbo_next_image, -cadence_flow, 1)
