@@ -178,11 +178,11 @@ class DeforumScheduleTemplate:
             }
                }
 
-    @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    # @classmethod
+    # def IS_CHANGED(cls, text, autorefresh):
+    #     # Force re-evaluation of the node
+    #     if autorefresh == "Yes":
+    #         return float("NaN")
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "show"
@@ -204,11 +204,11 @@ class DeforumAudioScheduleTemplate:
             }
                }
 
-    @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    # @classmethod
+    # def IS_CHANGED(cls, text, autorefresh):
+    #     # Force re-evaluation of the node
+    #     if autorefresh == "Yes":
+    #         return float("NaN")
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "show"
@@ -262,11 +262,11 @@ class DeforumScheduleVisualizer:
             }
                }
 
-    @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    # @classmethod
+    # def IS_CHANGED(cls, text, autorefresh):
+    #     # Force re-evaluation of the node
+    #     if autorefresh == "Yes":
+    #         return float("NaN")
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "show"
