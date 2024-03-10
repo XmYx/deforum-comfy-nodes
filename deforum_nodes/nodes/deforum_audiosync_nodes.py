@@ -91,7 +91,7 @@ class DeforumAmplitudeToKeyframeSeriesNode:
     FUNCTION = "convert"
     display_name = "Amplitude to Schedule"
     CATEGORY = "deforum"
-    def safe_eval(self, expr, t, x):
+    def safe_eval(self, expr, t, x, max_f):
         # Allowed functions and variables
         allowed_locals = {
             "sin": math.sin,
@@ -100,8 +100,10 @@ class DeforumAmplitudeToKeyframeSeriesNode:
             "sqrt": math.sqrt,
             "exp": math.exp,
             "log": math.log,
+            "abs": math.fabs,
             "t": t,  # Current frame index
             "x": x,  # Current amplitude value
+            "max_f": max_f,  # Current amplitude value
         }
 
         # Evaluate the expression safely
@@ -118,7 +120,7 @@ class DeforumAmplitudeToKeyframeSeriesNode:
         return float("NaN")
 
     def convert(self, type_name, amplitude, deforum_frame_data={}, math="x/100"):
-
+        max_f = deforum_frame_data.get('max_frames', 100)
 
         # Apply the math expression to each element of the amplitude series
         frame_index = deforum_frame_data.get("frame_idx", 0)
@@ -126,8 +128,9 @@ class DeforumAmplitudeToKeyframeSeriesNode:
 
         # Apply the math expression to each element of the amplitude list
         for x in amplitude:
-            modified_value = self.safe_eval(math, frame_index, x)
+            modified_value = self.safe_eval(math, frame_index, x, max_f)
             modified_amplitude_list.append(modified_value)
+            frame_index += 1
         modified_amplitude_series = pd.Series(modified_amplitude_list)
         # Convert the series to a string format
         formatted_strings = [f"{idx}:({val})" for idx, val in modified_amplitude_series.items()]

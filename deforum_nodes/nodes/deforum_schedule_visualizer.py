@@ -86,6 +86,34 @@ templates = [
     "0:((log(1+abs(t))) + (log(1+abs(1000))) - (cos(2*3.14*1000/max_f)) + (cos(2*3.14*t/max_f)) + (sin(2*3.14*1000/max_f)) + 1)"
 ]
 
+audio_templates = [
+    "x * t / max_f",  # Linear scaling of x with respect to t.
+    "x * sin(2 * 3.14 * t / max_f)",  # Modulating x with a sinusoidal wave based on frame.
+    "x * (1 - t / max_f)",  # Linear decrease of x towards the end.
+    "x * sin(2 * 3.14 * t / max_f) + x * cos(2 * 3.14 * t / max_f)",  # Superposition of sine and cosine waves scaled by x.
+    "x * log(t + 1) / log(max_f)",  # Logarithmic scaling of x.
+    "x * sqrt(t / max_f)",  # Square root scaling of x.
+    "x * (exp(t / max_f) - 1)",  # Exponential scaling of x.
+    "x * sin(2 * 3.14 * t / max_f) * cos(2 * 3.14 * t / max_f)",  # Product of sine and cosine waves scaled by x.
+    "x * (1 - abs(2 * t / max_f - 1))",  # Triangle wave modulation of x.
+    "x * abs(sin(2 * 3.14 * t / max_f))",  # Absolute sinusoidal wave scaled by x.
+    "x * (2 ** (t / max_f) - 1)",  # Exponential growth base 2 scaled by x.
+    "x * (-2 ** (t / max_f) + 2)",  # Inverted exponential curve base 2 scaled by x.
+    "x * (sin(2 * 3.14 * t / max_f) if t < max_f / 2 else cos(2 * 3.14 * t / max_f))",  # Conditional wave modulation of x.
+    "x * tan(3.14 * t / max_f)",  # Tangent wave scaling of x, watch for extreme values.
+    "x * (1 - t / max_f)",  # Linear decrease from x to 0.
+    "x * sin(2 * 3.14 * t / max_f)**2",  # Square of sinusoidal wave scaled by x, smoothing negatives.
+    "x * cos(2 * 3.14 * t / max_f)**2",  # Square of cosine wave scaled by x, smoothing negatives.
+    "x * exp(-t / max_f)",  # Exponential decay of x.
+    "x * (s % 10 + sin(2 * 3.14 * t / max_f))",  # Sinusoidal wave with base level determined by seed, scaled by x.
+    "x * sin(4 * 3.14 * t / max_f) + x * cos(2 * 3.14 * t / max_f)",  # Sum of two waves with different frequencies scaled by x.
+    "x * (sin(2 * 3.14 * t / max_f) * (t % 10))",  # Sinusoidal wave amplitude modulated by frame modulo, scaled by x.
+    "x * abs(cos(2 * 3.14 * t / max_f))",  # Absolute value of a cosine wave scaled by x, creating peaks.
+    "x * (sin(2 * 3.14 * t / (max_f + t)))",  # Sinusoidal wave with frequency modulated by frame, scaled by x.
+    "x * (sin(2 * 3.14 * t / max_f) / (t + 1))",  # Sinusoidal wave with amplitude inversely proportional to frame, scaled by x.
+    "(exp(t / max_f)) * x + (log(1 + abs(t))) * x",  # Combination of exponential growth and logarithmic scaling of x.
+    "(x * cos(2 * 3.14 * t / max_f)) / (1 + log(t + 1))",  # Cosine wave scaled by x with logarithmic denominator to soften growth.
+]
 
 def generate_complex_random_expression(max_frames, seed=None, max_parts=3):
     """
@@ -159,6 +187,32 @@ class DeforumScheduleTemplate:
     RETURN_TYPES = ("STRING",)
     FUNCTION = "show"
     display_name = "Schedule Templates"
+    CATEGORY = "deforum"
+    OUTPUT_NODE = True
+
+    def show(self, expression):
+        return(str(expression),)
+
+class DeforumAudioScheduleTemplate:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+
+                "expression": (audio_templates,),
+
+            }
+               }
+
+    @classmethod
+    def IS_CHANGED(cls, text, autorefresh):
+        # Force re-evaluation of the node
+        if autorefresh == "Yes":
+            return float("NaN")
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "show"
+    display_name = "Audio Schedule Expression Templates"
     CATEGORY = "deforum"
     OUTPUT_NODE = True
 
