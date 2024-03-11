@@ -257,7 +257,8 @@ class DeforumScheduleVisualizer:
             "required": {
 
                 "schedule": ("STRING", {"default": "0: (1.0)"}),
-                "max_frames": ("INT", {"default": 1, "min": 1, "max": 4096, "step": 1}),
+                "max_frames": ("INT", {"default": 0, "min": 0, "max": 4096, "step": 1}),
+                "grid": ("BOOLEAN", {"default": False}),
 
             }
                }
@@ -274,8 +275,9 @@ class DeforumScheduleVisualizer:
     CATEGORY = "deforum"
     OUTPUT_NODE = True
 
-    def show(self, schedule, max_frames):
-
+    def show(self, schedule, max_frames, grid):
+        if max_frames == 0:
+            max_frames = len(schedule.split(','))
         fi = FrameInterpolator(max_frames, -1)
         series = fi.get_inbetweens(fi.parse_key_frames(schedule))
 
@@ -283,6 +285,8 @@ class DeforumScheduleVisualizer:
         fig = Figure()
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
+        if grid:
+            ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')
 
         # Plot the series
         ax.plot(series)

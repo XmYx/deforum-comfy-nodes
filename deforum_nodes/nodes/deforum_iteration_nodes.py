@@ -213,9 +213,11 @@ class DeforumIteratorNode:
             print("[deforum] RESET LATENT"  )
 
             from ..mapping import gs
-
-            gs.deforum_cache.clear()
-            gs.deforum_cache = {}
+            if "image" in gs.deforum_cache:
+                gs.deforum_cache["image"].clear()
+            if "latent" in gs.deforum_cache:
+                gs.deforum_cache["latent"].clear()
+            #gs.deforum_cache = {}
             gs.reset = True
 
 

@@ -130,3 +130,68 @@ class DeforumGetCachedImageNode:
         if image is not None:
             mask = image[:, :, :, 0]
         return (image,mask,)
+
+
+
+
+class DeforumCacheStringNode:
+    @classmethod
+    def IS_CHANGED(cls, text, autorefresh):
+        # Force re-evaluation of the node
+        if autorefresh == "Yes":
+            return float("NaN")
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "input_string": ("STRING",{"default":""}),
+                "cache_index": ("INT", {"default":0, "min": 0, "max": 16, "step": 1})
+            }
+        }
+
+    RETURN_TYPES = (("STRING",))
+    FUNCTION = "cache_it"
+    CATEGORY = f"deforum"
+    display_name = "Cache String"
+    OUTPUT_NODE = True
+
+    def cache_it(self, input_string=None, cache_index=0):
+        from ..mapping import gs
+
+        if "string" not in gs.deforum_cache:
+            gs.deforum_cache["string"] = {}
+
+        gs.deforum_cache["string"][cache_index] = input_string
+
+        return (input_string,)
+
+
+class DeforumGetCachedStringNode:
+
+    @classmethod
+    def IS_CHANGED(cls, text, autorefresh):
+        # Force re-evaluation of the node
+        if autorefresh == "Yes":
+            return float("NaN")
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+
+            "cache_index": ("INT", {"default": 0, "min": 0, "max": 16, "step": 1})
+
+        }}
+
+    RETURN_TYPES = (("STRING",))
+    FUNCTION = "get_cached_string"
+    CATEGORY = f"deforum"
+    OUTPUT_NODE = True
+    display_name = "Load Cached String"
+
+    def get_cached_string(self, cache_index=0):
+        from ..mapping import gs
+        img_dict = gs.deforum_cache.get("string", {})
+        string = img_dict.get(cache_index)
+
+        return (str(string),)

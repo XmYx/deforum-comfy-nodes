@@ -8,4 +8,5 @@ numexpr
 rich
 imageio[ffmpeg]
 scikit-image
+moviepy
 git+https://github.com/XmYx/deforum-studio.git
