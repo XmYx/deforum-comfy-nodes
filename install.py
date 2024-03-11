@@ -164,10 +164,27 @@ def install():
         clone_or_pull_repo(repo_url, repo_dir)
 
 
-try:
-    print("")
-    #install()
+import subprocess
 
-except Exception as e:
-    print("[ERROR] deforum-comfy-nodes: Recommended Node package(s) installation failed.")
-    traceback.print_exc()
+
+def install_packages():
+    # Install packages from requirements.txt
+    # subprocess.run(["pip", "install", "-r", "requirements.txt"], check=True)
+
+    # Force reinstall the deforum-studio package from Git
+    subprocess.run(["pip", "install", "--force-reinstall", "git+https://github.com/XmYx/deforum-studio.git"],
+                   check=True)
+
+
+if __name__ == "__main__":
+    print("Installing packages...")
+    install_packages()
+    print("Installation complete.")
+
+# try:
+#     print("")
+#     #install()
+#
+# except Exception as e:
+#     print("[ERROR] deforum-comfy-nodes: Recommended Node package(s) installation failed.")
+#     traceback.print_exc()
