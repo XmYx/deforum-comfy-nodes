@@ -257,7 +257,7 @@ class DeforumScheduleVisualizer:
             "required": {
 
                 "schedule": ("STRING", {"default": "0: (1.0)"}),
-                "max_frames": ("INT", {"default": 0, "min": 0, "max": 4096, "step": 1}),
+                "max_frames": ("INT", {"default": 0, "min": 0, "max": 128000, "step": 1}),
                 "grid": ("BOOLEAN", {"default": False}),
 
             }

@@ -73,6 +73,44 @@ class DeforumComparatorNode:
         else:
             raise ValueError("Invalid condition")
 
+class DeforumFloatComparatorNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "float_1": ("FLOAT",{"default":0.00, "min":-999999.00, "max":2 ** 32, "step":0.01}),
+                "float_2": ("FLOAT",{"default":0.00, "min":-999999.00, "max":2 ** 32, "step":0.01}),
+                "condition": (["<", "<=", ">", ">=", "==" ],),
+                        }
+               }
+
+    @classmethod
+    def IS_CHANGED(cls, text, autorefresh):
+        # Force re-evaluation of the node
+        if autorefresh == "Yes":
+            return float("NaN")
+
+    RETURN_TYPES = ("BOOLEAN",)
+    FUNCTION = "compare"
+    display_name = "FLOAT Comparator"
+    CATEGORY = "deforum"
+    OUTPUT_NODE = True
+
+    def compare(self, float_1, float_2, condition):
+        if condition == "<":
+            return (float_1 < float_2,)
+        elif condition == "<=":
+            return (float_1 <= float_2,)
+        elif condition == ">":
+            return (float_1 > float_2,)
+        elif condition == ">=":
+            return (float_1 >= float_2,)
+        elif condition == "==":
+            return (float_1 == float_2,)
+        else:
+            raise ValueError("Invalid condition")
+
+
 class DeforumAndNode:
     @classmethod
     def INPUT_TYPES(cls):

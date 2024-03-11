@@ -64,28 +64,28 @@ class AddCustomNoiseNode:
                     "default": 0.1,
                     "min": 0.01,
                     "max": 10.0,
-                    "step": 0.1,
+                    "step": 0.01,
                     "display": "number"
                 }),
                 "temp_scale": ("FLOAT", {
                     "default": 1.0,
                     "min": 0.1,
                     "max": 10.0,
-                    "step": 0.1,
+                    "step": 0.01,
                     "display": "number"
                 }),
                 "scale_factor": ("FLOAT", {
                     "default": 1.0,
                     "min": 0.1,
                     "max": 10.0,
-                    "step": 0.1,
+                    "step": 0.01,
                     "display": "number"
                 }),
                 "location": ("FLOAT", {
                     "default": 0.0,
                     "min": -10.0,
                     "max": 10.0,
-                    "step": 0.1,
+                    "step": 0.01,
                     "display": "number"
                 }),
                 "res_x": ("INT", {

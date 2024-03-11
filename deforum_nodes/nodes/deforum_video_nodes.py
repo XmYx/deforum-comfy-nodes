@@ -121,6 +121,7 @@ class DeforumVideoSaveNode:
                      "dump_every": ("INT", {"default": 0, "min": 0, "max": 4096},),
                      "dump_now": ("BOOLEAN", {"default": False},),
                      "skip_save": ("BOOLEAN", {"default": False},),
+                     "skip_return": ("BOOLEAN", {"default": True},),
                      "enable_preview": ("BOOLEAN", {"default": True},),
                      },
                 "optional": {
@@ -151,6 +152,7 @@ class DeforumVideoSaveNode:
            dump_every,
            dump_now,
            skip_save,
+           skip_return,
            enable_preview,
            deforum_frame_data={},
            audio=None):
@@ -214,12 +216,14 @@ class DeforumVideoSaveNode:
 
                     # Write the video file, ensuring the audio file is not prematurely deleted
                     # try:
+
                     video_clip.write_videofile(output_path, codec=codec, audio_codec='aac')
                     # finally:
                     #     # Delay removal of temporary audio file to ensure it's released
                     #     if audio is not None:
                     #         os.unlink(tmp_audio_file.name)
-                ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
+                if not skip_return:
+                    ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
 
             self.images = []  # Empty the list for next use
 

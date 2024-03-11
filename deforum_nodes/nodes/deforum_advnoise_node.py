@@ -100,14 +100,14 @@ class AddAdvancedNoiseNode:
                     "default": 0.5,
                     "min": 0.1,
                     "max": 1.0,
-                    "step": 0.1,
+                    "step": 0.01,
                     "display": "number"
                 }),
                 "lacunarity": ("FLOAT", {
                     "default": 2.0,
                     "min": 1.0,
                     "max": 3.0,
-                    "step": 0.1,
+                    "step": 0.01,
                     "display": "number"
                 }),
                 # Wavelet Noise specific parameters
@@ -163,7 +163,7 @@ class AddAdvancedNoiseNode:
                     "default": 0.0,
                     "min": 0.0,
                     "max": 2 * np.pi,
-                    "step": 0.1,
+                    "step": 0.01,
                     "display": "number"
                 }),
                 # Reaction Diffusion Noise
