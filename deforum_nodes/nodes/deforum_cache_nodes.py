@@ -59,7 +59,8 @@ class DeforumGetCachedLatentNode:
 
     def get_cached_latent(self, cache_index=0):
         from ..mapping import gs
-
+        if gs.reset:
+            return (None,)
         latent_dict = gs.deforum_cache.get("latent", {})
         latent = latent_dict.get(cache_index)
         return (latent,)
@@ -124,6 +125,9 @@ class DeforumGetCachedImageNode:
 
     def get_cached_latent(self, cache_index=0):
         from ..mapping import gs
+
+        if gs.reset:
+            return (None, None)
         img_dict = gs.deforum_cache.get("image", {})
         image = img_dict.get(cache_index)
         mask = None

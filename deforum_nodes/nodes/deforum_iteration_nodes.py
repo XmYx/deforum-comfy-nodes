@@ -115,19 +115,10 @@ class DeforumIteratorNode:
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
         if self.frame_index >= anim_args.max_frames or reset_counter:
-            # from . import standalone_cadence
-            # standalone_cadence.turbo_next_image, standalone_cadence.turbo_next_frame_idx = None, 0
-            # standalone_cadence.turbo_prev_image, standalone_cadence.turbo_prev_frame_idx = None, 0
             self.reset_counter = False
-            # self.reset_iteration()
             self.frame_index = 0
-            # .should_run = False
-            # return [None]
             self.first_run = True
             self.second_run = True
-
-
-
 
         # else:
         args.scale = keys.cfg_scale_schedule_series[self.frame_index]
@@ -197,8 +188,6 @@ class DeforumIteratorNode:
 
         gen_args = self.get_current_frame(args, anim_args, root, keys, self.frame_index, areas)
 
-        # self.content.frame_slider.setMaximum(anim_args.max_frames - 1)
-
         self.args = args
         self.root = root
         if prompt_series is not None:
@@ -213,18 +202,12 @@ class DeforumIteratorNode:
             print("[deforum] RESET COUNTER")
         if reset_latent or not hasattr(self, "rng"):
             print("[deforum] RESET LATENT"  )
-
             from ..mapping import gs
             if "image" in gs.deforum_cache:
                 gs.deforum_cache["image"].clear()
             if "latent" in gs.deforum_cache:
                 gs.deforum_cache["latent"].clear()
-            #gs.deforum_cache = {}
             gs.reset = True
-
-
-
-
             if latent_type == "stable_diffusion":
                 channels = 4
                 compression = 8
@@ -272,15 +255,18 @@ class DeforumIteratorNode:
                 # frame_idx += turbo_steps
 
             self.first_run = False
+
         else:
             self.frame_index += 1 if not self.first_run else 0
             self.first_run = False
             self.second_run = False
-            from ..mapping import gs
-            gs.reset = False if not self.first_run else True
+
         if self.frame_index > anim_args.max_frames:
             self.frame_index = anim_args.max_frames
-        latent["samples"] = latent["samples"].float()
+        if latent is not None:
+            latent["samples"] = latent["samples"].float()
+        from ..mapping import gs
+        gs.reset = False if not self.first_run else True
         enable_autoqueue = enable_autoqueue if self.frame_index == 0 else False
         gen_args["sampler_name"] = deforum_data.get("sampler_name", "euler_a")
         gen_args["scheduler"] = deforum_data.get("scheduler", "normal")

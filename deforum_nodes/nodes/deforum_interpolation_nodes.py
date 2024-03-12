@@ -298,7 +298,9 @@ class DeforumCadenceNode:
     def fn(self, image, first_image, deforum_frame_data, depth_strength):
         result = []
         ret = None
-        if image is not None:
+
+
+        if image is not None and not deforum_frame_data.get("reset"):
             # Check if there are multiple images in the batch
             if image.shape[0] > 1:
                 for img in image:
@@ -313,15 +315,12 @@ class DeforumCadenceNode:
             else:
                 # Directly interpolate if only one image is present
                 ret = self.interpolate(image, first_image, deforum_frame_data, depth_strength)
-        if ret is not None:
-            last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
-
-
-            print("CADENCE FRAME 0", deforum_frame_data.get("frame_idx", 1))
-            if self.skip_return:
-                return (None, last)
-            else:
-                return (ret, last,)
+            if ret is not None:
+                last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
+                if self.skip_return:
+                    return (None, last)
+                else:
+                    return (ret, last,)
         else:
             _ = self.interpolate(None, None, deforum_frame_data, depth_strength, dry_run=True)
             return (None, None,)
