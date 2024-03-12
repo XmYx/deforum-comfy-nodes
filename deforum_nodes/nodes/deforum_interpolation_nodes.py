@@ -189,6 +189,7 @@ class DeforumCadenceNode:
         return float("NaN")
 
     def interpolate(self, image, first_image, deforum_frame_data, depth_strength, dry_run=False):
+        self.skip_return = False
         #global deforum_depth_algo, deforum_models
         # import turbo_prev_image, turbo_next_image, turbo_next_frame_idx, turbo_prev_frame_idx
         return_frames = []
@@ -251,7 +252,7 @@ class DeforumCadenceNode:
         self.interpolator.turbo_prev_image, self.interpolator.turbo_prev_frame_idx = self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx
         self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]
 
-        if self.interpolator.turbo_next_frame_idx == anim_args.diffusion_cadence and first_image is not None:
+        if self.interpolator.turbo_next_frame_idx == 0 and first_image is not None:
             pil_image = tensor2pil(first_image.clone().detach())
             # Convert PIL image to RGB NumPy array and cast to np.float32
             np_image = np.array(pil_image.convert("RGB")).astype(np.uint8)
@@ -260,6 +261,9 @@ class DeforumCadenceNode:
             np_image = cv2.normalize(np_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
             self.interpolator.turbo_prev_image = np_image.astype(np.uint8)
             self.interpolator.turbo_prev_frame_idx = 0
+            self.interpolator.turbo_next_frame_idx = anim_args.diffusion_cadence
+            deforum_frame_data["frame_idx"] = anim_args.diffusion_cadence
+            self.skip_return = True
 
         # if first_gen:
         #     self.interpolator.turbo_prev_image = np_image
@@ -311,7 +315,13 @@ class DeforumCadenceNode:
                 ret = self.interpolate(image, first_image, deforum_frame_data, depth_strength)
         if ret is not None:
             last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
-            return (ret, last,)
+
+
+            print("CADENCE FRAME 0", deforum_frame_data.get("frame_idx", 1))
+            if self.skip_return:
+                return (None, last)
+            else:
+                return (ret, last,)
         else:
             _ = self.interpolate(None, None, deforum_frame_data, depth_strength, dry_run=True)
             return (None, None,)

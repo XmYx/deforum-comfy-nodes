@@ -49,8 +49,6 @@ class DeforumVAEEncode:
     CATEGORY = "deforum/latent"
 
     def encode(self, vae, pixels, latent):
-        print(pixels, latent)
-
         if pixels is not None:
             t = vae.encode(pixels[:,:,:,:3])
             return ({"samples":t}, )

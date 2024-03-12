@@ -157,7 +157,7 @@ class DeforumVideoSaveNode:
            deforum_frame_data={},
            audio=None):
         dump = False
-        ret = None
+        ret = "skip"
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
         counter = find_next_index(full_output_folder, filename_prefix, format)
@@ -179,7 +179,7 @@ class DeforumVideoSaveNode:
             # When the current frame index reaches the last frame, save the video
 
             if dump_by == "max_frames":
-                dump = len(self.images) >= max_frames + 1
+                dump = len(self.images) >= max_frames
             else:
                 dump = len(self.images) >= dump_every
             if deforum_frame_data.get("reset", None):
@@ -188,7 +188,7 @@ class DeforumVideoSaveNode:
             if dump or dump_now:  # frame_idx is 0-based
                 if len(self.images) >= 2:
                     if not skip_save:
-                        self.save_video(full_output_folder, filename, counter, fps, audio, codec)
+                        self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
                     if not skip_return:
                         ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
                 self.images = []  # Empty the list for next use
@@ -206,25 +206,32 @@ class DeforumVideoSaveNode:
                       "frames":([tensor_to_webp_base64(i) for i in image]),
                       "fps":(fps,)}
         else:
-            if deforum_frame_data.get("reset", None):
-                self.images = []
-                dump = True
 
+            if anim_args is not None:
+                max_frames = anim_args.max_frames
+            else:
+                max_frames = len(self.images) + 5
+            if dump_by == "max_frames":
+                dump = len(self.images) >= max_frames
+            else:
+                dump = len(self.images) >= dump_every
+            if deforum_frame_data.get("reset", None):
+                dump = True
             if dump or dump_now:  # frame_idx is 0-based
                 if len(self.images) >= 2:
                     if not skip_save:
-                        self.save_video(full_output_folder, filename, counter, fps, audio, codec)
+                        self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
                     if not skip_return:
                         ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
-
+                self.images = []
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(dump or dump_now,),
-                      # "frames":([tensor_to_webp_base64(i) for i in image]),
+                      "frames":([]),
                       "fps":(fps,)}
 
         return {"ui": ui_ret, "result": (ret,)}
-    def save_video(self, full_output_folder, filename, counter, fps, audio, codec):
-        output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{format}")
+    def save_video(self, full_output_folder, filename, counter, fps, audio, codec, ext):
+        output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{ext}")
 
         print("[deforum] Saving video:", output_path)
 

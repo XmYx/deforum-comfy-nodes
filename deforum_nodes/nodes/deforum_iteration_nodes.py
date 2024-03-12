@@ -123,6 +123,7 @@ class DeforumIteratorNode:
             # .should_run = False
             # return [None]
             self.first_run = True
+            self.second_run = True
 
 
 
@@ -260,7 +261,10 @@ class DeforumIteratorNode:
         # global turbo_prev_img, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
         if anim_args.diffusion_cadence > 1:
             self.frame_index += anim_args.diffusion_cadence if not self.first_run else 0# if anim_args.diffusion_cadence == 1
-
+            if not self.first_run:
+                if self.second_run:
+                    self.frame_index = 0
+                    self.second_run = False
             # if turbo_steps > 1:
             # turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx
             # turbo_next_image, turbo_next_frame_idx = opencv_image, self.frame_index
@@ -270,6 +274,7 @@ class DeforumIteratorNode:
         else:
             self.frame_index += 1 if not self.first_run else 0
             self.first_run = False
+            self.second_run = False
             from ..mapping import gs
             gs.reset = False if not self.first_run else True
         if self.frame_index > anim_args.max_frames:
@@ -280,6 +285,8 @@ class DeforumIteratorNode:
         gen_args["scheduler"] = deforum_data.get("scheduler", "normal")
         gen_args["reset"] = reset_latent or reset_counter
         gen_args["frame_idx"] = self.frame_index
+        gen_args["first_run"] = self.first_run
+        gen_args["second_run"] = self.second_run
         return {"ui": {"counter":(self.frame_index,), "max_frames":(anim_args.max_frames,), "enable_autoqueue":(enable_autoqueue,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 

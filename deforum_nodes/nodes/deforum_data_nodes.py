@@ -129,8 +129,8 @@ class DeforumFrameDataExtract:
                     {"deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      }
                 }
-    RETURN_TYPES = ("INT","INT", "INT", "FLOAT", "STRING", "STRING", "FLOAT", "FLOAT")
-    RETURN_NAMES = ("frame_idx", "seed", "steps", "cfg_scale", "sampler_name", "scheduler_name", "denoise", "subseed_strength")
+    RETURN_TYPES = ("INT","INT", "INT", "FLOAT", "STRING", "STRING", "FLOAT", "FLOAT", "BOOLEAN")
+    RETURN_NAMES = ("frame_idx", "seed", "steps", "cfg_scale", "sampler_name", "scheduler_name", "denoise", "subseed_strength", "first_run")
     FUNCTION = "get_data"
     display_name = "Frame Data Extract"
     CATEGORY = "deforum/parameters"
@@ -146,5 +146,5 @@ class DeforumFrameDataExtract:
         keys = deforum_frame_data.get("keys")
         frame_idx = deforum_frame_data.get("frame_idx")
         subseed_str = keys.subseed_strength_schedule_series[frame_idx]
-
-        return (frame_idx, seed, steps, cfg, sampler_name, scheduler, denoise,subseed_str,)
+        first_run = deforum_frame_data.get("second_run", False)
+        return (frame_idx, seed, steps, cfg, sampler_name, scheduler, denoise, subseed_str, first_run, )
