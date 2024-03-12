@@ -86,35 +86,95 @@ templates = [
     "0:((log(1+abs(t))) + (log(1+abs(1000))) - (cos(2*3.14*1000/max_f)) + (cos(2*3.14*t/max_f)) + (sin(2*3.14*1000/max_f)) + 1)"
 ]
 
-audio_templates = [
-    "x * t / max_f",  # Linear scaling of x with respect to t.
-    "x * sin(2 * 3.14 * t / max_f)",  # Modulating x with a sinusoidal wave based on frame.
-    "x * (1 - t / max_f)",  # Linear decrease of x towards the end.
-    "x * sin(2 * 3.14 * t / max_f) + x * cos(2 * 3.14 * t / max_f)",  # Superposition of sine and cosine waves scaled by x.
-    "x * log(t + 1) / log(max_f)",  # Logarithmic scaling of x.
-    "x * sqrt(t / max_f)",  # Square root scaling of x.
-    "x * (exp(t / max_f) - 1)",  # Exponential scaling of x.
-    "x * sin(2 * 3.14 * t / max_f) * cos(2 * 3.14 * t / max_f)",  # Product of sine and cosine waves scaled by x.
-    "x * (1 - abs(2 * t / max_f - 1))",  # Triangle wave modulation of x.
-    "x * abs(sin(2 * 3.14 * t / max_f))",  # Absolute sinusoidal wave scaled by x.
-    "x * (2 ** (t / max_f) - 1)",  # Exponential growth base 2 scaled by x.
-    "x * (-2 ** (t / max_f) + 2)",  # Inverted exponential curve base 2 scaled by x.
-    "x * (sin(2 * 3.14 * t / max_f) if t < max_f / 2 else cos(2 * 3.14 * t / max_f))",  # Conditional wave modulation of x.
-    "x * tan(3.14 * t / max_f)",  # Tangent wave scaling of x, watch for extreme values.
-    "x * (1 - t / max_f)",  # Linear decrease from x to 0.
-    "x * sin(2 * 3.14 * t / max_f)**2",  # Square of sinusoidal wave scaled by x, smoothing negatives.
-    "x * cos(2 * 3.14 * t / max_f)**2",  # Square of cosine wave scaled by x, smoothing negatives.
-    "x * exp(-t / max_f)",  # Exponential decay of x.
-    "x * (s % 10 + sin(2 * 3.14 * t / max_f))",  # Sinusoidal wave with base level determined by seed, scaled by x.
-    "x * sin(4 * 3.14 * t / max_f) + x * cos(2 * 3.14 * t / max_f)",  # Sum of two waves with different frequencies scaled by x.
-    "x * (sin(2 * 3.14 * t / max_f) * (t % 10))",  # Sinusoidal wave amplitude modulated by frame modulo, scaled by x.
-    "x * abs(cos(2 * 3.14 * t / max_f))",  # Absolute value of a cosine wave scaled by x, creating peaks.
-    "x * (sin(2 * 3.14 * t / (max_f + t)))",  # Sinusoidal wave with frequency modulated by frame, scaled by x.
-    "x * (sin(2 * 3.14 * t / max_f) / (t + 1))",  # Sinusoidal wave with amplitude inversely proportional to frame, scaled by x.
-    "(exp(t / max_f)) * x + (log(1 + abs(t))) * x",  # Combination of exponential growth and logarithmic scaling of x.
-    "(x * cos(2 * 3.14 * t / max_f)) / (1 + log(t + 1))",  # Cosine wave scaled by x with logarithmic denominator to soften growth.
-]
+# audio_templates = [
+#     "x * t / max_f",  # Linear scaling of x with respect to time t.
+#     "x * sin(2 * pi * t / max_f)",  # Sinusoidal modulation of x based on frame time.
+#     "x * (1 - exp(-t / max_f))",  # Exponential approach of x to its maximum over time.
+#     "x * exp(-t / max_f)",  # Exponential decay of x over time.
+#     "x * sin(2 * pi * e * t / max_f)",  # Sinusoidal modulation with base e to vary frequency.
+#     "x * (1 if t < max_f / 2 else 0)",  # Binary step function in time, for a sudden change.
+#     "x * log(e + t / max_f)",  # Logarithmic scaling with base e, gentle growth over time.
+#     "x * cos(2 * pi * t / max_f) + e ** (t / max_f)",  # Cosine wave plus exponential growth factor e.
+#     "x * pow(t / max_f, 2)",  # Quadratic growth of x over time.
+#     "x * sqrt(t / max_f)",  # Square root scaling of x, slower increase over time.
+#     "x * tan(pi * t / max_f)",  # Tangent modulation, note potential for extreme values.
+#     "x * asin(sin(2 * pi * t / max_f))",  # Arcsine of a sinusoidal wave, for harmonic effects.
+#     "x * (2 ** (t / max_f) - 1)",  # Exponential growth based on power of 2.
+#     "x * factorial(int(t) % 5)",  # Modulating x by the factorial of t modulo 5, for periodic jumps.
+#     "x * (1 - abs(2 * t / max_f - 1))",  # Triangle wave shaping of x over time.
+#     "x * abs(sin(2 * pi * t / max_f))",  # Absolute value of a sinusoidal wave, ensuring positive values.
+#     "x * sin(2 * pi * t / max_f) * cos(2 * pi * t / max_f)",  # Product of sine and cosine for complex modulation.
+#     "x * (e ** (cos(2 * pi * t / max_f)) - 1)",  # Exponential function modulated by a cosine wave.
+#     "x * if(t < max_f / 2, sin(2 * pi * t / max_f), cos(2 * pi * t / max_f))",  # Conditional modulation with half period sine, half period cosine.
+#     "x * sin(4 * pi * t / max_f) + x * cos(2 * pi * t / max_f)",  # Combination of sine and cosine waves with different frequencies.
+#     "x * (sin(2 * pi * t / max_f) if t < max_f / 3 else sin(4 * pi * t / max_f))",  # Conditional frequency change in sine wave.
+#     "x * (exp(t / max_f) - 1) / log(e + t)",  # Exponential increase tempered by a logarithmic factor.
+#     "(x * cos(2 * pi * t / max_f)) / (1 + log(t + 1))",  # Cosine wave scaled by x with a logarithmic denominator to moderate growth.
+#     "x * sin(2 * pi * t / max_f) ** 2",  # Square of a sinusoidal wave, creating a smoothed, non-negative waveform.
+#     "x * cos(2 * pi * t / max_f) ** 2",  # Square of a cosine wave, similar effect as above but phase-shifted.
+# ]
 
+
+audio_templates = [
+    # Simple Amplitude Modulations
+    "x * 2",  # Doubling the amplitude.
+    "x / 2",  # Halving the amplitude.
+    "abs(x)",  # Absolute value of the amplitude.
+    "x * x",  # Squaring the amplitude.
+    "sqrt(abs(x))",  # Square root of the absolute amplitude.
+    "log(abs(x) + 1)",  # Logarithmic scaling of the amplitude.
+    "x * sin(x)",  # Sine modulation based on amplitude itself.
+    "x * cos(x)",  # Cosine modulation based on amplitude itself.
+    "-x",  # Inverting the amplitude.
+    "x * (exp(x) - 1)",  # Exponential scaling based on the amplitude.
+    "x * pow(e, x - 1)",  # Exponential growth using base e, adjusted for amplitude.
+    "x * factorial(int(abs(x)) % 5)",  # Factorial modulation based on the absolute amplitude modulo 5.
+    "x if x > 0.5 else x * 2",  # Conditional scaling for amplitudes greater than 0.5.
+    "min(x, 0.5)",  # Clipping amplitude to a maximum of 0.5.
+    "max(x, -0.5)",  # Ensuring amplitude is not less than -0.5.
+    "x % 0.5",  # Amplitude modulo 0.5, creating a repeating pattern.
+    "tan(x)",  # Tangent modulation of amplitude.
+    "asin(min(1, max(-1, x))) / pi",  # Arcsine of amplitude normalized to [-1, 1], scaled by π.
+    "1 / (abs(x) + 1)",  # Inverse scaling of amplitude, avoiding division by zero.
+    "pow(e, -abs(x))",  # Exponential decay based on the absolute amplitude.
+
+    # Temporal Expressions Involving Time and Maximum Frame
+    "x * t / max_f",  # Linear scaling of amplitude with respect to time.
+    "x * sin(2 * pi * t / max_f)",  # Sinusoidal modulation over time.
+    "x * exp(-t / max_f)",  # Exponential decay over time.
+    "x * (1 - exp(-t / max_f))",  # Inverse exponential growth.
+    "x * cos(2 * pi * e * t / max_f)",  # Cosine wave modulation with base e to alter frequency.
+    "x * if(t < max_f / 2, 1, 0)",  # Binary switch based on time, for sudden change.
+    "x * pow(t / max_f, 2)",  # Quadratic growth of amplitude over time.
+    "x * sqrt(t / max_f)",  # Square root scaling over time.
+    "x * tan(pi * t / max_f)",  # Tangent modulation over time.
+    "x * sin(2 * pi * t / max_f) * cos(2 * pi * t / max_f)",  # Product of sine and cosine for complex temporal modulation.
+    "x * sin(2 * pi * t / max_f) if t < max_f / 2 else x * cos(2 * pi * t / max_f)",  # Conditional wave modulation.
+    "x * sin(4 * pi * t / max_f) + x * cos(2 * pi * t / max_f)",  # Sum of waves with different frequencies.
+    "x * (exp(t / max_f) - 1) / log(e + t)",  # Exponential growth tempered by logarithm of time.
+    "(x * cos(2 * pi * t / max_f)) / (1 + log(t + 1))",  # Cosine wave moderated by logarithmic factor.
+
+    # Complex and Combined Expressions
+    "x * (sin(2 * pi * t / max_f) ** 2 + cos(2 * pi * t / max_f) ** 2)",  # Sum of squared sine and cosine waves.
+    "x * (1 - abs(2 * t / max_f - 1))",  # Triangle wave shaping over time.
+    "x * abs(sin(2 * pi * t / max_f))",  # Absolute sine wave for positive values.
+    "x * pow(e, cos(2 * pi * t / max_f))",  # Exponential function modulated by cosine.
+    "x * asin(sin(2 * pi * t / max_f)) / pi",  # Arcsine of sine wave normalized and scaled.
+    "x * pow(2, sin(2 * pi * t / max_f))",  # Exponential growth with base 2, modulated by sine wave.
+    "x * log(1 + abs(sin(2 * pi * t / max_f)))",  # Logarithmic scaling modulated by absolute sine wave.
+    "x * (sin(2 * pi * t / (max_f + t)))",  # Sinusoidal frequency modulation by time.
+    "(x * cos(2 * pi * t / max_f)) / (1 + log(t + 1)) * sin(2 * pi * t / max_f)",  # Combined cosine and sine waves with logarithmic softening.
+    "x * (sin(2 * pi * t / max_f) * (t % 10))",  # Sinusoidal wave amplitude modulated by frame modulo.
+    "x * exp(t / max_f) * sin(2 * pi * t / max_f)",  # Exponential growth combined with sinusoidal modulation.
+    "x * (if(t < max_f / 3, sin(2 * pi * t / max_f), cos(2 * pi * t / max_f)))",  # Conditional frequency modulation.
+    "x * (1 / (1 + exp(-t / max_f)))",  # Logistic sigmoid function for smooth transitions.
+    "x * pow(e, -t / max_f) * cos(2 * pi * t / max_f)",  # Exponential decay combined with cosine modulation.
+    "x * sin(2 * pi * t / max_f) / (1 + exp(-t / max_f))",  # Sinusoidal wave with logistic growth control.
+    "x * (e ** (t / max_f) - e ** (-t / max_f)) / 2",  # Hyperbolic sine function for symmetric exponential growth and decay.
+    "x * (1 - (t / max_f) ** 2)",  # Parabolic decrease towards the end of the timeline.
+    "x * tanh(2 * pi * t / max_f)",  # Hyperbolic tangent for smooth transitions between -1 and 1.
+    "x * factorial((int(t) % 5) + 1)",  # Factorial modulation based on time modulo 5.
+]
 def generate_complex_random_expression(max_frames, seed=None, max_parts=3):
     """
     Generates a complex random mathematical expression using a variety of functions, operators, and globals.

@@ -89,7 +89,6 @@ class DeforumInpaintModelConditioning:
     CATEGORY = "deforum"
     def encode(self, positive, negative, vae, pixels, mask, latent, deforum_frame_data={}):
         reset = deforum_frame_data.get("reset", False)
-
         if (pixels is not None and mask is not None) and not reset:
             x = (pixels.shape[1] // 8) * 8
             y = (pixels.shape[2] // 8) * 8
