@@ -31,7 +31,7 @@ class DeforumApplyFlowNode:
 
     RETURN_TYPES = (("IMAGE",))
     FUNCTION = "apply_flow"
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/image"
     OUTPUT_NODE = True
     display_name = "Apply Flow"
 
@@ -83,7 +83,7 @@ class DeforumHybridMotionNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
     display_name = "Hybrid Motion"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/image"
 
     def fn(self, image, hybrid_image, deforum_frame_data, hybrid_method):
         if self.raft_model is None:

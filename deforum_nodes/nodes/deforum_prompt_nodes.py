@@ -21,7 +21,7 @@ class DeforumPromptNode(DeforumDataBase):
     RETURN_TYPES = (("deforum_data",))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/prompt"
     display_name = "Prompt"
 
     @torch.inference_mode()
@@ -76,7 +76,7 @@ class DeforumAreaPromptNode(DeforumDataBase):
     RETURN_TYPES = (("deforum_data",))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/prompt"
     display_name = "Area Prompt"
 
     @torch.inference_mode()

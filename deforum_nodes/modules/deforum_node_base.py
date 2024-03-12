@@ -7,7 +7,7 @@ class DeforumDataBase:
     RETURN_TYPES = (("deforum_data",))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum_data"
+    CATEGORY = f"deforum/parameters"
     @classmethod
     def IS_CHANGED(cls, text, autorefresh):
         # Force re-evaluation of the node

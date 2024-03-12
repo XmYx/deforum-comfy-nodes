@@ -21,7 +21,7 @@ class DeforumConditioningBlendNode:
     RETURN_NAMES = ("POSITIVE", "NEGATIVE")
     FUNCTION = "fn"
     display_name = "Blend Conditionings"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/conditioning"
     def fn(self, clip, deforum_frame_data, blend_method):
         areas = deforum_frame_data.get("areas")
         negative_prompt = deforum_frame_data.get("negative_prompt", "")
@@ -86,7 +86,7 @@ class DeforumInpaintModelConditioning:
     FUNCTION = "encode"
 
     display_name = "InpaintModelConditioning [safe]"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/conditioning"
     def encode(self, positive, negative, vae, pixels, mask, latent, deforum_frame_data={}):
         reset = deforum_frame_data.get("reset", False)
         if (pixels is not None and mask is not None) and not reset:

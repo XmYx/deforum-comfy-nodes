@@ -11,7 +11,7 @@ class DeforumControlNetApply:
     RETURN_TYPES = ("CONDITIONING",)
     FUNCTION = "apply_controlnet"
     display_name = "Apply ControlNet [safe]"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/controlnet"
 
     def apply_controlnet(self, conditioning, control_net, strength, image=None):
         if strength == 0 or image is None:

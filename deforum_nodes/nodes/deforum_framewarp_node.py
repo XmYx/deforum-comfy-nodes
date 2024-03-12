@@ -32,7 +32,7 @@ class DeforumFrameWarpNode:
     RETURN_NAMES = ("IMAGE","DEPTH", "WARPED_DEPTH")
     FUNCTION = "fn"
     display_name = "Frame Warp"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/image"
 
     def fn(self, image, deforum_frame_data, warp_depth_image, depth_image=None):
         from deforum.models import DepthModel

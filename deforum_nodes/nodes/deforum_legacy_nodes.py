@@ -26,7 +26,7 @@ class DeforumSingleSampleNode:
     RETURN_TYPES = (("IMAGE",))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/sampling"
     display_name = "Integrated Pipeline"
 
     @torch.inference_mode()
@@ -162,7 +162,7 @@ class DeforumSetVAEDownscaleRatioNode:
     RETURN_TYPES = ("VAE",)
     FUNCTION = "fn"
     display_name = "Set VAE Downscale Ratio"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/_for_testing"
 
     def fn(self, vae, downscale_ratio):
         vae.downscale_ratio = downscale_ratio

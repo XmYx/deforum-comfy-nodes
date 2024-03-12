@@ -48,7 +48,7 @@ class DeforumIteratorNode:
     RETURN_NAMES = (("deforum_frame_data", "latent", "positive_prompt", "negative_prompt"))
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/logic"
     display_name = "Iterator Node"
 
 
@@ -316,7 +316,7 @@ class DeforumSeedNode:
         }
     FUNCTION = "get"
     OUTPUT_NODE = True
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/logic"
     RETURN_TYPES = (("INT",))
     display_name = "Seed Node"
 

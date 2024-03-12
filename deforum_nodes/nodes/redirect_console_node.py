@@ -42,7 +42,7 @@ class DeforumRedirectConsole:
 
     FUNCTION = "fn"
     display_name = "Redirect Console"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/utils"
 
     def fn(self, redirect_console):
         global console_redirected

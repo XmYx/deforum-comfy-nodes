@@ -14,7 +14,7 @@ class DeforumKSampler:
     RETURN_TYPES = ("LATENT",)
     FUNCTION = "sample"
     display_name = "KSampler"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/sampling"
 
     def sample(self, model, latent, positive, negative, deforum_frame_data):
         from nodes import common_ksampler

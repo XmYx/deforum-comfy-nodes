@@ -210,7 +210,7 @@ class AddAdvancedNoiseNode:
     RETURN_NAMES = ("NOISED_IMAGE","NOISE",)
 
     FUNCTION = "add_advanced_noise"
-    CATEGORY = "Advanced Noise"
+    CATEGORY = "deforum/noise"
     display_name = "Add Advanced Noise"
 
     def add_advanced_noise(self, images, noise_type, amount, seed=None, **kwargs):

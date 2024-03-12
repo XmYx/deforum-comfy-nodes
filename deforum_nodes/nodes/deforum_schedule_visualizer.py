@@ -247,7 +247,7 @@ class DeforumScheduleTemplate:
     RETURN_TYPES = ("STRING",)
     FUNCTION = "show"
     display_name = "Schedule Templates"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/help"
     OUTPUT_NODE = True
 
     def show(self, expression):
@@ -273,7 +273,7 @@ class DeforumAudioScheduleTemplate:
     RETURN_TYPES = ("STRING",)
     FUNCTION = "show"
     display_name = "Audio Schedule Expression Templates"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/help"
     OUTPUT_NODE = True
 
     def show(self, expression):
@@ -302,7 +302,7 @@ class DeforumScheduleTemplateRandomizer:
     RETURN_TYPES = ("STRING",)
     FUNCTION = "show"
     display_name = "Schedule Randomizer"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/utils"
     OUTPUT_NODE = True
 
     def show(self, seed, max_frames, max_parts):
@@ -332,7 +332,7 @@ class DeforumScheduleVisualizer:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "show"
     display_name = "Schedule Visualizer"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/utils"
     OUTPUT_NODE = True
 
     def show(self, schedule, max_frames, grid):

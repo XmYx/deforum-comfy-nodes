@@ -19,7 +19,7 @@ class DeforumCacheLatentNode:
 
     RETURN_TYPES = (("LATENT",))
     FUNCTION = "cache_it"
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/cache"
     display_name = "Cache Latent"
     OUTPUT_NODE = True
 
@@ -53,7 +53,7 @@ class DeforumGetCachedLatentNode:
 
     RETURN_TYPES = (("LATENT",))
     FUNCTION = "get_cached_latent"
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/cache"
     OUTPUT_NODE = True
     display_name = "Load Cached Latent"
 
@@ -84,7 +84,7 @@ class DeforumCacheImageNode:
 
     RETURN_TYPES = (("IMAGE",))
     FUNCTION = "cache_it"
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/cache"
     display_name = "Cache Image"
     OUTPUT_NODE = True
 
@@ -118,7 +118,7 @@ class DeforumGetCachedImageNode:
     RETURN_TYPES = (("IMAGE","MASK"))
     RETURN_NAMES = ("IMAGE","MASK")
     FUNCTION = "get_cached_latent"
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/cache"
     OUTPUT_NODE = True
     display_name = "Load Cached Image"
 
@@ -152,7 +152,7 @@ class DeforumCacheStringNode:
 
     RETURN_TYPES = (("STRING",))
     FUNCTION = "cache_it"
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/cache"
     display_name = "Cache String"
     OUTPUT_NODE = True
 
@@ -185,7 +185,7 @@ class DeforumGetCachedStringNode:
 
     RETURN_TYPES = (("STRING",))
     FUNCTION = "get_cached_string"
-    CATEGORY = f"deforum"
+    CATEGORY = f"deforum/cache"
     OUTPUT_NODE = True
     display_name = "Load Cached String"
 

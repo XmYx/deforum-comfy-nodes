@@ -26,7 +26,7 @@ class DeforumColorMatchNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
     display_name = "Color Match"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/image"
 
 
 
@@ -70,7 +70,7 @@ class DeforumAddNoiseNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "fn"
     display_name = "Add Noise"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/noise"
 
     def fn(self, image, deforum_frame_data):
 

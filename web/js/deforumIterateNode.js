@@ -7,6 +7,25 @@ import { ComfyWidgets } from "../../../scripts/widgets.js";
 // Thank you!
 
 
+// Hijack LiteGraph to sort categories and nodes alphabetically (case-insensitive)
+(function(LiteGraph) {
+    var originalGetNodeTypesCategories = LiteGraph.getNodeTypesCategories;
+    LiteGraph.getNodeTypesCategories = function(filter) {
+        var categories = originalGetNodeTypesCategories.call(this, filter);
+        // Sort categories case-insensitively
+        return categories.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    };
+
+    var originalGetNodeTypesInCategory = LiteGraph.getNodeTypesInCategory;
+    LiteGraph.getNodeTypesInCategory = function(category, filter) {
+        var nodeTypes = originalGetNodeTypesInCategory.call(this, category, filter);
+        // Sort node types case-insensitively by title
+        return nodeTypes.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+    };
+})(LiteGraph || global.LiteGraph); // Ensure LiteGraph is defined; use global.LiteGraph if it's not directly accessible
+
+
+
 document.getElementById("comfy-file-input").accept += ",video/webm,video/mp4";
 
 function chainCallback(object, property, callback) {
@@ -638,5 +657,3 @@ app.registerExtension({
         });
     }
 });
-
-

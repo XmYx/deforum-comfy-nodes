@@ -137,7 +137,7 @@ class AddCustomNoiseNode:
     RETURN_NAMES = ("NOISED_IMAGE","NOISE",)
     FUNCTION = "add_noise"
     display_name = "Add Custom Noise"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/noise"
     def add_noise(self, images, noise_type, amount, seed=None, temperature_map=None, **kwargs):
 
         image, noise = add_noise_torch(images.clone(), noise_type, seed, amount, temperature_map, **kwargs)

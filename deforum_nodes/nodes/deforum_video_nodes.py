@@ -45,7 +45,7 @@ class DeforumLoadVideo:
 
         },}
 
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/video"
     display_name = "Load Video"
 
     RETURN_TYPES = ("IMAGE","INT","INT")
@@ -136,7 +136,7 @@ class DeforumVideoSaveNode:
 
     FUNCTION = "fn"
     display_name = "Save Video"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/video"
     def add_image(self, image):
         self.images.append(image)
 

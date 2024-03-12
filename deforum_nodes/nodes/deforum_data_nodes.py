@@ -133,7 +133,7 @@ class DeforumFrameDataExtract:
     RETURN_NAMES = ("frame_idx", "seed", "steps", "cfg_scale", "sampler_name", "scheduler_name", "denoise", "subseed_strength")
     FUNCTION = "get_data"
     display_name = "Frame Data Extract"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/parameters"
 
     def get_data(self, deforum_frame_data):
         seed = deforum_frame_data.get("seed", 0)

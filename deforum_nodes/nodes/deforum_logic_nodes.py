@@ -25,7 +25,7 @@ class DeforumImageSwitcherNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "compare"
     display_name = "Image Switcher"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/logic"
     OUTPUT_NODE = True
 
     def compare(self, option=True, image_true=None, image_false=None):
@@ -56,7 +56,7 @@ class DeforumComparatorNode:
     RETURN_TYPES = ("BOOLEAN",)
     FUNCTION = "compare"
     display_name = "INT Comparator"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/logic"
     OUTPUT_NODE = True
 
     def compare(self, int_1, int_2, condition):
@@ -93,7 +93,7 @@ class DeforumFloatComparatorNode:
     RETURN_TYPES = ("BOOLEAN",)
     FUNCTION = "compare"
     display_name = "FLOAT Comparator"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/logic"
     OUTPUT_NODE = True
 
     def compare(self, float_1, float_2, condition):
@@ -125,7 +125,7 @@ class DeforumAndNode:
     RETURN_TYPES = ("BOOLEAN",)
     FUNCTION = "logical_and"
     display_name = "Logical AND"
-    CATEGORY = "logic"
+    CATEGORY = f"deforum/logic"
 
     def logical_and(self, condition_1, condition_2, *additional_conditions):
         return (all([condition_1, condition_2] + list(additional_conditions)),)
@@ -144,7 +144,7 @@ class DeforumOrNode:
     RETURN_TYPES = ("BOOLEAN",)
     FUNCTION = "logical_or"
     display_name = "Logical OR"
-    CATEGORY = "logic"
+    CATEGORY = f"deforum/logic"
 
     def logical_or(self, condition_1, condition_2, *additional_conditions):
         return (any([condition_1, condition_2] + list(additional_conditions)),)
@@ -161,7 +161,7 @@ class DeforumNotNode:
     RETURN_TYPES = ("BOOLEAN",)
     FUNCTION = "logical_not"
     display_name = "Logical NOT"
-    CATEGORY = "logic"
+    CATEGORY = f"deforum/logic"
 
     def logical_not(self, condition):
         return (not condition,)

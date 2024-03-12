@@ -35,7 +35,7 @@ class DeforumFILMInterpolationNode:
     # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
     FUNCTION = "fn"
     display_name = "FILM Interpolation"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/interpolation"
     @classmethod
     def IS_CHANGED(self, *args, **kwargs):
         # Force re-evaluation of the node
@@ -108,7 +108,7 @@ class DeforumSimpleInterpolationNode:
     RETURN_NAMES = ("IMAGES", "LAST_IMAGE")
     FUNCTION = "fn"
     display_name = "Simple Interpolation"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/interpolation"
     @classmethod
     def IS_CHANGED(self, *args, **kwargs):
         # Force re-evaluation of the node
@@ -180,7 +180,7 @@ class DeforumCadenceNode:
     RETURN_TYPES = ("IMAGE", "IMAGE")
     FUNCTION = "fn"
     display_name = "Cadence Interpolation"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/interpolation"
 
     @classmethod
     def IS_CHANGED(self, *args, **kwargs):

@@ -37,7 +37,7 @@ class ExtractDominantNoteAmplitude:
             },
         }
 
-    CATEGORY = "AudioAnalysis"
+    CATEGORY = "deforum/audio"
 
     RETURN_TYPES = ("AMPLITUDE",)
     RETURN_NAMES = ("dominant_note_amplitude",)
@@ -95,7 +95,7 @@ class DeforumAmplitudeToKeyframeSeriesNode:
     RETURN_TYPES = ("DEFORUM_FRAME_DATA", "AMPLITUDE", "STRING")
     FUNCTION = "convert"
     display_name = "Amplitude to Schedule"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/audio"
 
     def safe_eval(self, expr, t, x, max_f):
         allowed_locals = {
@@ -243,7 +243,7 @@ class DeforumAmplitudeToString:
     # RETURN_NAMES = ("POSITIVE", "NEGATIVE")
     FUNCTION = "convert"
     display_name = "Amplitude to String"
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/audio"
 
 
     @classmethod
@@ -262,7 +262,7 @@ class DerivativeOfAmplitude:
                     "amplitude": ("AMPLITUDE",),
                      },}
 
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/audio"
 
     RETURN_TYPES = ("AMPLITUDE",)
     RETURN_NAMES = ("amplitude_derivative",)
@@ -281,7 +281,7 @@ class SpectralCentroid:
                     "audio_fft": ("AUDIO_FFT",),
                      },}
 
-    CATEGORY = "deforum"
+    CATEGORY = "deforum/audio"
 
     RETURN_TYPES = ("FLOAT",)
     RETURN_NAMES = ("spectral_centroid",)
@@ -306,7 +306,7 @@ class TimeSmoothing:
                     }
                 }
 
-    CATEGORY = "TemporalAnalysis"
+    CATEGORY = "deforum/audio"
 
     RETURN_TYPES = ("AMPLITUDE",)
     RETURN_NAMES = ("smoothed_amplitude",)
@@ -326,7 +326,7 @@ class BeatDetection:
                  },
         }
 
-    CATEGORY = "RhythmAnalysis"
+    CATEGORY = "deforum/audio"
 
     RETURN_TYPES = ("AMPLITUDE",)
     RETURN_NAMES = ("beat_times",)
