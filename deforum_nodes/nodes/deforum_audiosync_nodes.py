@@ -336,34 +336,25 @@ class BeatDetection:
 
     def detect(self, audio):
         beat_times = self.find_beat_times(audio)
-        # Convert beat times to a Pandas Series, similar to how BatchAmplitudeSchedule handles amplitude data
-        beat_times_series = pd.Series(beat_times)
+        # Assuming beat_times are indices, we convert these to time values
+        beat_times_in_seconds = beat_times / audio.sample_rate
+        beat_times_series = pd.Series(beat_times_in_seconds)
         return (beat_times_series,)
 
     def find_beat_times(self, audio):
-        # AudioData is already a mono or stereo object, handle accordingly
         if audio.num_channels > 1:
-            # For simplicity, we'll just use the first channel for beat detection
             audio_data = audio.get_channel_audio_data(0)
         else:
             audio_data = audio.audio_data
 
-        # Perform envelope extraction to simplify the signal
         envelope = self.extract_envelope(audio_data, audio.sample_rate)
-
-        # Smooth the envelope to highlight beats
         smoothed_envelope = scipy.ndimage.gaussian_filter1d(envelope, sigma=5)
-
-        # Normalize smoothed envelope for consistent peak detection
         normalized_envelope = (smoothed_envelope - np.min(smoothed_envelope)) / (np.max(smoothed_envelope) - np.min(smoothed_envelope))
-
-        # Detect peaks which are potential beat times
         peaks, _ = scipy.signal.find_peaks(normalized_envelope, height=0.3)  # The height threshold may need adjustment
 
         return peaks
 
     def extract_envelope(self, audio_data, sample_rate):
-        # Placeholder for envelope extraction logic
-        audio_data_abs = np.abs(audio_data)
-        downsampled = scipy.signal.decimate(audio_data_abs, int(sample_rate / 1000), zero_phase=True)  # Downsample for simplicity
-        return downsampled
+        analytic_signal = scipy.signal.hilbert(audio_data)
+        envelope = np.abs(analytic_signal)
+        return envelope
