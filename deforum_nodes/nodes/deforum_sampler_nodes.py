@@ -28,3 +28,31 @@ class DeforumKSampler:
         latent["samples"] = latent["samples"].float()
         return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent,
                                denoise=denoise)
+
+
+class DeforumVAEEncode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+                              "vae": ("VAE", )},
+                "optional": {
+                            "pixels": ("IMAGE",),
+                            "latent": ("LATENT",)
+                }
+
+
+                }
+    RETURN_TYPES = ("LATENT",)
+    FUNCTION = "encode"
+    display_name = "VAEEncode [safe]"
+
+    CATEGORY = "deforum/latent"
+
+    def encode(self, vae, pixels, latent):
+        print(pixels, latent)
+
+        if pixels is not None:
+            t = vae.encode(pixels[:,:,:,:3])
+            return ({"samples":t}, )
+        else:
+            return (latent,)

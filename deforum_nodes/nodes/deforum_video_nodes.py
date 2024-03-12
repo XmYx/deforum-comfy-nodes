@@ -156,96 +156,107 @@ class DeforumVideoSaveNode:
            enable_preview,
            deforum_frame_data={},
            audio=None):
+        dump = False
+        ret = None
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
         counter = find_next_index(full_output_folder, filename_prefix, format)
         anim_args = deforum_frame_data.get("anim_args")
-        if anim_args is not None:
-            max_frames = anim_args.max_frames
-        else:
-            max_frames = image.shape[0] + len(self.images) + 2
-        if not deforum_frame_data.get("reset", None):
-            if image.shape[0] > 1:
-                for img in image:
-                    self.add_image(img)
+
+        if image is not None:
+
+            if anim_args is not None:
+                max_frames = anim_args.max_frames
             else:
-                self.add_image(image[0])
-        print(f"[deforum] Video Save node cached {len(self.images)} frames")
-        # When the current frame index reaches the last frame, save the video
+                max_frames = image.shape[0] + len(self.images) + 2
+            if not deforum_frame_data.get("reset", None):
+                if image.shape[0] > 1:
+                    for img in image:
+                        self.add_image(img)
+                else:
+                    self.add_image(image[0])
+            print(f"[deforum] Video Save node cached {len(self.images)} frames")
+            # When the current frame index reaches the last frame, save the video
 
-        if dump_by == "max_frames":
-            dump = len(self.images) >= max_frames + 1
-        else:
-            dump = len(self.images) >= dump_every
-        if deforum_frame_data.get("reset", None):
-            dump = True
-        ret = "skip"
-        if dump or dump_now:  # frame_idx is 0-based
-            if len(self.images) >= 2:
-                if not skip_save:
-                    output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{format}")
-
-                    print("[deforum] Saving video:", output_path)
-
-                    # writer = imageio.get_writer(output_path, fps=fps, codec=codec, quality=quality, pixelformat=pixel_format, format=format)
-                    # for frame in tqdm(self.images, desc=f"Saving {format} (imageio)"):
-                    #     writer.append_data(np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
-                    # writer.close()
-                    video_clip = mp.ImageSequenceClip(
-                        [np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8) for frame in
-                         self.images], fps=fps)
-
-                    if audio is not None:
-                        # Generate a temporary file for the audio
-                        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_audio_file:
-                            save_to_file(audio, tmp_audio_file.name)
-                            # Load the audio clip
-                            audio_clip = mp.AudioFileClip(tmp_audio_file.name)
-                            # Calculate video duration
-                            video_duration = len(self.images) / fps
-                            # Trim or loop the audio clip to match the video length
-                            if audio_clip.duration > video_duration:
-                                audio_clip = audio_clip.subclip(0,
-                                                                video_duration)  # Trim the audio to match video length
-                            elif audio_clip.duration < video_duration:
-                                # If you want to loop the audio, uncomment the following line
-                                # audio_clip = audio_clip.loop(duration=video_duration)
-                                pass  # If you prefer silence after the audio ends, do nothing
-                            # Set the audio on the video clip
-                            video_clip = video_clip.set_audio(audio_clip)
-
-                    # Write the video file, ensuring the audio file is not prematurely deleted
-                    # try:
-
-                    video_clip.write_videofile(output_path, codec=codec, audio_codec='aac')
-                    # finally:
-                    #     # Delay removal of temporary audio file to ensure it's released
-                    #     if audio is not None:
-                    #         os.unlink(tmp_audio_file.name)
-                if not skip_return:
-                    ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
-
-            self.images = []  # Empty the list for next use
-
-        if deforum_frame_data.get("reset", None):
-            if image.shape[0] > 1:
-                for img in image:
-                    self.add_image(img)
+            if dump_by == "max_frames":
+                dump = len(self.images) >= max_frames + 1
             else:
-                self.add_image(image[0])
-        if enable_preview:
+                dump = len(self.images) >= dump_every
+            if deforum_frame_data.get("reset", None):
+                dump = True
+            ret = "skip"
+            if dump or dump_now:  # frame_idx is 0-based
+                if len(self.images) >= 2:
+                    if not skip_save:
+                        self.save_video(full_output_folder, filename, counter, fps, audio, codec)
+                    if not skip_return:
+                        ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
+                self.images = []  # Empty the list for next use
+
+            if deforum_frame_data.get("reset", None):
+                if image.shape[0] > 1:
+                    for img in image:
+                        self.add_image(img)
+                else:
+                    self.add_image(image[0])
+        if enable_preview and image is not None:
 
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(dump or dump_now,),
                       "frames":([tensor_to_webp_base64(i) for i in image]),
                       "fps":(fps,)}
         else:
+            if deforum_frame_data.get("reset", None):
+                self.images = []
+                dump = True
+
+            if dump or dump_now:  # frame_idx is 0-based
+                if len(self.images) >= 2:
+                    if not skip_save:
+                        self.save_video(full_output_folder, filename, counter, fps, audio, codec)
+                    if not skip_return:
+                        ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
+
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(dump or dump_now,),
                       # "frames":([tensor_to_webp_base64(i) for i in image]),
                       "fps":(fps,)}
 
         return {"ui": ui_ret, "result": (ret,)}
+    def save_video(self, full_output_folder, filename, counter, fps, audio, codec):
+        output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{format}")
+
+        print("[deforum] Saving video:", output_path)
+
+        # writer = imageio.get_writer(output_path, fps=fps, codec=codec, quality=quality, pixelformat=pixel_format, format=format)
+        # for frame in tqdm(self.images, desc=f"Saving {format} (imageio)"):
+        #     writer.append_data(np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
+        # writer.close()
+        video_clip = mp.ImageSequenceClip(
+            [np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8) for frame in
+             self.images], fps=fps)
+
+        if audio is not None:
+            # Generate a temporary file for the audio
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_audio_file:
+                save_to_file(audio, tmp_audio_file.name)
+                # Load the audio clip
+                audio_clip = mp.AudioFileClip(tmp_audio_file.name)
+                # Calculate video duration
+                video_duration = len(self.images) / fps
+                # Trim or loop the audio clip to match the video length
+                if audio_clip.duration > video_duration:
+                    audio_clip = audio_clip.subclip(0,
+                                                    video_duration)  # Trim the audio to match video length
+                elif audio_clip.duration < video_duration:
+                    # If you want to loop the audio, uncomment the following line
+                    # audio_clip = audio_clip.loop(duration=video_duration)
+                    pass  # If you prefer silence after the audio ends, do nothing
+                # Set the audio on the video clip
+                video_clip = video_clip.set_audio(audio_clip)
+
+        video_clip.write_videofile(output_path, codec=codec, audio_codec='aac')
+
     @classmethod
     def IS_CHANGED(s, text, autorefresh):
         # Force re-evaluation of the node

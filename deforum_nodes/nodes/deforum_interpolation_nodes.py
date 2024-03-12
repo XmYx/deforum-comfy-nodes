@@ -172,6 +172,7 @@ class DeforumCadenceNode:
     def INPUT_TYPES(s):
         return {"required":
                     {"image": ("IMAGE",),
+                     "first_image": ("IMAGE",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      "depth_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                      }
@@ -187,18 +188,20 @@ class DeforumCadenceNode:
         # Force re-evaluation of the node
         return float("NaN")
 
-    def interpolate(self, image, deforum_frame_data, depth_strength):
+    def interpolate(self, image, first_image, deforum_frame_data, depth_strength, dry_run=False):
         #global deforum_depth_algo, deforum_models
         # import turbo_prev_image, turbo_next_image, turbo_next_frame_idx, turbo_prev_frame_idx
         return_frames = []
-        pil_image = tensor2pil(image.clone().detach())
-        # Convert PIL image to RGB NumPy array and cast to np.float32
-        np_image = np.array(pil_image.convert("RGB")).astype(np.uint8)
-
-        # Convert from RGB to BGR for OpenCV compatibility
-        #np_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
-        np_image = cv2.normalize(np_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
-        np_image = np_image.astype(np.uint8)
+        if not dry_run:
+            pil_image = tensor2pil(image.clone().detach())
+            # Convert PIL image to RGB NumPy array and cast to np.float32
+            np_image = np.array(pil_image.convert("RGB")).astype(np.uint8)
+            # Convert from RGB to BGR for OpenCV compatibility
+            #np_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+            np_image = cv2.normalize(np_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+            np_image = np_image.astype(np.uint8)
+        else:
+            np_image = None
         args = deforum_frame_data["args"]
         anim_args = deforum_frame_data["anim_args"]
         predict_depths = (
@@ -244,54 +247,71 @@ class DeforumCadenceNode:
             self.interpolator = CadenceInterpolator()
             #deforum_frame_data["frame_idx"] += anim_args.diffusion_cadence
             first_gen = True
-        if self.interpolator.turbo_next_image is not None:
-            self.interpolator.turbo_prev_image, self.interpolator.turbo_prev_frame_idx = self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx
-        self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"] - 1
-        if first_gen:
-            self.interpolator.turbo_prev_image = np_image
-            return image
+        # if self.interpolator.turbo_next_image is not None:
+        self.interpolator.turbo_prev_image, self.interpolator.turbo_prev_frame_idx = self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx
+        self.interpolator.turbo_next_image, self.interpolator.turbo_next_frame_idx = np_image, deforum_frame_data["frame_idx"]
+
+        if self.interpolator.turbo_next_frame_idx == anim_args.diffusion_cadence and first_image is not None:
+            pil_image = tensor2pil(first_image.clone().detach())
+            # Convert PIL image to RGB NumPy array and cast to np.float32
+            np_image = np.array(pil_image.convert("RGB")).astype(np.uint8)
+            # Convert from RGB to BGR for OpenCV compatibility
+            #np_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+            np_image = cv2.normalize(np_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+            self.interpolator.turbo_prev_image = np_image.astype(np.uint8)
+            self.interpolator.turbo_prev_frame_idx = 0
+
+        # if first_gen:
+        #     self.interpolator.turbo_prev_image = np_image
+        #     return image
         # with torch.inference_mode():
-        with torch.no_grad():
+        if not dry_run:
+            with torch.no_grad():
+                # from ..modules.standalone_cadence import new_standalone_cadence
+                frames = self.interpolator.new_standalone_cadence(deforum_frame_data["args"],
+                                                deforum_frame_data["anim_args"],
+                                                deforum_frame_data["root"],
+                                                deforum_frame_data["keys"],
+                                                deforum_frame_data["frame_idx"],
+                                                gs.deforum_models["depth_model"],
+                                                gs.deforum_models["raft_model"],
+                                                depth_strength)
 
-            # from ..modules.standalone_cadence import new_standalone_cadence
-            frames = self.interpolator.new_standalone_cadence(deforum_frame_data["args"],
-                                            deforum_frame_data["anim_args"],
-                                            deforum_frame_data["root"],
-                                            deforum_frame_data["keys"],
-                                            deforum_frame_data["frame_idx"],
-                                            gs.deforum_models["depth_model"],
-                                            gs.deforum_models["raft_model"],
-                                            depth_strength)
 
 
-
-        for frame in frames:
-            tensor = pil2tensor(frame)
-            return_frames.append(tensor.squeeze(0))
-        print(f"[deforum] [rbn] Cadence: {len(return_frames)} frames")
-        if len(return_frames) > 0:
-            return_frames = torch.stack(return_frames, dim=0)
-            return return_frames
+            for frame in frames:
+                tensor = pil2tensor(frame)
+                return_frames.append(tensor.squeeze(0))
+            print(f"[deforum] [rbn] Cadence: {len(return_frames)} frames")
+            if len(return_frames) > 0:
+                return_frames = torch.stack(return_frames, dim=0)
+                return return_frames
+            else:
+                return None
         else:
-            return image
+            return None
 
-    def fn(self, image, deforum_frame_data, depth_strength):
+    def fn(self, image, first_image, deforum_frame_data, depth_strength):
         result = []
+        ret = None
+        if image is not None:
+            # Check if there are multiple images in the batch
+            if image.shape[0] > 1:
+                for img in image:
+                    # Ensure img has batch dimension of 1 for interpolation
+                    interpolated_frames = self.interpolate(img.unsqueeze(0), first_image, deforum_frame_data, depth_strength)
 
-        # Check if there are multiple images in the batch
-        if image.shape[0] > 1:
-            for img in image:
-                # Ensure img has batch dimension of 1 for interpolation
-                interpolated_frames = self.interpolate(img.unsqueeze(0), deforum_frame_data, depth_strength)
-
-                # Collect all interpolated frames
-                for f in interpolated_frames:
-                    result.append(f)
-            # Stack all results into a single tensor, preserving color channels
-            ret = torch.stack(result, dim=0)
+                    # Collect all interpolated frames
+                    for f in interpolated_frames:
+                        result.append(f)
+                # Stack all results into a single tensor, preserving color channels
+                ret = torch.stack(result, dim=0)
+            else:
+                # Directly interpolate if only one image is present
+                ret = self.interpolate(image, first_image, deforum_frame_data, depth_strength)
+        if ret is not None:
+            last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
+            return (ret, last,)
         else:
-            # Directly interpolate if only one image is present
-            ret = self.interpolate(image, deforum_frame_data, depth_strength)
-
-        last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
-        return (ret, last,)
+            _ = self.interpolate(None, None, deforum_frame_data, depth_strength, dry_run=True)
+            return (None, None,)
