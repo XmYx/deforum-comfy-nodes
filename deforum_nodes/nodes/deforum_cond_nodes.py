@@ -1,3 +1,5 @@
+import random
+
 import torch
 
 from ..modules.deforum_comfyui_helpers import blend_tensors, blend_methods
@@ -128,3 +130,43 @@ class DeforumInpaintModelConditioning:
             return (out[0], out[1], out_latent)
         else:
             return (positive, negative, latent,)
+
+
+class DeforumShuffleTokenizer:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"clip": ("CLIP",),
+                     "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+
+                     }
+                }
+
+    RETURN_TYPES = ("CLIP",)
+    FUNCTION = "fn"
+    display_name = "Shuffle Tokenizer"
+    CATEGORY = "deforum/conditioning"
+    def fn(self, clip, seed=42):
+        # Access the tokenizer from the clip object
+        tokenizer = clip.tokenizer
+
+        # Copy the original vocabulary for restoration if needed
+        original_vocab = tokenizer.vocab.copy()
+
+        # Seed the random number generator for reproducibility
+        seeded_random = random.Random(seed)
+
+        # Create a list of (key, value) pairs, shuffle it, then convert it back to a dictionary
+        items = list(original_vocab.items())
+        seeded_random.shuffle(items)
+        shuffled_vocab = dict(items)
+
+        # Update the tokenizer's vocabulary with the shuffled version
+        # This step is highly dependent on the tokenizer's implementation.
+        # If the tokenizer has a method to set its vocab, use it.
+        # Otherwise, you might need to directly set the attribute, if possible.
+        # tokenizer.set_vocab(shuffled_vocab)  # Hypothetical method
+        tokenizer.vocab = shuffled_vocab  # Direct attribute setting, if no method available
+
+        return (clip,)

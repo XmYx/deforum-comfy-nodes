@@ -17,6 +17,7 @@ class DeforumIteratorNode:
         self.frame_index = 0
         self.seed = ""
         self.seeds = []
+        self.second_run = True
 
     @classmethod
     def IS_CHANGED(cls, *args, **kwargs):
@@ -210,7 +211,7 @@ class DeforumIteratorNode:
         subseeds = generate_seed_list(anim_args.max_frames + 1, args.seed_behavior, subseed, args.seed_iter_N)
         if reset_counter:
             print("[deforum] RESET COUNTER")
-        if latent is None or reset_latent or not hasattr(self, "rng"):
+        if reset_latent or not hasattr(self, "rng"):
             print("[deforum] RESET LATENT"  )
 
             from ..mapping import gs
