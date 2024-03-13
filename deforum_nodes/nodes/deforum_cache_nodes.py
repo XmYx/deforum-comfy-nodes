@@ -133,7 +133,7 @@ class DeforumGetCachedImageNode:
         mask = None
         if image is not None:
             mask = image[:, :, :, 0]
-        return (image,mask,)
+        return (image ,mask,)
 
 
 

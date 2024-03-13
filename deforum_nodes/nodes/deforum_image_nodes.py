@@ -120,5 +120,6 @@ class DeforumAddNoiseNode:
             print(f"[deforum] Adding Noise {noise} {anim_args.noise_type}")
             image = pil2tensor(noised_image).detach().cpu()
 
-            return (image,)
+        return (image,)
+
 

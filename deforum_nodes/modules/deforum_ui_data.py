@@ -328,13 +328,14 @@ deforum_depth_params = {
     "depth_algorithm": {
         "type": "dropdown",
         "choices": [
-            "Zoe",
             "Midas-3-Hybrid",
             "Midas+AdaBins (old)",
-            "Zoe+AdaBins (old)",
             "Midas-3.1-BeitLarge",
             "AdaBins",
-            "Leres"
+            "Leres",
+            "Zoe",
+            "Zoe+AdaBins (old)",
+
         ],
         "default": "Zoe"
     },

@@ -156,6 +156,9 @@ class DeforumVideoSaveNode:
            enable_preview,
            deforum_frame_data={},
            audio=None):
+
+        print("IF THIS IS FALSE I'LL EAT MY CAT", deforum_frame_data.get("reset", None))
+
         dump = False
         ret = "skip"
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
@@ -206,7 +209,6 @@ class DeforumVideoSaveNode:
                       "frames":([tensor_to_webp_base64(i) for i in image]),
                       "fps":(fps,)}
         else:
-
             if anim_args is not None:
                 max_frames = anim_args.max_frames
             else:
@@ -217,6 +219,7 @@ class DeforumVideoSaveNode:
                 dump = len(self.images) >= dump_every
             if deforum_frame_data.get("reset", None):
                 dump = True
+                dump_now = True
             if dump or dump_now:  # frame_idx is 0-based
                 if len(self.images) >= 2:
                     if not skip_save:
