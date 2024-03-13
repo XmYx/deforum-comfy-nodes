@@ -9,4 +9,5 @@ rich
 imageio[ffmpeg]
 scikit-image
 moviepy
+librosa
 git+https://github.com/XmYx/deforum-studio.git
