@@ -4,7 +4,9 @@ Deforum integration for ComfyUI.
 
 ## Installation
 
-To get started with Deforum Comfy Nodes, please make sure ComfyUI is installed. Follow the steps below depending on your method of preference.
+To get started with Deforum Comfy Nodes, please make sure ComfyUI is installed and you are using Python v3.10 or these nodes will not work. We recommend using a virtual environment.
+
+Follow the steps below depending on your method of preference.
 
 ### ComfyUI Manager
 
@@ -38,7 +40,7 @@ https://github.com/crystian/ComfyUI-Crystools
 ## Usage
 
 1. Launch ComfyUI
-2. Load the example workflow from the examples folder.
+2. Load any of the example workflows from the examples folder.
 3. Queue prompt, this will generate your first frame, you can enable Auto queueing, or batch as many images as long you'd
 like your animation to be.
 
