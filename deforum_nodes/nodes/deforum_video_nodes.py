@@ -206,10 +206,10 @@ class DeforumVideoSaveNode:
                 else:
                     self.add_image(image[0])
         if enable_preview and image is not None:
-            if audio is not None:
-                base64_audio = encode_audio_base64(audio, len(self.images), fps)
-            else:
-                base64_audio = None
+            # if audio is not None:
+            base64_audio = self.encode_audio_base64(audio, len(self.images), fps)
+            # else:
+            #     base64_audio = None
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(dump or dump_now,),
                       "frames":([tensor_to_webp_base64(i) for i in image]),
@@ -240,6 +240,39 @@ class DeforumVideoSaveNode:
                       "fps":(fps,)}
 
         return {"ui": ui_ret, "result": (ret,)}
+
+    def encode_audio_base64(self, audio_data, frame_count, fps):
+        sample_rate = 44100  # Default sample rate
+
+        if audio_data is None:
+            # Generate silent audio data
+            duration_in_seconds = frame_count / float(fps)
+            silence = np.zeros(int(duration_in_seconds * sample_rate), dtype=np.int16)
+            audio_data_reshaped = silence
+        else:
+            # Handle actual audio data
+            num_samples_to_keep = int((frame_count / fps) * audio_data.sample_rate)
+            if audio_data.num_channels > 1:
+                audio_data_reshaped = audio_data.audio_data.reshape((-1, audio_data.num_channels))
+            else:
+                audio_data_reshaped = audio_data.audio_data
+            actual_samples = audio_data_reshaped.shape[0]
+            if actual_samples > num_samples_to_keep:
+                audio_data_reshaped = audio_data_reshaped[:num_samples_to_keep, ...]
+            elif actual_samples < num_samples_to_keep:
+                padding_length = num_samples_to_keep - actual_samples
+                if audio_data.num_channels > 1:
+                    padding = np.zeros((padding_length, audio_data.num_channels), dtype=audio_data_reshaped.dtype)
+                else:
+                    padding = np.zeros(padding_length, dtype=audio_data_reshaped.dtype)
+                audio_data_reshaped = np.vstack((audio_data_reshaped, padding))
+
+        # Convert the numpy array to bytes and encode in base64
+        output = BytesIO()
+        write(output, sample_rate, audio_data_reshaped)
+        base64_audio = base64.b64encode(output.getvalue()).decode('utf-8')
+        return base64_audio
+
     def save_video(self, full_output_folder, filename, counter, fps, audio, codec, ext):
         output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{ext}")
 
