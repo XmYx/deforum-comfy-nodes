@@ -115,13 +115,43 @@ function addVideoPreview(nodeType) {
         previewWidget.imgEl = document.createElement("img");
         previewWidget.imgEl.style['width'] = "100%"
         previewWidget.imgEl.hidden = true;
-        // Create an audio element for audio playback
+        // // Create an audio element for audio playback
+        // previewWidget.audioEl = document.createElement("audio");
+        // previewWidget.audioEl.controls = true; // Optional: Show controls
+        // previewWidget.audioEl.loop = true; // Enable audio looping by default
+        // previewWidget.audioEl.style["width"] = "100%"; // Make audio widget as wide as the node
+        //
+        //
+        // // Create an audio waveform display element
+        // previewWidget.waveformEl = document.createElement("img");
+        // previewWidget.waveformEl.style.width = "100%";
+        // previewWidget.waveformEl.style.position = "absolute";
+        // previewWidget.waveformEl.style.bottom = "30px"; // Adjust based on your layout
+        // previewWidget.waveformEl.hidden = true; // Initially hidden
+
         previewWidget.audioEl = document.createElement("audio");
         previewWidget.audioEl.controls = true; // Optional: Show controls
         previewWidget.audioEl.loop = true; // Enable audio looping by default
-        previewWidget.audioEl.style["width"] = "100%"; // Make audio widget as wide as the node
-
+        previewWidget.audioEl.style.width = "100%"; // Make audio widget as wide as the node
         element.appendChild(previewWidget.audioEl); // Append audio element to the DOM
+
+        // Immediately append the waveform image element under the audio element
+        previewWidget.waveformEl = document.createElement("img");
+        previewWidget.waveformEl.style.width = "100%";
+        previewWidget.waveformEl.style.display = "block"; // Ensure it's displayed as a block-level element
+        previewWidget.waveformEl.hidden = true; // Initially hidden
+        element.appendChild(previewWidget.waveformEl); // This positions it right under the audio controls
+
+
+        // Method to update the waveform image
+        previewNode.updateWaveformImage = function(imageSrc) {
+            if (imageSrc) {
+                previewWidget.waveformEl.src = 'data:image/png;base64,' + imageSrc;
+                previewWidget.waveformEl.hidden = false; // Show the waveform image
+            } else {
+                previewWidget.waveformEl.hidden = true; // Hide if no source provided
+            }
+        };
 
 
         // Add transport controls
@@ -171,9 +201,8 @@ function addVideoPreview(nodeType) {
             updateFrame(frameIndex);
         };
         controls.appendChild(stepForwardButton);
-
-
         previewWidget.parentEl.appendChild(previewWidget.imgEl)
+
         let frameIndex = 0;
         let cachedFrames = this.getCachedFrames(); // Assuming this method exists and retrieves an array of frame data
         previewWidget.imgEl.onload = () => {
@@ -189,15 +218,7 @@ function addVideoPreview(nodeType) {
             updateFrame(frameIndex);
         }.bind(this));
 
-        // Function to update frame view
-        // function updateFrame(index) {
-        //     cachedFrames = previewNode  .getCachedFrames()
-        //     if (cachedFrames && cachedFrames.length > 0) {
-        //         previewWidget.imgEl.hidden = false;
-        //         previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[index];
-        //     }
-        // }
-                // Function to update displayed frame
+        // Function to update displayed frame
         function updateFrame(index) {
             const cachedFrames = previewNode.getCachedFrames(); // Get cached frames
             if (cachedFrames && cachedFrames.length > 0) {
@@ -210,25 +231,31 @@ function addVideoPreview(nodeType) {
         this.playing = false;
         this.playbackInterval = 80;
         this.startPlayback = function(playbackInterval) {
-            if (this.playing) {
-                this.stopPlayback(); // Stop current playback if it's running
-            }
+            if (this.playing === false) {
+                this.playbackInterval = playbackInterval;
+                const widget = this; // Capture 'this' to use inside setInterval function
+                this.imageSequenceInterval = setInterval(() => {
+                    const cachedFrames = this.getCachedFrames();
+                    //const displayFrames = cachedFrames.length > 0 ? cachedFrames : frames;
+                    if (cachedFrames && cachedFrames.length > 0) {
+                        previewWidget.imgEl.hidden = false;
+                        previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[frameIndex];
+                        frameIndex = (frameIndex + 1) % cachedFrames.length;
+                    }
+                }, this.playbackInterval); // Update frame every 80ms
 
-            this.playbackInterval = playbackInterval;
-            const widget = this; // Capture 'this' to use inside setInterval function
-            this.imageSequenceInterval = setInterval(() => {
-                const cachedFrames = this.getCachedFrames();
-                //const displayFrames = cachedFrames.length > 0 ? cachedFrames : frames;
-                if (cachedFrames && cachedFrames.length > 0) {
-                    previewWidget.imgEl.hidden = false;
-                    previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[frameIndex];
-                    frameIndex = (frameIndex + 1) % cachedFrames.length;
-                }
-            }, this.playbackInterval); // Update frame every 80ms
-            if (previewWidget.audioSrc) { // Check if there's audio to play
-                previewWidget.audioEl.src = previewWidget.audioSrc; // Load the audio source
-                previewWidget.audioEl.play(); // Start audio playback
+
+
             }
+            if (previewWidget.audioSrc) { // Check if there's audio to play
+                    previewWidget.audioEl.src = previewWidget.audioSrc; // Load the audio source
+                    previewWidget.audioEl.play(); // Start audio playback
+            }
+            // if (this.playing) {
+            //     this.stopPlayback(); // Stop current playback if it's running
+            // }
+
+
         };
         // Function to stop playback
         this.stopPlayback = function() {
@@ -377,7 +404,8 @@ app.registerExtension({
 		};
 	},
 	beforeRegisterNodeDef(nodeType, nodeData) {
-		if (nodeType.comfyClass === "DeforumIteratorNode") {
+
+        if (nodeType.comfyClass === "DeforumIteratorNode") {
             const onIteratorExecuted = nodeType.prototype.onExecuted
             nodeType.prototype.onExecuted = function (message) {
                 const r = onIteratorExecuted ? onIteratorExecuted.apply(this, message) : undefined
@@ -437,6 +465,28 @@ app.registerExtension({
 
 				return r;
 			};
+		}
+
+        else if (nodeType.comfyClass === "DeforumBigBoneResetNode") {
+
+
+            const onResetExecuted = nodeType.prototype.onExecuted
+            nodeType.prototype.onExecuted = function (message) {
+                const r = onResetExecuted ? onResetExecuted.apply(this, message) : undefined
+                for (const w of this.widgets || []) {
+
+                    if (w.name === "reset_deforum") {
+                        const counterWidget = w;
+                        counterWidget.value = false;
+                    }
+                }
+
+
+
+            return r
+            }
+
+
 		} else if (nodeType.comfyClass === "DeforumLoadVideo") {
                 addUploadWidget(nodeType, nodeData, "video");
 
@@ -474,6 +524,12 @@ app.registerExtension({
 
 
                 if (output && "frames" in output) { // Safely check if 'frames' is a key in 'output'
+
+                    if ("waveform" in output) {
+                        this.updateWaveformImage(output["waveform"])
+
+                    }
+
                     if (this.playing === false) {
                         this.playing = true;
                         this.cacheFrames(output["frames"]);

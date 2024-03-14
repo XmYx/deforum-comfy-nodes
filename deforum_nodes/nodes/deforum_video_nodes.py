@@ -129,6 +129,7 @@ class DeforumVideoSaveNode:
                 "optional": {
                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                     "audio": ("AUDIO",),
+                    "waveform_image": ("IMAGE",),
                 }
 
                 }
@@ -157,7 +158,8 @@ class DeforumVideoSaveNode:
            skip_return,
            enable_preview,
            deforum_frame_data={},
-           audio=None):
+           audio=None,
+           waveform_image=None):
 
 
         dump = False
@@ -215,6 +217,8 @@ class DeforumVideoSaveNode:
                       "frames":([tensor_to_webp_base64(i) for i in image]),
                       "fps":(fps,),
                       "audio":(base64_audio,)}
+            if waveform_image is not None:
+                ui_ret["waveform"] = (tensor_to_webp_base64(waveform_image),)
         else:
             if anim_args is not None:
                 max_frames = anim_args.max_frames

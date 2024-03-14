@@ -55,6 +55,12 @@ class DeforumIteratorNode:
 
     @torch.inference_mode()
     def get(self, deforum_data, latent_type, latent=None, init_latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, enable_autoqueue=False, *args, **kwargs):
+
+        from ..mapping import gs
+        if gs.reset:
+            reset_counter = True
+            reset_latent = True
+
         # global deforum_cache
         root_dict = RootArgs()
         args_dict = {key: value["value"] for key, value in DeforumArgs().items()}
@@ -202,7 +208,7 @@ class DeforumIteratorNode:
             print("[deforum] RESET COUNTER")
         if reset_latent or not hasattr(self, "rng"):
             print("[deforum] RESET LATENT"  )
-            from ..mapping import gs
+
             if "image" in gs.deforum_cache:
                 gs.deforum_cache["image"].clear()
             if "latent" in gs.deforum_cache:
@@ -317,3 +323,31 @@ class DeforumSeedNode:
     @torch.inference_mode()
     def get(self, seed, *args, **kwargs):
         return (seed,)
+
+
+class DeforumBigBoneResetNode:
+    @classmethod
+    def IS_CHANGED(cls, text, autorefresh):
+        # Force re-evaluation of the node
+        # if autorefresh == "Yes":
+        return float("NaN")
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "reset_deforum":("BOOLEAN", {"default": False},),},
+
+        }
+    FUNCTION = "get"
+    CATEGORY = f"deforum/logic"
+    RETURN_TYPES = (("BOOLEAN",))
+    display_name = "Big Bone Reset Node"
+
+    def get(self, reset_deforum, *args, **kwargs):
+        from ..mapping import gs
+        gs.reset = reset_deforum
+        # deforum_frame_data["reset"] = reset_deforum
+        # deforum_frame_data["reset_latent"] = reset_deforum
+        # deforum_frame_data["reset_counter"] = reset_deforum
+        # deforum_frame_data["first_run"] = reset_deforum
+        return {"ui":{"reset":(reset_deforum,)}, "result":(reset_deforum,)}
