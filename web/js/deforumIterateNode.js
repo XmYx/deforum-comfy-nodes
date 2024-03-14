@@ -483,12 +483,16 @@ app.registerExtension({
             extendNodePrototypeWithFrameCaching(nodeType);
             addVideoPreview(nodeType);
             const onVideoSaveExecuted = nodeType.prototype.onExecuted
+
+            let restoreWidget
             nodeType.prototype.onExecuted = function (message) {
 
             const r = onVideoSaveExecuted ? onVideoSaveExecuted.apply(this, message) : undefined
-
                 let swapSkipSave = false;
-                for (const w of this.widgets || []) {
+
+            for (const w of this.widgets || []) {
+
+
                     if (w.name === "dump_now") {
                         const dumpWidget = w;
                         if (dumpWidget.value === true) {
@@ -501,8 +505,8 @@ app.registerExtension({
                         if (swapSkipSave === true) {
                             saveWidget.value = false;
                         }
-
-
+                    } else if (w.name === "restore") {
+                        restoreWidget = w
                     }
                 }
                 const output = app.nodeOutputs?.[this.id + ""];
@@ -513,6 +517,9 @@ app.registerExtension({
 
 
                 if (output && "frames" in output) { // Safely check if 'frames' is a key in 'output'
+
+
+
                     if (this.playing === false) {
                         //this.playing = true;
 
@@ -532,11 +539,21 @@ app.registerExtension({
                         }
 
                     }
-
                     if (should_reset[0] === true) {
                         this.stopPlayback();
                         this.clearFrameCache();
                         this.cacheFrames(output["frames"]);
+                        restoreWidget.value = false;
+                    } else {
+                        if (this.getCachedFrames().length < output["counter"]) {
+                            restoreWidget.value = true;
+                            this.clearFrameCache();
+                        } else {
+                            restoreWidget.value = false;
+                        }
+
+
+
                     }
                 }
 

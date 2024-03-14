@@ -125,11 +125,15 @@ class DeforumVideoSaveNode:
                      "skip_save": ("BOOLEAN", {"default": False},),
                      "skip_return": ("BOOLEAN", {"default": True},),
                      "enable_preview": ("BOOLEAN", {"default": True},),
+                     "restore": ("BOOLEAN", {"default": False},),
                      },
                 "optional": {
                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                     "audio": ("AUDIO",),
                     "waveform_image": ("IMAGE",),
+                },
+                "hidden": {
+                    "js_frames": ("INT", {"default": 0, "min": 0, "max": 9999999999},),
                 }
 
                 }
@@ -159,8 +163,8 @@ class DeforumVideoSaveNode:
            enable_preview,
            deforum_frame_data={},
            audio=None,
-           waveform_image=None):
-
+           waveform_image=None,
+           restore=False):
 
         dump = False
         ret = "skip"
@@ -214,7 +218,7 @@ class DeforumVideoSaveNode:
             #     base64_audio = None
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(dump or dump_now,),
-                      "frames":([tensor_to_webp_base64(i) for i in image]),
+                      "frames":([tensor_to_webp_base64(i) for i in image] if not restore else [tensor_to_webp_base64(i) for i in self.images]),
                       "fps":(fps,),
                       "audio":(base64_audio,)}
             if waveform_image is not None:
