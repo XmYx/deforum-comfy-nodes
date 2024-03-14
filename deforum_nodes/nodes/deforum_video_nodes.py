@@ -1,4 +1,6 @@
+import base64
 import os
+from io import BytesIO
 
 import cv2
 import imageio
@@ -157,7 +159,6 @@ class DeforumVideoSaveNode:
            deforum_frame_data={},
            audio=None):
 
-        print("IF THIS IS FALSE I'LL EAT MY CAT", deforum_frame_data.get("reset", None))
 
         dump = False
         ret = "skip"
@@ -179,6 +180,8 @@ class DeforumVideoSaveNode:
                 else:
                     self.add_image(image[0])
             print(f"[deforum] Video Save node cached {len(self.images)} frames")
+            print("THE CAT IS FINE. SOMETHING WAS False THOUGH THE CAT IS NOT")
+
             # When the current frame index reaches the last frame, save the video
 
             if dump_by == "max_frames":
@@ -203,11 +206,15 @@ class DeforumVideoSaveNode:
                 else:
                     self.add_image(image[0])
         if enable_preview and image is not None:
-
+            if audio is not None:
+                base64_audio = encode_audio_base64(audio, len(self.images), fps)
+            else:
+                base64_audio = None
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(dump or dump_now,),
                       "frames":([tensor_to_webp_base64(i) for i in image]),
-                      "fps":(fps,)}
+                      "fps":(fps,),
+                      "audio":(base64_audio,)}
         else:
             if anim_args is not None:
                 max_frames = anim_args.max_frames
@@ -245,7 +252,6 @@ class DeforumVideoSaveNode:
         video_clip = mp.ImageSequenceClip(
             [np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8) for frame in
              self.images], fps=fps)
-
         if audio is not None:
             # Generate a temporary file for the audio
             with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_audio_file:
@@ -273,3 +279,47 @@ class DeforumVideoSaveNode:
         if autorefresh == "Yes":
             return float("NaN")
 
+
+def encode_audio_base64(audio_data, frame_count, fps):
+    # Calculate the target duration of the audio in seconds based on the video duration
+    target_audio_duration = frame_count / fps
+
+    # Calculate the number of samples to keep based on the target duration and the sample rate
+    num_samples_to_keep = int(target_audio_duration * audio_data.sample_rate)
+
+    # Reshape the audio data based on the number of channels
+    if audio_data.num_channels > 1:
+        audio_data_reshaped = audio_data.audio_data.reshape((-1, audio_data.num_channels))
+    else:
+        audio_data_reshaped = audio_data.audio_data
+
+    # Trim or pad the audio data to match the target duration
+    actual_samples = audio_data_reshaped.shape[0]
+    if actual_samples > num_samples_to_keep:
+        # Trim the audio data if it's longer than the target duration
+        audio_data_reshaped = audio_data_reshaped[:num_samples_to_keep, ...]
+    elif actual_samples < num_samples_to_keep:
+        # Pad the audio data with zeros if it's shorter than the target duration
+        padding_length = num_samples_to_keep - actual_samples
+        if audio_data.num_channels > 1:
+            padding = np.zeros((padding_length, audio_data.num_channels), dtype=audio_data_reshaped.dtype)
+        else:
+            padding = np.zeros(padding_length, dtype=audio_data_reshaped.dtype)
+        audio_data_reshaped = np.vstack((audio_data_reshaped, padding))
+
+    # Convert the adjusted numpy array to bytes
+    output = BytesIO()
+    write(output, audio_data.sample_rate, audio_data_reshaped.astype(np.int16))
+
+    # Encode bytes to base64
+    base64_audio = base64.b64encode(output.getvalue()).decode('utf-8')
+
+    return base64_audio
+def save_to_file(data, filepath: str):
+    # Ensure the audio data is reshaped properly for mono/stereo
+    if data.num_channels > 1:
+        audio_data_reshaped = data.audio_data.reshape((-1, data.num_channels))
+    else:
+        audio_data_reshaped = data.audio_data
+    write(filepath, data.sample_rate, audio_data_reshaped.astype(np.int16))
+    return True

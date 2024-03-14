@@ -83,6 +83,7 @@ function addVideoPreview(nodeType) {
     chainCallback(nodeType.prototype, "onNodeCreated", function() {
         var element = document.createElement("div");
         const previewNode = this;
+        previewNode.fps = 24
         previewNode.size[1] += 45;
         var previewWidget = this.addDOMWidget("videopreview", "preview", element, {
             serialize: false,
@@ -100,7 +101,7 @@ function addVideoPreview(nodeType) {
                 if (!(height > 0)) {
                     height = 0;
                 }
-                this.computedHeight = height + 10;
+                this.computedHeight = height + 50;
                 return [width, height];
             }
             return [width, -4];//no loaded src, widget should not display
@@ -114,6 +115,13 @@ function addVideoPreview(nodeType) {
         previewWidget.imgEl = document.createElement("img");
         previewWidget.imgEl.style['width'] = "100%"
         previewWidget.imgEl.hidden = true;
+        // Create an audio element for audio playback
+        previewWidget.audioEl = document.createElement("audio");
+        previewWidget.audioEl.controls = true; // Optional: Show controls
+        previewWidget.audioEl.loop = true; // Enable audio looping by default
+        previewWidget.audioEl.style["width"] = "100%"; // Make audio widget as wide as the node
+
+        element.appendChild(previewWidget.audioEl); // Append audio element to the DOM
 
 
         // Add transport controls
@@ -172,9 +180,26 @@ function addVideoPreview(nodeType) {
             previewWidget.aspectRatio = previewWidget.imgEl.naturalWidth / previewWidget.imgEl.naturalHeight;
             fitHeight(this);
         };
+
+        // Use the audio element's timeline to control the frame index
+        previewWidget.audioEl.addEventListener('timeupdate', function() {
+            // Calculate the current frame based on the audio current time and fps
+            const currentTime = previewWidget.audioEl.currentTime;
+            frameIndex = Math.floor(currentTime * this.fps) % this.getCachedFrames().length;
+            updateFrame(frameIndex);
+        }.bind(this));
+
         // Function to update frame view
+        // function updateFrame(index) {
+        //     cachedFrames = previewNode  .getCachedFrames()
+        //     if (cachedFrames && cachedFrames.length > 0) {
+        //         previewWidget.imgEl.hidden = false;
+        //         previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[index];
+        //     }
+        // }
+                // Function to update displayed frame
         function updateFrame(index) {
-            cachedFrames = previewNode  .getCachedFrames()
+            const cachedFrames = previewNode.getCachedFrames(); // Get cached frames
             if (cachedFrames && cachedFrames.length > 0) {
                 previewWidget.imgEl.hidden = false;
                 previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[index];
@@ -200,22 +225,44 @@ function addVideoPreview(nodeType) {
                     frameIndex = (frameIndex + 1) % cachedFrames.length;
                 }
             }, this.playbackInterval); // Update frame every 80ms
+            if (previewWidget.audioSrc) { // Check if there's audio to play
+                previewWidget.audioEl.src = previewWidget.audioSrc; // Load the audio source
+                previewWidget.audioEl.play(); // Start audio playback
+            }
         };
         // Function to stop playback
         this.stopPlayback = function() {
+            const prevIndex = previewWidget.audioEl.currentTime
             if (this.imageSequenceInterval) {
                 clearInterval(this.imageSequenceInterval);
                 this.imageSequenceInterval = null; // Clear the interval ID
                 this.playing = false; // Mark as not playing
             }
+            previewWidget.audioEl.pause(); // Pause audio playback
+            previewWidget.audioEl.currentTime = 0; // Reset audio to start
         };
         this.setPlaybackInterval = function(newInterval) {
-            this.playbackInterval = newInterval;
-            if (this.playing) {
-                this.stopPlayback();
-                this.startPlayback(newInterval); // Restart playback with new interval if it's currently playing
+            // Check if the new interval is different from the current playback interval
+            if (this.playbackInterval !== newInterval) {
+                this.playbackInterval = newInterval; // Update the playback interval
+
+                // Only adjust playback if it's currently active
+                if (this.playing) {
+                    this.stopPlayback(); // Stop current playback
+                    this.startPlayback(newInterval); // Restart playback with the new interval
+                }
             }
         };
+
+        this.updateAudio = function (audioBase64) {
+            if (audioBase64) {
+
+                previewWidget.audioSrc = `data:audio/wav;base64,${audioBase64}`; // Update the audio source with new base64 data
+            } else {
+                previewWidget.audioSrc = null; // Clear the audio source if there's no audio
+            }
+        };
+
 
     });
 }
@@ -423,17 +470,26 @@ app.registerExtension({
                 const should_reset = output["should_dump"]
                 const fps = output["fps"]
                 const millisecondsPerFrame = 1000 / fps[0];
-
+                this.fps = fps
 
 
                 if (output && "frames" in output) { // Safely check if 'frames' is a key in 'output'
                     if (this.playing === false) {
                         this.playing = true;
                         this.cacheFrames(output["frames"]);
+                        if ("audio" in output) {
+                            this.updateAudio(output["audio"]);
+
+                        }
                         this.startPlayback(millisecondsPerFrame);
                     } else {
                         this.setPlaybackInterval(millisecondsPerFrame);
                         this.cacheFrames(output["frames"]);
+
+                        if ("audio" in output) {
+                            this.updateAudio(output["audio"]);
+                        }
+
                     }
 
                     if (should_reset[0] === true) {

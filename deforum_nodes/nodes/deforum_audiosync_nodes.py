@@ -5,6 +5,7 @@ import scipy.signal
 import scipy.ndimage
 
 import numpy as np
+from pydub import AudioSegment
 from scipy.signal import butter, filtfilt, find_peaks
 import librosa
 
@@ -36,23 +37,25 @@ class ExtractDominantNoteAmplitude:
                 "min_frequency": ("FLOAT", {"default": 20.0, "min": 0.0, "max": 20000.0, "step": 1.0}),
                 "max_frequency": ("FLOAT", {"default": 8000.0, "min": 0.0, "max": 20000.0, "step": 1.0}),
                 "magnitude_threshold": ("FLOAT", {"default": 0.01, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "smoothing_window_size": ("INT", {"default": 5, "min": 1, "max": 101, "step": 2}),
+                "smoothing_window_size": ("INT", {"default": 5, "min": 1, "max": 101, "step": 1}),
                 # Odd number, savgol_filter constraint
             },
         }
 
     CATEGORY = "deforum/audio"
 
-    RETURN_TYPES = ("AMPLITUDE",)
-    RETURN_NAMES = ("dominant_note_amplitude",)
+    RETURN_TYPES = ("AMPLITUDE","AMPLITUDE",)
+    RETURN_NAMES = ("dominant_note_amplitude","phase_amplitude",)
     FUNCTION = "extract"
 
     def extract(self, audio_fft, min_frequency, max_frequency, magnitude_threshold, smoothing_window_size):
         dominant_frequencies_amplitude = []
+        dominant_frequencies_phase = []
 
         for fft_data in audio_fft:
             indices = fft_data.get_indices_for_frequency_bands(min_frequency, max_frequency)
             magnitudes = np.abs(fft_data.fft)[indices]
+            phases = np.angle(fft_data.fft)[indices]
 
             # Optional: Apply smoothing to magnitudes
             if smoothing_window_size > 1 and len(magnitudes) > smoothing_window_size:
@@ -65,17 +68,119 @@ class ExtractDominantNoteAmplitude:
             # Apply magnitude threshold
             magnitudes[magnitudes < magnitude_threshold] = 0
 
-            # Identify dominant frequency index and its amplitude
+            # Identify dominant frequency index, its amplitude, and phase
             if magnitudes.size > 0:  # Ensure there's data after filtering
                 dominant_index = np.argmax(magnitudes)
                 dominant_frequencies_amplitude.append(magnitudes[dominant_index])
+                dominant_frequencies_phase.append(phases[dominant_index])
             else:
                 dominant_frequencies_amplitude.append(0)
+                dominant_frequencies_phase.append(0)  # Use a default phase (e.g., 0) when no dominant frequency is found
 
         # Convert to numpy array for consistency
-        dominant_frequencies_amplitude = np.array(dominant_frequencies_amplitude)
+        return (np.array(dominant_frequencies_amplitude), np.array(dominant_frequencies_phase),)
 
-        return (dominant_frequencies_amplitude,)
+class InverseFFTNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "magnitude": ("AMPLITUDE",),
+                "phase": ("AMPLITUDE",),
+            },
+        }
+
+    CATEGORY = "signal_processing"
+
+    RETURN_TYPES = ("AMPLITUDE",)
+    RETURN_NAMES = ("time_domain_signal",)
+    FUNCTION = "synthesize"
+
+    def synthesize(self, magnitude, phase):
+        # Ensure magnitude and phase arrays have the same length
+        if magnitude.shape != phase.shape:
+            raise ValueError("Magnitude and phase arrays must have the same length.")
+
+        # Combine magnitude and phase to form the complex spectrum
+        complex_spectrum = magnitude * np.exp(1j * phase)
+
+        # Perform the inverse FFT to convert the spectrum back to the time domain
+        time_domain_signal = np.fft.ifft(complex_spectrum)
+
+        # Since the input is real, the output should also be real. We take the real part to avoid numerical errors that might introduce imaginary parts.
+        return (np.real(time_domain_signal),)
+
+class AmplitudeToAudio:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "amplitude": ("AMPLITUDE",),
+                "phase": ("AMPLITUDE",),
+            },
+            "optional": {
+                # You can define additional parameters such as sample rate if needed
+                "sample_rate": ("INT", {"default": 44100, "min": 1, "max": 192000, "step": 1}),
+            },
+        }
+
+    CATEGORY = "AudioProcessing"
+
+    RETURN_TYPES = ("AUDIO",)
+    RETURN_NAMES = ("audio_samples",)
+    FUNCTION = "convert"
+
+    def convert(self, amplitude, phase, sample_rate=44100):
+        if len(amplitude) != len(phase):
+            raise ValueError("Amplitude and phase sequences must have the same length.")
+
+        # Reconstruct the complex spectrum from amplitude and phase
+        complex_spectrum = amplitude * np.exp(1j * phase)
+
+        # Perform the inverse FFT
+        audio_samples = np.fft.ifft(complex_spectrum).real  # Taking the real part as the output
+
+        # Convert the normalized audio samples to 16-bit integers
+        audio_samples_int16 = np.int16(audio_samples / np.max(np.abs(audio_samples)) * 32767)
+
+        # Creating an AudioSegment object from the NumPy array
+        audio_segment = AudioSegment(
+            audio_samples_int16.tobytes(),
+            frame_rate=sample_rate,
+            sample_width=audio_samples_int16.dtype.itemsize,
+            channels=1
+        )
+
+        # Create the AudioData object
+        audio_data = AudioData(audio_segment)
+
+        return (audio_data,)
+
+class AudioData:
+    def __init__(self, audio_segment) -> None:
+        # Extract the sample rate
+        self.sample_rate = audio_segment.frame_rate
+
+        # Get the number of audio channels
+        self.num_channels = audio_segment.channels
+
+        # Extract the audio data as a NumPy array
+        samples = np.array(audio_segment.get_array_of_samples())
+        if audio_segment.channels == 2:
+            self.audio_data = np.reshape(samples, (len(samples)//2, 2))
+        else:
+            self.audio_data = samples
+
+    def get_channel_audio_data(self, channel: int):
+        if channel < 0 or channel >= self.num_channels:
+            raise IndexError(f"Channel '{channel}' out of range. total channels is '{self.num_channels}'.")
+        return self.audio_data[channel::self.num_channels]
+
+    def get_channel_fft(self, channel: int):
+        audio_data = self.get_channel_audio_data(channel)
+        return np.fft.fft(audio_data)
+
+
 
 def xor(a, b):
     return bool(a) ^ bool(b)
@@ -488,3 +593,19 @@ class TempoChangeDetectionNode:
         # Return the sequence as desired
         print(len(change_points_sequence))  # Debug print to check the length of the output sequence
         return (change_points_sequence,)
+
+class ConvertNormalizedAmplitude:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {"normalized_amp": ("NORMALIZED_AMPLITUDE",)},
+        }
+
+    CATEGORY = "deforum/audio"
+    RETURN_TYPES = ("AMPLITUDE",)
+    RETURN_NAMES = ("amplitude",)
+    FUNCTION = "convert_normalized_amplitude"
+    display_name = "Convert Normalized Amplitude"
+
+    def convert_normalized_amplitude(self, normalized_amp):
+        return (normalized_amp,)

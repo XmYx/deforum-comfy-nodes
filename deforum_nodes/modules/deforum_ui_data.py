@@ -26,65 +26,65 @@ deforum_base_params = {
         "type": "dropdown",
         "choices": comfy.samplers.KSampler.SCHEDULERS
     },
-    "steps": {
-        "type": "spinbox",
-        "default": 25,
-        "min": 0,
-        "max": 10000,
-        "step": 1
-    },
-    "scale": {
-        "type": "spinbox",
-        "default": 7,
-        "min": 0,
-        "max": 10000,
-        "step": 1
-    },
-    "n_batch": {
-        "type": "spinbox",
-        "default": 1,
-        "min": 0,
-        "max": 10000,
-        "step": 1
-    },
-    "batch_name": {
-        "type": "lineedit",
-        "default": "Deforum_{timestring}"
-    },
-    "seed_behavior": {
-        "type": "dropdown",
-        "choices": ["fixed", "random", "ladder", "incrementing", "decrementing"]
-    },
-
-    "seed_iter_N": {
-        "type": "spinbox",
-        "default": 1,
-        "min": 0,
-        "max": 10000,
-        "step": 1
-    },
-    "outdir": {
-        "type": "lineedit",
-        "default": "output/deforum"
-    },
-    "strength": {
-        "type": "doublespinbox",
-        "default": 0.8,
-        "min": 0,
-        "max": 1,
-        "step": 0.01
-    },
-    "save_settings": {
-        "type": "checkbox",
-        "default": True
-    },
-    "save_sample_per_step": {
-        "type": "checkbox",
-        "default": False
-    },
+    # "steps": {
+    #     "type": "spinbox",
+    #     "default": 25,
+    #     "min": 0,
+    #     "max": 10000,
+    #     "step": 1
+    # },
+    # "scale": {
+    #     "type": "spinbox",
+    #     "default": 7,
+    #     "min": 0,
+    #     "max": 10000,
+    #     "step": 1
+    # },
+    # "n_batch": {
+    #     "type": "spinbox",
+    #     "default": 1,
+    #     "min": 0,
+    #     "max": 10000,
+    #     "step": 1
+    # },
+    # "batch_name": {
+    #     "type": "lineedit",
+    #     "default": "Deforum_{timestring}"
+    # },
+    # "seed_behavior": {
+    #     "type": "dropdown",
+    #     "choices": ["fixed", "random", "ladder", "incrementing", "decrementing"]
+    # },
+    #
+    # "seed_iter_N": {
+    #     "type": "spinbox",
+    #     "default": 1,
+    #     "min": 0,
+    #     "max": 10000,
+    #     "step": 1
+    # },
+    # "outdir": {
+    #     "type": "lineedit",
+    #     "default": "output/deforum"
+    # },
+    # "strength": {
+    #     "type": "doublespinbox",
+    #     "default": 0.8,
+    #     "min": 0,
+    #     "max": 1,
+    #     "step": 0.01
+    # },
+    # "save_settings": {
+    #     "type": "checkbox",
+    #     "default": True
+    # },
+    # "save_sample_per_step": {
+    #     "type": "checkbox",
+    #     "default": False
+    # },
     "prompt_weighting": {
         "type": "checkbox",
-        "default": False
+        "default": True
     },
     "normalize_prompt_weights": {
         "type": "checkbox",
@@ -126,18 +126,18 @@ deforum_anim_params = {
         "type": "dropdown",
         "choices": ["wrap", "replicate", "zeros"]
     },
-    "resume_from_timestring": {
-        "type": "checkbox",
-        "default": False
-    },
-    "resume_timestring": {
-        "type": "lineedit",
-        "default": "20230129210106"
-    },
-    "use_looper": {
-        "type": "checkbox",
-        "default": False
-    },
+    # "resume_from_timestring": {
+    #     "type": "checkbox",
+    #     "default": False
+    # },
+    # "resume_timestring": {
+    #     "type": "lineedit",
+    #     "default": "20230129210106"
+    # },
+    # "use_looper": {
+    #     "type": "checkbox",
+    #     "default": False
+    # },
 
 }
 
@@ -189,15 +189,15 @@ deforum_translation_params = {
 
 deforum_hybrid_video_params = {
 
-    "hybrid_generate_inputframes": {
-        "type": "checkbox",
-        "default": False
-    },
-    "hybrid_generate_human_masks": {
-        "type": "dropdown",
-        "choices": ["None", "PNGs", "Video", "Both"],
-        "default": "None"
-    },
+    # "hybrid_generate_inputframes": {
+    #     "type": "checkbox",
+    #     "default": False
+    # },
+    # "hybrid_generate_human_masks": {
+    #     "type": "dropdown",
+    #     "choices": ["None", "PNGs", "Video", "Both"],
+    #     "default": "None"
+    # },
     "hybrid_use_first_frame_as_init_image": {
         "type": "checkbox",
         "default": True
@@ -232,57 +232,57 @@ deforum_hybrid_video_params = {
         "choices": ["None", "Normal", "Before Motion", "After Generation"],
         "default": "None"
     },
-    "hybrid_use_init_image": {
-        "type": "checkbox",
-        "default": False
-    },
-    "hybrid_comp_mask_type": {
-        "type": "dropdown",
-        "choices": ["None", "Depth", "Video Depth", "Blend", "Difference"],
-        "default": "None"
-    },
-    "hybrid_comp_mask_inverse": {
-        "type": "checkbox",
-        "default": False
-    },
-    "hybrid_comp_mask_equalize": {
-        "type": "dropdown",
-        "choices": ["None", "Before", "After", "Both"],
-        "default": "None"
-    },
-    "hybrid_comp_mask_auto_contrast": {
-        "type": "checkbox",
-        "default": False
-    },
-    "hybrid_comp_save_extra_frames": {
-        "type": "checkbox",
-        "default": False
-    },
+    # "hybrid_use_init_image": {
+    #     "type": "checkbox",
+    #     "default": False
+    # },
+    # "hybrid_comp_mask_type": {
+    #     "type": "dropdown",
+    #     "choices": ["None", "Depth", "Video Depth", "Blend", "Difference"],
+    #     "default": "None"
+    # },
+    # "hybrid_comp_mask_inverse": {
+    #     "type": "checkbox",
+    #     "default": False
+    # },
+    # "hybrid_comp_mask_equalize": {
+    #     "type": "dropdown",
+    #     "choices": ["None", "Before", "After", "Both"],
+    #     "default": "None"
+    # },
+    # "hybrid_comp_mask_auto_contrast": {
+    #     "type": "checkbox",
+    #     "default": False
+    # },
+    # "hybrid_comp_save_extra_frames": {
+    #     "type": "checkbox",
+    #     "default": False
+    # },
 
 }
 
 deforum_hybrid_video_schedules = {
 
-    "hybrid_comp_alpha_schedule": {
-        "type": "lineedit",
-        "default": "0:(0.5)"
-    },
-    "hybrid_comp_mask_blend_alpha_schedule": {
-        "type": "lineedit",
-        "default": "0:(0.5)"
-    },
-    "hybrid_comp_mask_contrast_schedule": {
-        "type": "lineedit",
-        "default": "0:(1)"
-    },
-    "hybrid_comp_mask_auto_contrast_cutoff_high_schedule": {
-        "type": "lineedit",
-        "default": "0:(100)"
-    },
-    "hybrid_comp_mask_auto_contrast_cutoff_low_schedule": {
-        "type": "lineedit",
-        "default": "0:(0)"
-    },
+    # "hybrid_comp_alpha_schedule": {
+    #     "type": "lineedit",
+    #     "default": "0:(0.5)"
+    # },
+    # "hybrid_comp_mask_blend_alpha_schedule": {
+    #     "type": "lineedit",
+    #     "default": "0:(0.5)"
+    # },
+    # "hybrid_comp_mask_contrast_schedule": {
+    #     "type": "lineedit",
+    #     "default": "0:(1)"
+    # },
+    # "hybrid_comp_mask_auto_contrast_cutoff_high_schedule": {
+    #     "type": "lineedit",
+    #     "default": "0:(100)"
+    # },
+    # "hybrid_comp_mask_auto_contrast_cutoff_low_schedule": {
+    #     "type": "lineedit",
+    #     "default": "0:(0)"
+    # },
     "hybrid_flow_factor_schedule": {
         "type": "lineedit",
         "default": "0:(1)"
