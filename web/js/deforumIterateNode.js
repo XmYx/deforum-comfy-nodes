@@ -266,21 +266,46 @@ function addVideoPreview(nodeType) {
         };
         previewWidget.audioEl.addEventListener('play', () => this.startPlayback(previewWidget.playbackInterval));
         previewWidget.audioEl.addEventListener('pause', () => this.stopPlayback());
+
         this.updateAudio = function (audioBase64) {
+            const wasPlaying = !previewWidget.audioEl.paused; // Check if audio was playing
+            const currentTime = previewWidget.audioEl.currentTime; // Store current playback time
+
             if (audioBase64) {
-
                 previewWidget.audioSrc = `data:audio/wav;base64,${audioBase64}`; // Update the audio source with new base64 data
-                if (previewWidget.audioSrc) { // Check if there's audio to play
-                previewWidget.audioEl.src = previewWidget.audioSrc; // Load the audio source
-                //previewWidget.audioEl.play(); // Start audio playback
-                }
-                //previewWidget.audioEl.pause(); // Pause audio playback
-                //previewWidget.audioEl.play(); // Pause audio playback
+                previewWidget.audioEl.src = previewWidget.audioSrc; // Load the new audio source
 
+                // Check if there was an audio playing
+                if (wasPlaying) {
+                    // Wait for the audio to be loaded
+                    previewWidget.audioEl.oncanplaythrough = function() {
+                        <previewWidget className="audi"></previewWidget>oEl.currentTime = currentTime; // Seek to the previous playback time
+                        previewWidget.audioEl.play(); // Resume playback
+                        previewWidget.audioEl.oncanplaythrough = null; // Remove the event listener to avoid memory leaks
+                    };
+                }
             } else {
                 previewWidget.audioSrc = null; // Clear the audio source if there's no audio
+                // Optionally handle the scenario when there's no new audio source
             }
         };
+
+
+        // this.updateAudio = function (audioBase64) {
+        //     if (audioBase64) {
+        //
+        //         previewWidget.audioSrc = `data:audio/wav;base64,${audioBase64}`; // Update the audio source with new base64 data
+        //         if (previewWidget.audioSrc) { // Check if there's audio to play
+        //         previewWidget.audioEl.src = previewWidget.audioSrc; // Load the audio source
+        //         //previewWidget.audioEl.play(); // Start audio playback
+        //         }
+        //         //previewWidget.audioEl.pause(); // Pause audio playback
+        //         //previewWidget.audioEl.play(); // Pause audio playback
+        //
+        //     } else {
+        //         previewWidget.audioSrc = null; // Clear the audio source if there's no audio
+        //     }
+        // };
 
 
     });
@@ -505,7 +530,12 @@ app.registerExtension({
                         if (swapSkipSave === true) {
                             saveWidget.value = false;
                         }
-                    } else if (w.name === "restore") {
+                    } else if (w.name === "clear_cache") {
+                        const cacheClearWidget = w;
+                        if (cacheClearWidget.value === true) {
+                            cacheClearWidget.value = false;
+                        }
+                    }else if (w.name === "restore") {
                         restoreWidget = w
                     }
                 }

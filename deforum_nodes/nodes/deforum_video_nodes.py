@@ -126,6 +126,7 @@ class DeforumVideoSaveNode:
                      "skip_return": ("BOOLEAN", {"default": True},),
                      "enable_preview": ("BOOLEAN", {"default": True},),
                      "restore": ("BOOLEAN", {"default": False},),
+                     "clear_cache": ("BOOLEAN", {"default": False},),
                      },
                 "optional": {
                     "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
@@ -164,7 +165,8 @@ class DeforumVideoSaveNode:
            deforum_frame_data={},
            audio=None,
            waveform_image=None,
-           restore=False):
+           restore=False,
+           clear_cache=False):
 
         dump = False
         ret = "skip"
@@ -196,6 +198,7 @@ class DeforumVideoSaveNode:
                 dump = len(self.images) >= dump_every
             if deforum_frame_data.get("reset", None):
                 dump = True
+                clear_cache = True
             ret = "skip"
             if dump or dump_now:  # frame_idx is 0-based
                 if len(self.images) >= 2:
@@ -203,7 +206,8 @@ class DeforumVideoSaveNode:
                         self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
                     if not skip_return:
                         ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
-                self.images = []  # Empty the list for next use
+                if clear_cache:
+                    self.images = []  # Empty the list for next use
 
             if deforum_frame_data.get("reset", None):
                 if image.shape[0] > 1:
@@ -217,7 +221,7 @@ class DeforumVideoSaveNode:
             # else:
             #     base64_audio = None
             ui_ret = {"counter":(len(self.images),),
-                      "should_dump":(dump or dump_now,),
+                      "should_dump":(clear_cache,),
                       "frames":([tensor_to_webp_base64(i) for i in image] if not restore else [tensor_to_webp_base64(i) for i in self.images]),
                       "fps":(fps,),
                       "audio":(base64_audio,)}
@@ -235,15 +239,17 @@ class DeforumVideoSaveNode:
             if deforum_frame_data.get("reset", None):
                 dump = True
                 dump_now = True
+                clear_cache = True
             if dump or dump_now:  # frame_idx is 0-based
                 if len(self.images) >= 2:
                     if not skip_save:
                         self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
                     if not skip_return:
                         ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
-                self.images = []
+                if clear_cache:
+                    self.images = []
             ui_ret = {"counter":(len(self.images),),
-                      "should_dump":(dump or dump_now,),
+                      "should_dump":(clear_cache,),
                       "frames":([]),
                       "fps":(fps,)}
 
@@ -258,6 +264,7 @@ class DeforumVideoSaveNode:
             silence = np.zeros(int(duration_in_seconds * sample_rate), dtype=np.int16)
             audio_data_reshaped = silence
         else:
+            sample_rate = audio_data.sample_rate
             # Handle actual audio data
             num_samples_to_keep = int((frame_count / fps) * audio_data.sample_rate)
             if audio_data.num_channels > 1:
@@ -277,6 +284,7 @@ class DeforumVideoSaveNode:
 
         # Convert the numpy array to bytes and encode in base64
         output = BytesIO()
+
         write(output, sample_rate, audio_data_reshaped)
         base64_audio = base64.b64encode(output.getvalue()).decode('utf-8')
         return base64_audio
