@@ -169,7 +169,7 @@ class DeforumVideoSaveNode:
            clear_cache=False):
 
         dump = False
-        ret = "skip"
+        ret = None
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir)
         counter = find_next_index(full_output_folder, filename_prefix, format)
@@ -196,10 +196,11 @@ class DeforumVideoSaveNode:
                 dump = len(self.images) >= max_frames
             else:
                 dump = len(self.images) >= dump_every
+
             if deforum_frame_data.get("reset", None):
                 dump = True
                 clear_cache = True
-            ret = "skip"
+            ret = None
             if dump or dump_now:  # frame_idx is 0-based
                 if len(self.images) >= 2:
                     if not skip_save:
@@ -208,7 +209,7 @@ class DeforumVideoSaveNode:
                         ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
                 if clear_cache:
                     self.images = []  # Empty the list for next use
-
+                enable_preview = True
             if deforum_frame_data.get("reset", None):
                 if image.shape[0] > 1:
                     for img in image:

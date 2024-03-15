@@ -279,7 +279,7 @@ function addVideoPreview(nodeType) {
                 if (wasPlaying) {
                     // Wait for the audio to be loaded
                     previewWidget.audioEl.oncanplaythrough = function() {
-                        <previewWidget className="audi"></previewWidget>oEl.currentTime = currentTime; // Seek to the previous playback time
+                        previewWidget.audioEl.currentTime = currentTime; // Seek to the previous playback time
                         previewWidget.audioEl.play(); // Resume playback
                         previewWidget.audioEl.oncanplaythrough = null; // Remove the event listener to avoid memory leaks
                     };
