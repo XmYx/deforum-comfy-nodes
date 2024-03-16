@@ -18,6 +18,7 @@ class DeforumIteratorNode:
         self.seed = ""
         self.seeds = []
         self.second_run = True
+        self.logger = None
 
     @classmethod
     def IS_CHANGED(cls, *args, **kwargs):
@@ -121,10 +122,24 @@ class DeforumIteratorNode:
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
 
         if self.frame_index >= anim_args.max_frames or reset_counter:
+            # if self.logger:
+            #     self.logger.stop_live_display()
+            # config = {
+            #     "Header": {"type": "full", "columns": ["DEFORUM COMFY ANIMATOR - Logging"]},
+            #     "Status": {"type": "columns", "columns": ["Frame", "Progress", "Errors"]}
+            # }
+            # self.logger = TerminalTableLogger(config)
+            # self.logger.start_live_display()
             self.reset_counter = False
             self.frame_index = 0
             self.first_run = True
             self.second_run = True
+
+        if not self.logger:
+            self.logger = comfy.utils.ProgressBar(anim_args.max_frames)
+
+
+        self.logger.update_absolute(self.frame_index)
 
         # else:
         args.scale = keys.cfg_scale_schedule_series[self.frame_index]
@@ -280,6 +295,9 @@ class DeforumIteratorNode:
         gen_args["frame_idx"] = self.frame_index
         gen_args["first_run"] = self.first_run
         gen_args["second_run"] = self.second_run
+        gen_args["logger"] = self.logger
+        torch.cuda.synchronize()
+
         return {"ui": {"counter":(self.frame_index,), "max_frames":(anim_args.max_frames,), "enable_autoqueue":(enable_autoqueue,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
 
@@ -301,7 +319,8 @@ class DeforumIteratorNode:
                 "frame_idx": frame_idx,
                 "anim_args": anim_args,
                 "args": args,
-                "areas":areas[frame_idx] if areas is not None else None}
+                "areas":areas[frame_idx] if areas is not None else None,
+                "logger":self.logger}
 
 class DeforumSeedNode:
     @classmethod

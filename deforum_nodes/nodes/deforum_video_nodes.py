@@ -44,6 +44,9 @@ class DeforumLoadVideo:
         return {"required": {
                     "video": (sorted(files),),
                     "reset": ("BOOLEAN", {"default": False},),
+                    "iterative": ("BOOLEAN", {"default": True},),
+                    "start_frame": ("INT", {"default": 0, "min": 0, "max": 1000000},),
+                    "return_frames": ("INT", {"default": 1, "min": 1, "max": 1000000},),
 
         },}
 
@@ -58,8 +61,40 @@ class DeforumLoadVideo:
         self.cap = None
         self.current_frame = None
 
-    def load_video_frame(self, video, reset):
+    # def load_video_frame(self, video, reset, iterative, start_frame, return_frames):
+    #     video_path = folder_paths.get_annotated_filepath(video)
+    #
+    #     # Initialize or reset video capture
+    #     if self.cap is None or self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.video_path != video_path or reset:
+    #         try:
+    #             self.cap.release()
+    #         except:
+    #             pass
+    #         self.cap = cv2.VideoCapture(video_path)
+    #
+    #         self.cap = cv2.VideoCapture(video_path)
+    #         self.current_frame = -1
+    #         self.video_path = video_path
+    #     success, frame = self.cap.read()
+    #     if success:
+    #         self.current_frame += 1
+    #         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #         frame = np.array(frame).astype(np.float32)
+    #         frame = pil2tensor(frame)  # Convert to torch tensor
+    #     else:
+    #         # Reset if reached the end of the video
+    #         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    #         success, frame = self.cap.read()
+    #         self.current_frame = 0
+    #         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #         frame = np.array(frame).astype(np.float32)
+    #         frame = pil2tensor(frame)  # Convert to torch tensor
+    #
+    #     return (frame,self.current_frame,self.cap.get(cv2.CAP_PROP_POS_FRAMES),)
+    def load_video_frame(self, video, reset, iterative, start_frame, return_frames):
         video_path = folder_paths.get_annotated_filepath(video)
+        max_frames = 0
+        frames = []
 
         # Initialize or reset video capture
         if self.cap is None or self.cap.get(cv2.CAP_PROP_POS_FRAMES) >= self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or self.video_path != video_path or reset:
@@ -68,29 +103,41 @@ class DeforumLoadVideo:
             except:
                 pass
             self.cap = cv2.VideoCapture(video_path)
-
-            self.cap = cv2.VideoCapture(video_path)
             self.current_frame = -1
             self.video_path = video_path
 
+        if not iterative:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+            self.current_frame = start_frame - 1
 
+        max_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        success, frame = self.cap.read()
-        if success:
-            self.current_frame += 1
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = np.array(frame).astype(np.float32)
-            frame = pil2tensor(frame)  # Convert to torch tensor
-        else:
-            # Reset if reached the end of the video
-            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        for _ in range(return_frames + 1):
             success, frame = self.cap.read()
-            self.current_frame = 0
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = np.array(frame).astype(np.float32)
-            frame = pil2tensor(frame)  # Convert to torch tensor
 
-        return (frame,self.current_frame,self.cap.get(cv2.CAP_PROP_POS_FRAMES),)
+            if not success:
+                self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                success, frame = self.cap.read()
+                self.current_frame = -1
+
+            if success:
+                self.current_frame += 1
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame = np.array(frame).astype(np.float32)
+                frame = pil2tensor(frame)  # Convert to torch tensor
+                frames.append(frame[0])
+            else:
+                break
+
+        if len(frames) <= 1:
+            frame = frames[0] if frames else None
+            return (frame, self.current_frame, max_frames)
+        else:
+            # Stack frames along a new dimension (simulate batch dimension)
+            frame = torch.stack(frames)
+            print(frame.shape)
+
+        return (frame, self.current_frame, max_frames)
 
     @classmethod
     def IS_CHANGED(cls, text, autorefresh):

@@ -15,7 +15,33 @@ from deforum.pipelines.deforum_animation.animation_helpers import DeforumAnimKey
 from deforum.pipelines.deforum_animation.pipeline_deforum_animation import interpolate_areas
 
 blend_methods = ["linear", "sigmoidal", "gaussian", "pyramid", "none"]
+import torch
+import torch.nn.functional as F
+import math
 
+
+def pad_to_match(tensor1, tensor2):
+    """
+    Pad the smaller tensor with zeros to match the size of the larger tensor.
+    """
+    if tensor1.size() == tensor2.size():
+        return tensor1, tensor2
+    else:
+        # Find the size difference between the two tensors
+        diff_dims = [abs(s1 - s2) for s1, s2 in zip(tensor1.size(), tensor2.size())]
+
+        # Padding format (left, right, top, bottom) for 4D tensors, e.g., (batch, channels, height, width)
+        padding = []
+        for diff in reversed(diff_dims):  # Reverse to start padding from last dimensions
+            padding.extend([diff // 2, diff - diff // 2])
+
+        # Apply padding to the smaller tensor
+        if tensor1.numel() < tensor2.numel():
+            tensor1 = F.pad(tensor1, padding)
+        else:
+            tensor2 = F.pad(tensor2, padding)
+
+        return tensor1, tensor2
 
 def parse_widget(widget_info: dict) -> tuple:
     parsed_widget = None
@@ -173,6 +199,8 @@ def find_next_index(output_dir, filename_prefix, format):
 import torch.nn.functional as F
 
 def pyramid_blend(tensor1, tensor2, blend_value):
+    tensor1, tensor2 = pad_to_match(tensor1, tensor2)
+
     # For simplicity, we'll use two levels of blending
     downsampled1 = F.avg_pool2d(tensor1, 2)
     downsampled2 = F.avg_pool2d(tensor2, 2)
@@ -182,10 +210,14 @@ def pyramid_blend(tensor1, tensor2, blend_value):
 
     return blended_high
 def gaussian_blend(tensor2, tensor1, blend_value):
+    tensor1, tensor2 = pad_to_match(tensor1, tensor2)
+
     sigma = 0.5  # Adjust for desired smoothness
     weight = math.exp(-((blend_value - 0.5) ** 2) / (2 * sigma ** 2))
     return (1 - weight) * tensor1 + weight * tensor2
 def sigmoidal_blend(tensor1, tensor2, blend_value):
+    tensor1, tensor2 = pad_to_match(tensor1, tensor2)
+
     # Convert blend_value into a tensor with the same shape as tensor1 and tensor2
     blend_tensor = torch.full_like(tensor1, blend_value)
     weight = 1 / (1 + torch.exp(-10 * (blend_tensor - 0.5)))  # Sigmoid function centered at 0.5
@@ -197,6 +229,8 @@ def blend_tensors(obj1, obj2, blend_value, blend_method="linear"):
 
     if blend_method == "linear":
         weight = blend_value
+        obj1[0], obj2[0] = pad_to_match(obj1[0], obj2[0])
+        obj1[1]['pooled_output'], obj2[1]['pooled_output'] = pad_to_match(obj1[1]['pooled_output'], obj2[1]['pooled_output'])
         blended_cond = (1 - weight) * obj1[0] + weight * obj2[0]
         blended_pooled = (1 - weight) * obj1[1]['pooled_output'] + weight * obj2[1]['pooled_output']
 

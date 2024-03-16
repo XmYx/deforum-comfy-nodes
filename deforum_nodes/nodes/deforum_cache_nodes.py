@@ -95,7 +95,7 @@ class DeforumCacheImageNode:
         if "image" not in gs.deforum_cache:
             gs.deforum_cache["image"] = {}
         if image is not None:
-            gs.deforum_cache["image"][cache_index] = image.clone()
+            gs.deforum_cache["image"][cache_index] = image.detach().clone()
 
         return (image,)
 
@@ -133,6 +133,7 @@ class DeforumGetCachedImageNode:
         mask = None
         if image is not None:
             mask = image[:, :, :, 0]
+            image = image.detach().clone()
         return (image ,mask,)
 
 
