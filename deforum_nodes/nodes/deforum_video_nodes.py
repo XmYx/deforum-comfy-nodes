@@ -188,9 +188,8 @@ class DeforumVideoSaveNode:
         self.size = None
         self.temp_dir = temp_dir
         self.hex_dig = hex_dig
+        self.audio_path = None
         # self._register_temp_file_route()
-
-
 
     def _register_temp_file_route(self):
         # Generate a unique endpoint using a hash of the temp directory
@@ -313,15 +312,17 @@ class DeforumVideoSaveNode:
                     self.add_image(image[0])
         if enable_preview and image is not None:
             # if audio is not None:
-            audio_path = self.encode_audio_base64(audio, len(self.images), fps, 0)
+            # Delete the previous temporary audio file if it exists
+            if self.audio_path and os.path.exists(os.path.join(self.temp_dir, self.audio_path)):
+                os.remove(os.path.join(self.temp_dir, self.audio_path))
 
-            # else:
-            #     base64_audio = None
+            self.audio_path = self.encode_audio_base64(audio, len(self.images), fps, 0)
+
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(clear_cache,),
                       "frames":([f"/tmp/{self.hex_dig}/{os.path.basename(frame_path)}" for frame_path in self.images] if restore else [f"/tmp/{self.hex_dig}/{os.path.basename(frame_path)}" for frame_path in new_images]),
                       "fps":(fps,),
-                      "audio":(f"/tmp/{self.hex_dig}/{audio_path}",)}
+                      "audio":(f"/tmp/{self.hex_dig}/{self.audio_path}",)}
             if waveform_image is not None:
                 ui_ret["waveform"] = (tensor_to_webp_base64(waveform_image),)
         else:
@@ -383,13 +384,7 @@ class DeforumVideoSaveNode:
                 # Slice the audio data from start_sample to end_sample
                 audio_data_reshaped = audio_data_reshaped[start_sample:end_sample]
 
-        # Convert the numpy array to bytes and encode in base64
-        # with BytesIO() as output:
-        #     write(output, sample_rate, audio_data_reshaped)
-        #     base64_audio = base64.b64encode(output.getvalue()).decode('utf-8')
-        #
-        # return base64_audio
-        temp_audio_path = os.path.join(self.temp_dir, f"audio_{tempfile.mktemp(suffix='.wav')}")
+
         with tempfile.NamedTemporaryFile(delete=False, dir=self.temp_dir, suffix='.wav') as tmp_file:
             temp_audio_path = tmp_file.name
         from scipy.io.wavfile import write as wav_write
