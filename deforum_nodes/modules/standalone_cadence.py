@@ -168,7 +168,7 @@ class CadenceInterpolator:
                 # if args.overlay_mask and (anim_args.use_mask_video or args.use_mask):
                 #     img = do_overlay_mask(args, anim_args, img, tween_frame_idx, True)
                 if logger:
-                    preview = preview
+                    # preview = preview
                     pil_img = PIL.Image.fromarray(img.astype(np.uint8))
                     logger.update_absolute(turbo_steps - (frame_idx - tween_frame_idx) + 1, preview=("JPEG", pil_img, 512))
 
