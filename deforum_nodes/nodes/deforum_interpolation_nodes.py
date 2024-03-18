@@ -4,6 +4,8 @@ import numpy as np
 
 from deforum import FilmModel
 from deforum.models import DepthModel, RAFT
+
+from comfy import model_management
 from ..modules.standalone_cadence import CadenceInterpolator
 from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor
 
@@ -348,6 +350,14 @@ class DeforumCadenceNode:
         result = []
         ret = None
         if image is not None and not deforum_frame_data.get("reset"):
+
+            device = model_management.get_torch_device()
+            free_memory = model_management.get_free_memory(device)
+            if free_memory < 4000000000:
+                print("Low current VRam, offloading all models before executing Cadence")
+                model_management.unload_all_models()
+
+
             # Check if there are multiple images in the batch
             if image.shape[0] > 1:
                 for img in image:

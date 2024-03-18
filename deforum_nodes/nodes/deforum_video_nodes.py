@@ -308,7 +308,7 @@ class DeforumVideoSaveNode:
                     if not skip_return:
                         ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
                 if clear_cache:
-                    self.images.clear()
+                    self.images = []
                     # self.clear_cache_directory()
                 enable_preview = True
             if deforum_frame_data.get("reset", None):
@@ -352,7 +352,7 @@ class DeforumVideoSaveNode:
                     if not skip_return:
                         ret = torch.stack([pil2tensor(Image.open(i))[0] for i in self.images], dim=0)
                 if clear_cache:
-                    self.images = self.images.clear()
+                    self.images = self.images = []
                     # self.clear_cache_directory()
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(clear_cache,),
@@ -370,7 +370,7 @@ class DeforumVideoSaveNode:
             audio_data_reshaped = silence
         else:
             # Calculate start and end samples
-            start_sample = int((start_frame / fps) * audio_data.sample_rate)
+            start_sample = 0
             end_sample = start_sample + int((frame_count / fps) * audio_data.sample_rate)
 
             # Handle actual audio data
@@ -396,7 +396,8 @@ class DeforumVideoSaveNode:
         with tempfile.NamedTemporaryFile(delete=False, dir=self.temp_dir, suffix='.wav') as tmp_file:
             temp_audio_path = tmp_file.name
         from scipy.io.wavfile import write as wav_write
-        wav_write(temp_audio_path, sample_rate, audio_data_reshaped)
+
+        wav_write(temp_audio_path, 48000, audio_data_reshaped)
 
         # Return the path relative to the temp directory for URL construction
         return os.path.basename(temp_audio_path)

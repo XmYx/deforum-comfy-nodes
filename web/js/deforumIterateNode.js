@@ -154,7 +154,7 @@ function addVideoPreview(nodeType) {
 
 
         this.playing = false;
-        this.playbackInterval = 80;
+        this.playbackInterval = 41.666666666666664;
         this.startPlayback = function(playbackInterval) {
             if (this.playing === false) {
                 this.playing = true;
@@ -185,8 +185,9 @@ function addVideoPreview(nodeType) {
             if (this.playbackInterval !== newInterval) {
                 this.playbackInterval = newInterval; // Update the playback interval
             }
+            console.log("New interval", newInterval)
 
-            const wasPlaying = !previewWidget.audioEl.paused; // Check if audio was playing
+            const wasPlaying = this.playing; // Check if audio was playing
             const currentTime = previewWidget.audioEl.currentTime; // Store current playback time
             if (wasPlaying) {
                 // Wait for the audio to be loaded
@@ -208,7 +209,7 @@ function addVideoPreview(nodeType) {
 //            console.log(this.getCachedAudio().length)
 
             // Check if audio was playing
-            const wasPlaying = !previewWidget.audioEl.paused;
+            const wasPlaying = this.playing;
             const currentTime = previewWidget.audioEl.currentTime;
             if (previewWidget.audioEl.src !== audioBase64) {
                 previewWidget.audioEl.src = audioBase64;
