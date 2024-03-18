@@ -87,7 +87,7 @@ class CadenceInterpolator:
                     if anim_args.hybrid_motion in ['Affine', 'Perspective']:
                         if anim_args.hybrid_motion_use_prev_img:
                             matrix = get_matrix_for_hybrid_motion_prev_imgs(tween_frame_idx - 1, (args.width, args.height),
-                                                                       goal_img, self.prev_img, anim_args.hybrid_motion)
+                                                                       self.turbo_next_image, self.turbo_prev_image, anim_args.hybrid_motion)
                             if advance_prev:
                                 self.turbo_prev_image = image_transform_ransac(self.turbo_prev_image, matrix, anim_args.hybrid_motion)
                             if advance_next:
@@ -106,11 +106,7 @@ class CadenceInterpolator:
                                     self.turbo_next_image = image_transform_ransac(self.turbo_next_image, matrix, anim_args.hybrid_motion)
                     if anim_args.hybrid_motion in ['Optical Flow']:
                         if anim_args.hybrid_motion_use_prev_img:
-                            # flow = get_flow_for_hybrid_motion_prev_imgs(tween_frame_idx - 1, (args.width, args.height), goal_img.astype(np.uint8), self.prev_flow, self.prev_img.astype(np.uint8),
-                            #                                        anim_args.hybrid_flow_method, raft_model,
-                            #                                        anim_args.hybrid_flow_consistency,
-                            #                                        anim_args.hybrid_consistency_blur,
-                            #                                        anim_args.hybrid_comp_save_extra_frames)
+
                             flow = get_flow_for_hybrid_motion_prev_imgs(self.turbo_next_image,
                                         self.prev_flow,
                                         self.turbo_prev_image,
@@ -172,23 +168,10 @@ class CadenceInterpolator:
                 # if args.overlay_mask and (anim_args.use_mask_video or args.use_mask):
                 #     img = do_overlay_mask(args, anim_args, img, tween_frame_idx, True)
                 if logger:
-
+                    preview = preview
                     pil_img = PIL.Image.fromarray(img.astype(np.uint8))
-
-                    # print(tween_frame_idx)
-                    # print(turbo_steps - (frame_idx - tween_frame_idx) + 1)
                     logger.update_absolute(turbo_steps - (frame_idx - tween_frame_idx) + 1, preview=("JPEG", pil_img, 512))
 
-                    # if logger:
-                    #     logger.update_row("Status", ["Cadence", str(tween_frame_idx), f"tween:{tween:0.2f}"])
-                # get prev_img during cadence
-                #self.prev_img = img
-                # current image update for cadence frames (left commented because it doesn't currently update the preview)
-                # state.current_image = Image.fromarray(cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB))
-    
-                # saving cadence frames
-                #filename = f"{root.timestring}_{tween_frame_idx:09}.png"
-                #cv2.imwrite(os.path.join("cadence_test", filename), img)
                 imgs.append(img)
                 x += 1
         return imgs

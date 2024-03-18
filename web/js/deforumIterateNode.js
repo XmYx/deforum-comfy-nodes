@@ -125,55 +125,6 @@ function addVideoPreview(nodeType) {
 
 
 
-        // // Add transport controls
-        // const controls = document.createElement("div");
-        // controls.style.display = "flex";
-        // controls.style.justifyContent = "space-around";
-        // previewWidget.parentEl.appendChild(controls);
-        //
-        // // Play button
-        // const playButton = document.createElement("button");
-        // playButton.innerText = "Play";
-        // playButton.onclick = () => {
-        //     if (!this.playing) {
-        //         this.startPlayback(this.playbackInterval);
-        //     }
-        // };
-        // controls.appendChild(playButton);
-        //
-        // // Stop button
-        // const stopButton = document.createElement("button");
-        // stopButton.innerText = "Stop";
-        // stopButton.onclick = () => {
-        //     this.stopPlayback();
-        //     // Reset frameIndex if needed
-        //     // frameIndex = 0; // Uncomment to reset frame index on stop
-        // };
-        // controls.appendChild(stopButton);
-        //
-        // // Step Back button
-        // const stepBackButton = document.createElement("button");
-        // stepBackButton.innerText = "Step Back";
-        // stepBackButton.onclick = () => {
-        //     if (frameIndex > 0) {
-        //         frameIndex -= 1;
-        //     } else {
-        //         frameIndex = cachedFrames.length - 1; // Wrap around to the last frame
-        //     }
-        //     updateFrame(frameIndex);
-        // };
-        // controls.appendChild(stepBackButton);
-        //
-        // // Step Forward button
-        // const stepForwardButton = document.createElement("button");
-        // stepForwardButton.innerText = "Step Forward";
-        // stepForwardButton.onclick = () => {
-        //     frameIndex = (frameIndex + 1) % cachedFrames.length;
-        //     updateFrame(frameIndex);
-        // };
-        // controls.appendChild(stepForwardButton);
-
-
         previewWidget.parentEl.appendChild(previewWidget.imgEl)
         let frameIndex = 0;
         let cachedFrames = this.getCachedFrames(); // Assuming this method exists and retrieves an array of frame data
@@ -192,20 +143,12 @@ function addVideoPreview(nodeType) {
             }
         }.bind(this));
 
-        // Function to update frame view
-        // function updateFrame(index) {
-        //     cachedFrames = previewNode  .getCachedFrames()
-        //     if (cachedFrames && cachedFrames.length > 0) {
-        //         previewWidget.imgEl.hidden = false;
-        //         previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[index];
-        //     }
-        // }
-                // Function to update displayed frame
+
         function updateFrame(index) {
             const cachedFrames = previewNode.getCachedFrames(); // Get cached frames
             if (cachedFrames && cachedFrames.length > 0) {
                 previewWidget.imgEl.hidden = false;
-                previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[index];
+                previewWidget.imgEl.src = cachedFrames[index];
             }
         }
 
@@ -213,11 +156,6 @@ function addVideoPreview(nodeType) {
         this.playing = false;
         this.playbackInterval = 80;
         this.startPlayback = function(playbackInterval) {
-            // if (this.playing) {
-            //     this.stopPlayback(); // Stop current playback if it's running
-            // }
-            //previewWidget.audioEl.play();
-            //this.playbackInterval = playbackInterval;
             if (this.playing === false) {
                 this.playing = true;
                 const widget = this; // Capture 'this' to use inside setInterval function
@@ -226,20 +164,11 @@ function addVideoPreview(nodeType) {
                     //const displayFrames = cachedFrames.length > 0 ? cachedFrames : frames;
                     if (cachedFrames && cachedFrames.length > 0) {
                         previewWidget.imgEl.hidden = false;
-                        previewWidget.imgEl.src = 'data:image/png;base64,' + cachedFrames[frameIndex];
+                        previewWidget.imgEl.src = cachedFrames[frameIndex];
                         frameIndex = (frameIndex + 1) % cachedFrames.length;
                     }
                 }, this.playbackInterval); // Update frame every 80ms
-
-
-
             }
-
-
-            // if (previewWidget.audioSrc) { // Check if there's audio to play
-            //     previewWidget.audioEl.src = previewWidget.audioSrc; // Load the audio source
-            //     //previewWidget.audioEl.play(); // Start audio playback
-            // }
         };
         // Function to stop playback
         this.stopPlayback = function() {
@@ -249,69 +178,52 @@ function addVideoPreview(nodeType) {
                 this.imageSequenceInterval = null; // Clear the interval ID
                 this.playing = false; // Mark as not playing
             }
-            //previewWidget.audioEl.pause(); // Pause audio playback
-            //previewWidget.audioEl.currentTime = 0; // Reset audio to start
+
         };
         this.setPlaybackInterval = function(newInterval) {
             // Check if the new interval is different from the current playback interval
             if (this.playbackInterval !== newInterval) {
                 this.playbackInterval = newInterval; // Update the playback interval
+            }
 
-                // Only adjust playback if it's currently active
-                // if (this.playing) {
-                //     this.stopPlayback(); // Stop current playback
-                //     this.startPlayback(newInterval); // Restart playback with the new interval
-                // }
+            const wasPlaying = !previewWidget.audioEl.paused; // Check if audio was playing
+            const currentTime = previewWidget.audioEl.currentTime; // Store current playback time
+            if (wasPlaying) {
+                // Wait for the audio to be loaded
+                this.playing = false; // Mark as not playing
+                clearInterval(this.imageSequenceInterval);
+                this.imageSequenceInterval = null; // Clear the interval ID
+                previewWidget.audioEl.oncanplaythrough = function() {
+                    previewWidget.audioEl.currentTime = currentTime; // Seek to the previous playback time
+                    previewWidget.audioEl.play(); // Resume playback
+                    previewWidget.audioEl.oncanplaythrough = null; // Remove the event listener to avoid memory leaks
+                };
             }
         };
         previewWidget.audioEl.addEventListener('play', () => this.startPlayback(previewWidget.playbackInterval));
         previewWidget.audioEl.addEventListener('pause', () => this.stopPlayback());
 
         this.updateAudio = function (audioBase64) {
-            const wasPlaying = !previewWidget.audioEl.paused; // Check if audio was playing
-            const currentTime = previewWidget.audioEl.currentTime; // Store current playback time
+            //this.cacheAudio(audioBase64);
+//            console.log(this.getCachedAudio().length)
 
-            if (audioBase64) {
-                previewWidget.audioSrc = `data:audio/wav;base64,${audioBase64}`; // Update the audio source with new base64 data
-                previewWidget.audioEl.src = previewWidget.audioSrc; // Load the new audio source
+            // Check if audio was playing
+            const wasPlaying = !previewWidget.audioEl.paused;
+            const currentTime = previewWidget.audioEl.currentTime;
+            if (previewWidget.audioEl.src !== audioBase64) {
+                previewWidget.audioEl.src = audioBase64;
+                // If the audio was playing, continue playback
+                if (!previewWidget.audioEl.paused) {
+                    previewWidget.audioEl.load(); // Load the new audio source
+//                    previewWidget.audioEl.currentTime = currentTime;
+                    previewWidget.audioEl.play(); // Resume playback
+                    previewWidget.audioEl.currentTime = currentTime;
 
-                // Check if there was an audio playing
-                if (wasPlaying) {
-                    // Wait for the audio to be loaded
-                    previewWidget.audioEl.oncanplaythrough = function() {
-                        previewWidget.audioEl.currentTime = currentTime; // Seek to the previous playback time
-                        previewWidget.audioEl.play(); // Resume playback
-                        previewWidget.audioEl.oncanplaythrough = null; // Remove the event listener to avoid memory leaks
-                    };
                 }
-            } else {
-                previewWidget.audioSrc = null; // Clear the audio source if there's no audio
-                // Optionally handle the scenario when there's no new audio source
             }
         };
-
-
-        // this.updateAudio = function (audioBase64) {
-        //     if (audioBase64) {
-        //
-        //         previewWidget.audioSrc = `data:audio/wav;base64,${audioBase64}`; // Update the audio source with new base64 data
-        //         if (previewWidget.audioSrc) { // Check if there's audio to play
-        //         previewWidget.audioEl.src = previewWidget.audioSrc; // Load the audio source
-        //         //previewWidget.audioEl.play(); // Start audio playback
-        //         }
-        //         //previewWidget.audioEl.pause(); // Pause audio playback
-        //         //previewWidget.audioEl.play(); // Pause audio playback
-        //
-        //     } else {
-        //         previewWidget.audioSrc = null; // Clear the audio source if there's no audio
-        //     }
-        // };
-
-
     });
 }
-
-
 
 function addUploadWidget(nodeType, nodeData, widgetName, type="video") {
     chainCallback(nodeType.prototype, "onNodeCreated", function() {
@@ -389,23 +301,34 @@ function addUploadWidget(nodeType, nodeData, widgetName, type="video") {
     });
 }
 
-// Extend the node prototype to include frame caching capabilities
 function extendNodePrototypeWithFrameCaching(nodeType) {
-    nodeType.prototype.frameCache = []; // Initialize an empty cache
+    nodeType.prototype.frameCache = []; // Initialize an empty cache for frames
+    nodeType.prototype.audioCache = ''; // Initialize an empty string for audio cache
 
     // Method to add frames to the cache
     nodeType.prototype.cacheFrames = function(frames) {
         this.frameCache = this.frameCache.concat(frames);
     };
 
-    // Method to clear the frame cache
-    nodeType.prototype.clearFrameCache = function() {
-        this.frameCache = [];
+    // Method to cache audio data
+    nodeType.prototype.cacheAudio = function(audioBase64) {
+        this.audioCache = this.audioCache + audioBase64; // Cache the base64 audio data
     };
 
-    // Method to get cached frames
+    // Method to clear both frame and audio caches
+    nodeType.prototype.clearCache = function() {
+        this.frameCache = [];
+        this.audioCache = '';
+    };
+
+    // Method to get cached frames (unchanged)
     nodeType.prototype.getCachedFrames = function() {
         return this.frameCache;
+    };
+
+    // Method to get cached audio
+    nodeType.prototype.getCachedAudio = function() {
+        return this.audioCache;
     };
 }
 
@@ -571,13 +494,13 @@ app.registerExtension({
                     }
                     if (should_reset[0] === true) {
                         this.stopPlayback();
-                        this.clearFrameCache();
+                        this.clearCache();
                         this.cacheFrames(output["frames"]);
                         restoreWidget.value = false;
                     } else {
                         if (this.getCachedFrames().length < output["counter"]) {
                             restoreWidget.value = true;
-                            this.clearFrameCache();
+                            this.clearCache();
                         } else {
                             restoreWidget.value = false;
                         }

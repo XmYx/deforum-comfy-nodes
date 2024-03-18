@@ -201,6 +201,7 @@ class DeforumCadenceNode:
                      "first_image": ("IMAGE",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
                      "depth_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                     "preview": ("BOOLEAN", {"default":False}),
                      },
                 "optional":
                     {"hybrid_images": ("IMAGE",),}
@@ -217,7 +218,7 @@ class DeforumCadenceNode:
         # Force re-evaluation of the node
         return float("NaN")
 
-    def interpolate(self, image, first_image, deforum_frame_data, depth_strength, dry_run=False, hybrid_images=None):
+    def interpolate(self, image, first_image, deforum_frame_data, depth_strength, preview=False, dry_run=False, hybrid_images=None):
         self.skip_return = False
         hybrid_provider = None
         #global deforum_depth_algo, deforum_models
@@ -325,7 +326,7 @@ class DeforumCadenceNode:
                                                 gs.deforum_models["depth_model"],
                                                 gs.deforum_models["raft_model"],
                                                 depth_strength,
-                                                self.logger,
+                                                self.logger if preview else None,
                                                 hybrid_provider=hybrid_provider)
 
 
@@ -342,7 +343,7 @@ class DeforumCadenceNode:
         else:
             return None
 
-    def fn(self, image, first_image, deforum_frame_data, depth_strength, hybrid_images=None):
+    def fn(self, image, first_image, deforum_frame_data, depth_strength, preview, hybrid_images=None):
 
         result = []
         ret = None
@@ -351,7 +352,7 @@ class DeforumCadenceNode:
             if image.shape[0] > 1:
                 for img in image:
                     # Ensure img has batch dimension of 1 for interpolation
-                    interpolated_frames = self.interpolate(img.unsqueeze(0), first_image, deforum_frame_data, depth_strength, hybrid_images=hybrid_images)
+                    interpolated_frames = self.interpolate(img.unsqueeze(0), first_image, deforum_frame_data, depth_strength, preview=preview, hybrid_images=hybrid_images)
 
                     # Collect all interpolated frames
                     for f in interpolated_frames:
@@ -360,7 +361,7 @@ class DeforumCadenceNode:
                 ret = torch.stack(result, dim=0)
             else:
                 # Directly interpolate if only one image is present
-                ret = self.interpolate(image, first_image, deforum_frame_data, depth_strength, hybrid_images=hybrid_images)
+                ret = self.interpolate(image, first_image, deforum_frame_data, depth_strength, preview=preview, hybrid_images=hybrid_images)
             if ret is not None:
                 last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
                 if self.skip_return:

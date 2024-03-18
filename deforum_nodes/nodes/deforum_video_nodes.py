@@ -1,11 +1,16 @@
 import base64
+import gc
 import os
 from io import BytesIO
+from aiohttp import web
+import hashlib
 
+import server
 import cv2
 import imageio
 import numpy as np
 import torch
+from PIL import Image
 from tqdm import tqdm
 
 import folder_paths
@@ -151,11 +156,48 @@ class DeforumLoadVideo:
             return "Invalid video file: {}".format(video)
         return True
 
+temp_dir = tempfile.mkdtemp()
+hash_object = hashlib.md5(temp_dir.encode())
+hex_dig = hash_object.hexdigest()
+endpoint = f"/tmp/{hex_dig}/{{filename}}"
+
+
+@server.PromptServer.instance.routes.get(endpoint)
+async def serve_temp_file(request):
+    filename = request.match_info['filename']
+
+    if '..' in filename or filename.startswith('/'):
+        return web.Response(status=400, text="Invalid file path.")
+
+    file_path = os.path.join(temp_dir, filename)
+
+    if os.path.isfile(file_path):
+        return web.FileResponse(file_path)
+    else:
+        return web.Response(status=404, text="File not found.")
+
+# Dynamically add the route to the server's router
+# server.PromptServer.instance.routes.get(endpoint)(serve_temp_file)
+
+print(f"Endpoint {endpoint} registered for serving files from {temp_dir}")
+
 class DeforumVideoSaveNode:
     def __init__(self):
         self.output_dir = folder_paths.get_output_directory()
         self.images = []
         self.size = None
+        self.temp_dir = temp_dir
+        self.hex_dig = hex_dig
+        # self._register_temp_file_route()
+
+
+
+    def _register_temp_file_route(self):
+        # Generate a unique endpoint using a hash of the temp directory
+        hash_object = hashlib.md5(self.temp_dir.encode())
+        self.hex_dig = hash_object.hexdigest()
+
+
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
@@ -193,7 +235,12 @@ class DeforumVideoSaveNode:
     display_name = "Save Video"
     CATEGORY = "deforum/video"
     def add_image(self, image):
-        self.images.append(image)
+        frame_path = os.path.join(self.temp_dir, f"frame_{len(self.images):05d}.png")
+        tensor2pil(image).save(frame_path)
+        self.images.append(frame_path)
+        del image
+        return frame_path
+        # self.images.append(image)
 
     def fn(self,
            image,
@@ -214,7 +261,8 @@ class DeforumVideoSaveNode:
            waveform_image=None,
            restore=False,
            clear_cache=False):
-
+        new_images = []
+        base64_audio = ""
         dump = False
         ret = None
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
@@ -231,9 +279,9 @@ class DeforumVideoSaveNode:
             if not deforum_frame_data.get("reset", None):
                 if image.shape[0] > 1:
                     for img in image:
-                        self.add_image(img)
+                        new_images.append(self.add_image(img))
                 else:
-                    self.add_image(image[0])
+                    new_images.append(self.add_image(image[0]))
             print(f"[deforum] Video Save node cached {len(self.images)} frames")
             print("THE CAT IS FINE. SOMETHING WAS False THOUGH THE CAT IS NOT")
 
@@ -265,14 +313,15 @@ class DeforumVideoSaveNode:
                     self.add_image(image[0])
         if enable_preview and image is not None:
             # if audio is not None:
-            base64_audio = self.encode_audio_base64(audio, len(self.images), fps)
+            audio_path = self.encode_audio_base64(audio, len(self.images), fps, 0)
+
             # else:
             #     base64_audio = None
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(clear_cache,),
-                      "frames":([tensor_to_webp_base64(i) for i in image] if not restore else [tensor_to_webp_base64(i) for i in self.images]),
+                      "frames":([f"/tmp/{self.hex_dig}/{os.path.basename(frame_path)}" for frame_path in self.images] if restore else [f"/tmp/{self.hex_dig}/{os.path.basename(frame_path)}" for frame_path in new_images]),
                       "fps":(fps,),
-                      "audio":(base64_audio,)}
+                      "audio":(f"/tmp/{self.hex_dig}/{audio_path}",)}
             if waveform_image is not None:
                 ui_ret["waveform"] = (tensor_to_webp_base64(waveform_image),)
         else:
@@ -293,49 +342,61 @@ class DeforumVideoSaveNode:
                     if not skip_save:
                         self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
                     if not skip_return:
-                        ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
+                        ret = torch.stack([pil2tensor(Image.open(i))[0] for i in self.images], dim=0)
                 if clear_cache:
-                    self.images = []
+                    self.images = self.images.clear()
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(clear_cache,),
                       "frames":([]),
                       "fps":(fps,)}
-
+        del base64_audio, image
         return {"ui": ui_ret, "result": (ret,)}
 
-    def encode_audio_base64(self, audio_data, frame_count, fps):
-        sample_rate = 44100  # Default sample rate
-
+    def encode_audio_base64(self, audio_data, frame_count, fps, start_frame):
+        sample_rate = 44100  # Assuming a default sample rate
         if audio_data is None:
-            # Generate silent audio data
+            # Generate silent audio data for the specified duration
             duration_in_seconds = frame_count / float(fps)
             silence = np.zeros(int(duration_in_seconds * sample_rate), dtype=np.int16)
             audio_data_reshaped = silence
         else:
-            sample_rate = audio_data.sample_rate
+            # Calculate start and end samples
+            start_sample = int((start_frame / fps) * audio_data.sample_rate)
+            end_sample = start_sample + int((frame_count / fps) * audio_data.sample_rate)
+
             # Handle actual audio data
-            num_samples_to_keep = int((frame_count / fps) * audio_data.sample_rate)
             if audio_data.num_channels > 1:
+                # Ensure the audio data is properly reshaped for multi-channel data
                 audio_data_reshaped = audio_data.audio_data.reshape((-1, audio_data.num_channels))
             else:
                 audio_data_reshaped = audio_data.audio_data
-            actual_samples = audio_data_reshaped.shape[0]
-            if actual_samples > num_samples_to_keep:
-                audio_data_reshaped = audio_data_reshaped[:num_samples_to_keep, ...]
-            elif actual_samples < num_samples_to_keep:
-                padding_length = num_samples_to_keep - actual_samples
-                if audio_data.num_channels > 1:
-                    padding = np.zeros((padding_length, audio_data.num_channels), dtype=audio_data_reshaped.dtype)
-                else:
-                    padding = np.zeros(padding_length, dtype=audio_data_reshaped.dtype)
-                audio_data_reshaped = np.vstack((audio_data_reshaped, padding))
+
+            # Loop the audio if the end_sample exceeds the length of the audio data
+            total_samples = audio_data_reshaped.shape[0]
+            if end_sample > total_samples:
+                looped_audio_data = []
+                while end_sample > len(looped_audio_data):
+                    remaining_samples = end_sample - len(looped_audio_data)
+                    looped_audio_data.extend(audio_data_reshaped[:min(remaining_samples, total_samples)])
+                audio_data_reshaped = np.array(looped_audio_data)[:end_sample - start_sample]
+            else:
+                # Slice the audio data from start_sample to end_sample
+                audio_data_reshaped = audio_data_reshaped[start_sample:end_sample]
 
         # Convert the numpy array to bytes and encode in base64
-        output = BytesIO()
+        # with BytesIO() as output:
+        #     write(output, sample_rate, audio_data_reshaped)
+        #     base64_audio = base64.b64encode(output.getvalue()).decode('utf-8')
+        #
+        # return base64_audio
+        temp_audio_path = os.path.join(self.temp_dir, f"audio_{tempfile.mktemp(suffix='.wav')}")
+        with tempfile.NamedTemporaryFile(delete=False, dir=self.temp_dir, suffix='.wav') as tmp_file:
+            temp_audio_path = tmp_file.name
+        from scipy.io.wavfile import write as wav_write
+        wav_write(temp_audio_path, sample_rate, audio_data_reshaped)
 
-        write(output, sample_rate, audio_data_reshaped)
-        base64_audio = base64.b64encode(output.getvalue()).decode('utf-8')
-        return base64_audio
+        # Return the path relative to the temp directory for URL construction
+        return os.path.basename(temp_audio_path)
 
     def save_video(self, full_output_folder, filename, counter, fps, audio, codec, ext):
         output_path = os.path.join(full_output_folder, f"{filename}_{counter}.{ext}")
@@ -346,9 +407,9 @@ class DeforumVideoSaveNode:
         # for frame in tqdm(self.images, desc=f"Saving {format} (imageio)"):
         #     writer.append_data(np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
         # writer.close()
-        video_clip = mp.ImageSequenceClip(
-            [np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8) for frame in
-             self.images], fps=fps)
+        frames = [Image.open(frame_path) for frame_path in self.images]
+        video_clip = mp.ImageSequenceClip([np.array(frame) for frame in frames], fps=fps)
+
         if audio is not None:
             # Generate a temporary file for the audio
             with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_audio_file:
@@ -369,7 +430,7 @@ class DeforumVideoSaveNode:
                 video_clip = video_clip.set_audio(audio_clip)
 
         video_clip.write_videofile(output_path, codec=codec, audio_codec='aac')
-
+        del tmp_audio_file
     @classmethod
     def IS_CHANGED(s, text, autorefresh):
         # Force re-evaluation of the node
@@ -410,7 +471,6 @@ def encode_audio_base64(audio_data, frame_count, fps):
 
     # Encode bytes to base64
     base64_audio = base64.b64encode(output.getvalue()).decode('utf-8')
-
     return base64_audio
 def save_to_file(data, filepath: str):
     # Ensure the audio data is reshaped properly for mono/stereo
