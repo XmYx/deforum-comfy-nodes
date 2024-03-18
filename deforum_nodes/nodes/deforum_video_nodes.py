@@ -1,6 +1,7 @@
 import base64
 import gc
 import os
+import shutil
 from io import BytesIO
 from aiohttp import web
 import hashlib
@@ -189,12 +190,17 @@ class DeforumVideoSaveNode:
         self.temp_dir = temp_dir
         self.hex_dig = hex_dig
         self.audio_path = None
-        # self._register_temp_file_route()
 
-    def _register_temp_file_route(self):
-        # Generate a unique endpoint using a hash of the temp directory
-        hash_object = hashlib.md5(self.temp_dir.encode())
-        self.hex_dig = hash_object.hexdigest()
+    def clear_cache_directory(self):
+        for filename in os.listdir(self.temp_dir):
+            file_path = os.path.join(self.temp_dir, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f'Failed to delete {file_path}. Reason: {e}')
 
 
     @classmethod
@@ -282,7 +288,7 @@ class DeforumVideoSaveNode:
                 else:
                     new_images.append(self.add_image(image[0]))
             print(f"[deforum] Video Save node cached {len(self.images)} frames")
-            print("THE CAT IS FINE. SOMETHING WAS False THOUGH THE CAT IS NOT")
+            # print("THE CAT IS FINE. SOMETHING WAS False THOUGH THE CAT IS NOT")
 
             # When the current frame index reaches the last frame, save the video
 
@@ -302,7 +308,8 @@ class DeforumVideoSaveNode:
                     if not skip_return:
                         ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
                 if clear_cache:
-                    self.images = []  # Empty the list for next use
+                    self.images.clear()
+                    # self.clear_cache_directory()
                 enable_preview = True
             if deforum_frame_data.get("reset", None):
                 if image.shape[0] > 1:
@@ -346,6 +353,7 @@ class DeforumVideoSaveNode:
                         ret = torch.stack([pil2tensor(Image.open(i))[0] for i in self.images], dim=0)
                 if clear_cache:
                     self.images = self.images.clear()
+                    # self.clear_cache_directory()
             ui_ret = {"counter":(len(self.images),),
                       "should_dump":(clear_cache,),
                       "frames":([]),
