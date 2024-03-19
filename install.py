@@ -6,7 +6,10 @@ import threading
 import locale
 import traceback
 import re
-
+import os
+import subprocess
+import sys
+import platform
 
 if sys.argv[0] == 'install.py':
     sys.path.append('.')   # for portable version
@@ -176,14 +179,58 @@ def install_packages():
                    check=True)
 
 
+def get_cuda_version():
+    try:
+        cuda_version = subprocess.check_output(["nvcc", "--version"]).decode("utf-8")
+        for line in cuda_version.split('\n'):
+            if "release" in line:
+                return line.split('release')[1].split(',')[0].strip().replace('.', '')
+    except Exception as e:
+        print(f"Error getting CUDA version: {e}")
+        return None
+
+def get_torch_version():
+    try:
+        import torch
+        return torch.__version__.split('+')[0]  # Removes the +cuXXX if exists
+    except ImportError:
+        print("PyTorch is not installed. Please install PyTorch before proceeding.")
+        sys.exit(1)
+
+def construct_wheel_name(cuda_version, py_version, os_name):
+    # cuda_version: e.g., "110", "102"
+    # py_version: e.g., "38", "37"
+    # os_name: either "linux" or "win"
+    os_map = {"Linux": "manylinux2014_x86_64", "Windows": "win_amd64"}
+    torch_version = get_torch_version().replace('.', '')
+    cuda_str = f"cu{cuda_version}" if cuda_version else "cpu"
+    filename = f"stable_fast-1.0.4+torch{torch_version}{cuda_str}-cp{py_version}-cp{py_version}-{os_map[os_name]}.whl"
+    return filename
+
+def install_stable_fast():
+    cuda_version = get_cuda_version()
+    python_version = f"{sys.version_info.major}{sys.version_info.minor}"
+    os_name = platform.system()
+    wheel_name = construct_wheel_name(cuda_version, python_version, os_name)
+    url = f"https://github.com/chengzeyi/stable-fast/releases/download/v1.0.4/{wheel_name}"
+    print(f"Attempting to install: {wheel_name}")
+    subprocess.run([sys.executable, "-m", "pip", "install", url])
+
+
+
 if __name__ == "__main__":
     print("Installing packages...")
     try:
         install_packages()
         print("Installation complete.")
     except Exception as e:
-        print("deforum backend package install failed, if you encounter any issues, please activate your venv and run:\npip install git+https://github.com/XmYxdeforum-studio.git\nIf you are using ComfyUI portable, you have to locate your python executable and add that's path before the pip install command.")
+        print("[warning] deforum backend package install failed, if you encounter any issues, please activate your venv and run:\npip install git+https://github.com/XmYxdeforum-studio.git\nIf you are using ComfyUI portable, you have to locate your python executable and add that's path before the pip install command.")
         pass
+    try:
+        install_stable_fast()
+        print("Installed Stable Fast 1.0.4")
+    except:
+        print("[warning] Stable Fast Install Failed")
 # try:
 #     print("")
 #     #install()
