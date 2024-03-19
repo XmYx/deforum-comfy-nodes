@@ -190,6 +190,7 @@ class DeforumVideoSaveNode:
         self.temp_dir = temp_dir
         self.hex_dig = hex_dig
         self.audio_path = None
+        self.filepath = ""
 
     def clear_cache_directory(self):
         for filename in os.listdir(self.temp_dir):
@@ -233,7 +234,8 @@ class DeforumVideoSaveNode:
 
                 }
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = ("IMAGE","STRING",)
+    RETURN_NAMES = ("IMAGES","VIDEOPATH",)
     OUTPUT_NODE = True
 
     FUNCTION = "fn"
@@ -274,7 +276,6 @@ class DeforumVideoSaveNode:
             filename_prefix, self.output_dir)
         counter = find_next_index(full_output_folder, filename_prefix, format)
         anim_args = deforum_frame_data.get("anim_args")
-
         if image is not None:
 
             if anim_args is not None:
@@ -304,7 +305,8 @@ class DeforumVideoSaveNode:
             if dump or dump_now:  # frame_idx is 0-based
                 if len(self.images) >= 2:
                     if not skip_save:
-                        self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
+                        self.filepath = self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
+
                     if not skip_return:
                         ret = torch.stack([pil2tensor(i)[0] for i in self.images], dim=0)
                 if clear_cache:
@@ -348,7 +350,7 @@ class DeforumVideoSaveNode:
             if dump or dump_now:  # frame_idx is 0-based
                 if len(self.images) >= 2:
                     if not skip_save:
-                        self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
+                        self.filepath = self.save_video(full_output_folder, filename, counter, fps, audio, codec, format)
                     if not skip_return:
                         ret = torch.stack([pil2tensor(Image.open(i))[0] for i in self.images], dim=0)
                 if clear_cache:
@@ -359,7 +361,7 @@ class DeforumVideoSaveNode:
                       "frames":([]),
                       "fps":(fps,)}
         del base64_audio, image
-        return {"ui": ui_ret, "result": (ret,)}
+        return {"ui": ui_ret, "result": (ret,self.filepath,)}
 
     def encode_audio_base64(self, audio_data, frame_count, fps, start_frame):
         sample_rate = 44100  # Assuming a default sample rate
@@ -432,9 +434,11 @@ class DeforumVideoSaveNode:
                     pass  # If you prefer silence after the audio ends, do nothing
                 # Set the audio on the video clip
                 video_clip = video_clip.set_audio(audio_clip)
+            del tmp_audio_file
 
         video_clip.write_videofile(output_path, codec=codec, audio_codec='aac')
-        del tmp_audio_file
+        return output_path
+
     @classmethod
     def IS_CHANGED(s, text, autorefresh):
         # Force re-evaluation of the node
