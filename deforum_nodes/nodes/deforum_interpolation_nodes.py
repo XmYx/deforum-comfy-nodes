@@ -333,15 +333,15 @@ class DeforumCadenceNode:
 
 
 
-            for frame in frames:
-                tensor = pil2tensor(frame)
-                return_frames.append(tensor.squeeze(0))
-            print(f"[deforum] [rbn] Cadence: {len(return_frames)} frames")
-            if len(return_frames) > 0:
-                return_frames = torch.stack(return_frames, dim=0)
-                return return_frames
-            else:
-                return None
+            # for frame in frames:
+            #     tensor = pil2tensor(frame)
+            #     return_frames.append(tensor.squeeze(0))
+            # print(f"[deforum] [rbn] Cadence: {len(return_frames)} frames")
+            # if len(return_frames) > 0:
+            #     return_frames = torch.stack(return_frames, dim=0)
+                return frames
+            # else:
+            #     return None
         else:
             return None
 
@@ -372,6 +372,7 @@ class DeforumCadenceNode:
             else:
                 # Directly interpolate if only one image is present
                 ret = self.interpolate(image, first_image, deforum_frame_data, depth_strength, preview=preview, hybrid_images=hybrid_images)
+                ret = torch.stack([torch.from_numpy(i) / 255.0 for i in ret], dim=0)
             if ret is not None:
                 last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
                 if self.skip_return:

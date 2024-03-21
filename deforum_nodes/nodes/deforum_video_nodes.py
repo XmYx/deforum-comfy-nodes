@@ -118,7 +118,7 @@ class DeforumLoadVideo:
 
         max_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        for _ in range(return_frames + 1):
+        for _ in range(return_frames):
             success, frame = self.cap.read()
 
             if not success:
@@ -134,14 +134,12 @@ class DeforumLoadVideo:
                 frames.append(frame[0])
             else:
                 break
-
         if len(frames) <= 1:
-            frame = frames[0] if frames else None
+            frame = torch.stack(frames) if frames else None
             return (frame, self.current_frame, max_frames)
         else:
             # Stack frames along a new dimension (simulate batch dimension)
             frame = torch.stack(frames)
-            print(frame.shape)
 
         return (frame, self.current_frame, max_frames)
 
