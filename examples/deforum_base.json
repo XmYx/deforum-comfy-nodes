@@ -186,6 +186,9 @@
       "widgets_values": [
         "Recording 2024-02-08 214819.mp4",
         "image",
+        "image",
+        0,
+        1,
         "image"
       ]
     },
@@ -668,10 +671,7 @@
       "widgets_values": [
         "2D",
         120,
-        "wrap",
-        false,
-        "20230129210106",
-        false
+        "wrap"
       ]
     },
     {
@@ -893,12 +893,7 @@
         "Node name for S&R": "DeforumHybridScheduleNode"
       },
       "widgets_values": [
-        "0:(0.5)",
-        "0:(0.5)",
-        "0:(1)",
-        "0:(100)",
-        "0:(0)",
-        "0:(0.8)"
+        "0:(0.5)"
       ]
     },
     {
@@ -942,17 +937,7 @@
         "normal",
         25,
         7,
-        1,
-        "Deforum_{timestring}",
-        "fixed",
-        1,
-        "output/deforum",
-        0.8,
-        true,
-        false,
-        false,
-        true,
-        false
+        1
       ]
     },
     {
@@ -962,10 +947,10 @@
         -753,
         -52
       ],
-      "size": [
-        335.66650390625,
-        197
-      ],
+      "size": {
+        "0": 335.66650390625,
+        "1": 417
+      },
       "flags": {},
       "order": 3,
       "mode": 0,
@@ -1138,16 +1123,42 @@
       ]
     },
     {
+      "id": 16,
+      "type": "PreviewImage",
+      "pos": [
+        1120,
+        821
+      ],
+      "size": {
+        "0": 587.271728515625,
+        "1": 617.682373046875
+      },
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 462,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
       "id": 173,
       "type": "DeforumVideoSaveNode",
       "pos": [
         1134,
         -58
       ],
-      "size": {
-        "0": 315,
-        "1": 407
-      },
+      "size": [
+        573,
+        686.5
+      ],
       "flags": {},
       "order": 22,
       "mode": 0,
@@ -1166,12 +1177,23 @@
           "name": "audio",
           "type": "AUDIO",
           "link": null
+        },
+        {
+          "name": "waveform_image",
+          "type": "IMAGE",
+          "link": null
         }
       ],
       "outputs": [
         {
           "name": "IMAGE",
           "type": "IMAGE",
+          "links": null,
+          "shape": 3
+        },
+        {
+          "name": "VIDEOPATH",
+          "type": "STRING",
           "links": null,
           "shape": 3
         }
@@ -1196,34 +1218,14 @@
           "hidden": false,
           "paused": false,
           "params": {}
+        },
+        false,
+        {
+          "hidden": false,
+          "paused": false,
+          "params": {}
         }
       ]
-    },
-    {
-      "id": 16,
-      "type": "PreviewImage",
-      "pos": [
-        1120,
-        821
-      ],
-      "size": [
-        587.2717496093755,
-        617.6823474975588
-      ],
-      "flags": {},
-      "order": 20,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 462,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "PreviewImage"
-      }
     }
   ],
   "links": [
