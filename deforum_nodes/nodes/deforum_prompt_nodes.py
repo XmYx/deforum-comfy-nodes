@@ -108,3 +108,46 @@ class DeforumAreaPromptNode(DeforumDataBase):
         deforum_data["prompts"] = None
 
         return (deforum_data,)
+
+
+class DeforumUnformattedPromptNode(DeforumDataBase):
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "unformatted_prompts": ("STRING", {"forceInput": False, "multiline": True}),
+                "keyframe_interval": ("INT", {"default": 50, "min": 1, "max": 8192, "step": 1}),
+            },
+            "optional": {
+                "deforum_data": ("deforum_data",),
+            },
+        }
+
+    RETURN_TYPES = (("deforum_data",))
+    FUNCTION = "get"
+    OUTPUT_NODE = True
+    CATEGORY = f"deforum/prompt"
+    display_name = "Unformatted Prompt"
+
+    @torch.inference_mode()
+    def get(self, unformatted_prompts, keyframe_interval, deforum_data=None):
+        # Splitting the unformatted prompts into lines
+        lines = unformatted_prompts.split('\n')
+
+        # Creating an empty dictionary for formatted prompts
+        formatted_prompts = {}
+
+        # Parsing each line and formatting the prompts
+        for i, line in enumerate(lines):
+            keyframe = i * keyframe_interval
+            formatted_prompts[keyframe] = line.strip()
+
+        if deforum_data:
+            deforum_data["prompts"] = formatted_prompts
+        else:
+            deforum_data = {"prompts": formatted_prompts}
+
+        return (deforum_data,)
