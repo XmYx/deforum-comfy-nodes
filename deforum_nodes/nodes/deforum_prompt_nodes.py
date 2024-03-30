@@ -26,24 +26,29 @@ class DeforumPromptNode(DeforumDataBase):
 
     @torch.inference_mode()
     def get(self, prompts, deforum_data=None):
-
-        # Splitting the data into rows
-        rows = prompts.split('\n')
-
-        # Creating an empty dictionary
-        prompts = {}
-
-        # Parsing each row
-        for row in rows:
-            key, value = row.split(':', 1)
-            key = int(key)
-            value = value.strip('"')
-            prompts[key] = value
-
-        if deforum_data:
-            deforum_data["prompts"] = prompts
+        if deforum_data and "prompts" in deforum_data:
+            # Convert the formatted prompts back to a string for editing
+            formatted_prompts = deforum_data["prompts"]
+            prompts = "\n".join([f"{key}:'{value}'" for key, value in formatted_prompts.items()])
         else:
-            deforum_data = {"prompts": prompts}
+            # Splitting the data into rows
+            rows = prompts.split('\n')
+
+            # Creating an empty dictionary
+            prompts_dict = {}
+
+            # Parsing each row
+            for row in rows:
+                key, value = row.split(':', 1)
+                key = int(key)
+                value = value.strip('"')
+                prompts_dict[key] = value
+
+            if deforum_data:
+                deforum_data["prompts"] = prompts_dict
+            else:
+                deforum_data = {"prompts": prompts_dict}
+
         return (deforum_data,)
 
 
@@ -149,5 +154,63 @@ class DeforumUnformattedPromptNode(DeforumDataBase):
             deforum_data["prompts"] = formatted_prompts
         else:
             deforum_data = {"prompts": formatted_prompts}
+
+        return (deforum_data,)
+
+class DeforumAppendNode(DeforumDataBase):
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "append_text": ("STRING", {"multiline": True, "default": ""}),
+                "keyframe_interval": ("INT", {"default": 50, "min": 1, "max": 8192, "step": 1}),
+            },
+            "optional": {
+                "deforum_data": ("deforum_data",),
+                "append_to_all": (["No", "Yes"], {"default": "No"}),
+                "use_neg": (["No", "Yes"], {"default": "No"}),
+            },
+        }
+
+    RETURN_TYPES = (("deforum_data",))
+    FUNCTION = "get"
+    OUTPUT_NODE = True
+    CATEGORY = f"deforum/prompt"
+    display_name = "Append"
+
+    @torch.inference_mode()
+    def get(self, append_text, keyframe_interval, deforum_data=None, append_to_all="No", use_neg="No"):
+        print("Append Text:", append_text)
+        print("Keyframe Interval:", keyframe_interval)
+        print("Deforum Data:", deforum_data)
+        print("Append to All:", append_to_all)
+        print("Use --neg:", use_neg)
+        
+        if deforum_data and "prompts" in deforum_data:
+            formatted_prompts = deforum_data["prompts"]
+            print("Formatted Prompts (Before Append):", formatted_prompts)
+            
+            neg_prefix = "--neg " if use_neg == "Yes" else ""
+            
+            if append_to_all == "Yes":
+                # Append the first line of append_text to every prompt
+                first_line = append_text.split('\n')[0]
+                for key in formatted_prompts:
+                    formatted_prompts[key] = f"{formatted_prompts[key]} {neg_prefix}{first_line}"
+            else:
+                # Append the append_text to prompts based on keyframe interval
+                lines = append_text.split('\n')
+                for i, line in enumerate(lines):
+                    keyframe = i * keyframe_interval
+                    if keyframe in formatted_prompts:
+                        formatted_prompts[keyframe] = f"{formatted_prompts[keyframe]} {neg_prefix}{line}"
+            
+            print("Formatted Prompts (After Append):", formatted_prompts)
+            deforum_data["prompts"] = formatted_prompts
+        else:
+            deforum_data = {"prompts": {}}
 
         return (deforum_data,)
