@@ -31,7 +31,7 @@ class DeforumIteratorNode:
         return {
             "required": {
                 "deforum_data": ("deforum_data",),
-                "latent_type": (["stable_diffusion", "stable_cascade"],)
+                "latent_type": (["stable_diffusion", "stable_cascade", "sd3"],)
             },
             "optional": {
                 "latent": ("LATENT",),
@@ -244,8 +244,10 @@ class DeforumIteratorNode:
                                      0.6, 1024, 1024)
             if latent_type == "stable_diffusion":
                 l = self.rng.first().half().to(comfy.model_management.intermediate_device())
-            else:
+            elif latent_type == "stable_cascade":
                 l = torch.zeros([1, 16, args.height // 42, args.width // 42]).to(comfy.model_management.intermediate_device())
+            elif latent_type == "sd3":
+                l = torch.ones([1, 16, args.height // 8, args.width // 8], device=comfy.model_management.intermediate_device()) * 0.0609
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
         else:
