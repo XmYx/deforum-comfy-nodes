@@ -118,9 +118,9 @@ class DeforumIteratorNode:
                 setattr(loop_args, key, val)
 
         root.animation_prompts = deforum_data.get("prompts")
+        anim_args.fps = 24
 
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
-
         if self.frame_index >= anim_args.max_frames or reset_counter:
             # if self.logger:
             #     self.logger.stop_live_display()
