@@ -212,7 +212,7 @@ class DeforumIteratorNode:
         self.args = args
         self.root = root
         if prompt_series is not None:
-            gen_args["next_prompt"] = next_prompt
+            gen_args["next_prompt"], _ = split_weighted_subprompts(next_prompt)
             gen_args["prompt_blend"] = blend_value
         gen_args["frame_index"] = self.frame_index
         gen_args["max_frames"] = anim_args.max_frames
