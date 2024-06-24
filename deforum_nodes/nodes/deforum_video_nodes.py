@@ -241,9 +241,13 @@ class DeforumVideoSaveNode:
     CATEGORY = "deforum/video"
     def add_image(self, image):
         frame_path = os.path.join(self.temp_dir, f"frame_{len(self.images):05d}.png")
-        tensor2pil(image).save(frame_path)
+        if isinstance(image, torch.Tensor):
+            tensor2pil(image).save(frame_path)
+        else:
+            im = cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_BGR2RGB)
+            cv2.imwrite(frame_path, im)
         self.images.append(frame_path)
-        del image
+        # del image
         return frame_path
         # self.images.append(image)
 
@@ -281,7 +285,7 @@ class DeforumVideoSaveNode:
             else:
                 max_frames = image.shape[0] + len(self.images) + 2
             if not deforum_frame_data.get("reset", None):
-                if image.shape[0] > 1:
+                if len(image) > 1:
                     for img in image:
                         new_images.append(self.add_image(img))
                 else:

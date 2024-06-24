@@ -14,10 +14,14 @@ deforum_base_params = {
         "max": 4096,
         "step": 64
     },
-    # "seed": {
-    #     "type": "lineedit",
-    #     "default": "-1",
-    # },
+    "seed_schedule": {
+        "type": "lineedit",
+        "default": "0: (-1)",
+    },
+    "seed_behavior": {
+        "type": "dropdown",
+        "choices": ["fixed", "random"]
+    },
     "sampler_name": {
         "type": "dropdown",
         "choices": comfy.samplers.KSampler.SAMPLERS
@@ -26,6 +30,7 @@ deforum_base_params = {
         "type": "dropdown",
         "choices": comfy.samplers.KSampler.SCHEDULERS
     },
+
     # "steps": {
     #     "type": "spinbox",
     #     "default": 25,
@@ -50,10 +55,6 @@ deforum_base_params = {
     # "batch_name": {
     #     "type": "lineedit",
     #     "default": "Deforum_{timestring}"
-    # },
-    # "seed_behavior": {
-    #     "type": "dropdown",
-    #     "choices": ["fixed", "random", "ladder", "incrementing", "decrementing"]
     # },
     #
     # "seed_iter_N": {

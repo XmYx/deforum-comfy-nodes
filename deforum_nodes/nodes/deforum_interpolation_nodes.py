@@ -372,9 +372,10 @@ class DeforumCadenceNode:
             else:
                 # Directly interpolate if only one image is present
                 ret = self.interpolate(image, first_image, deforum_frame_data, depth_strength, preview=preview, hybrid_images=hybrid_images)
-                ret = torch.stack([torch.from_numpy(i) / 255.0 for i in ret], dim=0)
+                #ret = torch.stack([torch.from_numpy(i) / 255.0 for i in ret], dim=0)
             if ret is not None:
-                last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
+                #last = ret[-1].unsqueeze(0)  # Preserve the last frame separately with batch dimension
+                last = torch.from_numpy(ret[-1]).unsqueeze(0) / 255.0  # Preserve the last frame separately with batch dimension
                 if self.skip_return:
                     return (None, last)
                 else:

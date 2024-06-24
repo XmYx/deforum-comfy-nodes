@@ -142,7 +142,6 @@ class DeforumFrameDataExtract:
         sampler_name = deforum_frame_data.get("sampler_name", "euler_a")
         scheduler = deforum_frame_data.get("scheduler", "normal")
         denoise = deforum_frame_data.get("denoise", 1.0)
-
         keys = deforum_frame_data.get("keys")
         frame_idx = deforum_frame_data.get("frame_idx")
         subseed_str = keys.subseed_strength_schedule_series[frame_idx]

@@ -1,4 +1,5 @@
 import math
+import secrets
 from types import SimpleNamespace
 import torch
 from deforum import ImageRNGNoise
@@ -146,18 +147,27 @@ class DeforumIteratorNode:
         if prompt_series is not None:
             args.prompt = prompt_series[self.frame_index]
 
-        args.seed = int(args.seed)
-        root.seed_internal = int(root.seed_internal)
-        args.seed_iter_N = int(args.seed_iter_N)
+        seed = keys.seed_schedule_series[self.frame_index]
 
-        if self.seed == "":
-            self.seed = args.seed
-            self.seed_internal = root.seed_internal
-            self.seed_iter_N = args.seed_iter_N
+        if args.seed_behavior == 'random':
+            seed = secrets.randbelow(2 ** 32 - 1)
 
-        self.seed = next_seed(args, root)
-        args.seed = self.seed
-        self.seeds.append(self.seed)
+        self.seed = seed
+        args.seed = seed
+        self.seeds.append(seed)
+
+        # args.seed = int(args.seed)
+        # root.seed_internal = int(root.seed_internal)
+        # args.seed_iter_N = int(args.seed_iter_N)
+        #
+        # if self.seed == "":
+        #     self.seed = args.seed
+        #     self.seed_internal = root.seed_internal
+        #     self.seed_iter_N = args.seed_iter_N
+        #
+        # self.seed = next_seed(args, root)
+        # args.seed = self.seed
+        # self.seeds.append(self.seed)
 
         blend_value = 0.0
 
