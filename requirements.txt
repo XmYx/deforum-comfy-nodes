@@ -11,4 +11,4 @@ scikit-image
 moviepy
 librosa
 pydub
-git+https://github.com/XmYx/deforum-studio.git
+git+https://github.com/deforum-studio/deforum.git

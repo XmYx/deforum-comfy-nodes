@@ -220,12 +220,12 @@ def install_stable_fast():
 
 if __name__ == "__main__":
     print("Installing packages...")
-    try:
-        install_packages()
-        print("Installation complete.")
-    except Exception as e:
-        print("[warning] deforum backend package install failed, if you encounter any issues, please activate your venv and run:\npip install git+https://github.com/XmYxdeforum-studio.git\nIf you are using ComfyUI portable, you have to locate your python executable and add that's path before the pip install command.")
-        pass
+    # try:
+    #     install_packages()
+    #     print("Installation complete.")
+    # except Exception as e:
+    #     print("[warning] deforum backend package install failed, if you encounter any issues, please activate your venv and run:\npip install git+https://github.com/XmYxdeforum-studio.git\nIf you are using ComfyUI portable, you have to locate your python executable and add that's path before the pip install command.")
+    #     pass
     try:
         install_stable_fast()
         print("Installed Stable Fast 1.0.4")
