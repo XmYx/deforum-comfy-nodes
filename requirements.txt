@@ -1,5 +1,5 @@
 opencv-contrib-python
-timm==0.6.5
+timm==0.6.13
 PyWavelets
 opensimplex
 matplotlib
