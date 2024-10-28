@@ -216,6 +216,28 @@ def install_stable_fast():
     print(f"Attempting to install: {wheel_name}")
     subprocess.run([sys.executable, "-m", "pip", "install", url])
 
+def install_reqs():
+    # Install 'comfy' dependencies
+    subprocess.check_call([
+        'pip', 'install',
+        'einops>=0.6.0',
+        'numexpr>=2.8.4',
+        'matplotlib>=3.7.1',
+        'pandas>=1.5.3',
+        'av>=10.0.0',
+        'pims>=0.6.1',
+        'imageio-ffmpeg>=0.4.8',
+        'rich>=13.3.2',
+        'gdown>=4.7.1',
+        'py3d>=0.0.87',
+        'librosa>=0.10.0.post2',
+    ])
+
+    # Install deforum-studio with 'comfy' extras and no dependencies
+    subprocess.check_call([
+        'pip', 'install', '--no-deps',
+        'git+https://github.com/XmYx/deforum-studio.git#egg=deforum_studio[comfy]'
+    ])
 
 
 if __name__ == "__main__":
