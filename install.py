@@ -231,32 +231,34 @@ def install_reqs():
         'gdown>=4.7.1',
         'py3d>=0.0.87',
         'librosa>=0.10.0.post2',
+        'numpy<2.0.0',
+        'pydub>=0.16.5',
+        'opencv-contrib-python>=4.7.0.68',
+        'loguru>=0.4.0',
+        'python-decouple>=3.8',
+        'timm>=0.6.13',
+        'scikit-image>=0.21.0',
+        'moviepy<2.0.0.dev1'
     ])
 
     # Install deforum-studio with 'comfy' extras and no dependencies
     subprocess.check_call([
         'pip', 'install', '--no-deps',
-        'git+https://github.com/XmYx/deforum-studio.git#egg=deforum_studio[comfy]'
+        'git+https://github.com/XmYx/deforum-studio.git#egg=deforum[comfy]'
     ])
 
 
 if __name__ == "__main__":
     print("Installing packages...")
-    # try:
-    #     install_packages()
-    #     print("Installation complete.")
-    # except Exception as e:
-    #     print("[warning] deforum backend package install failed, if you encounter any issues, please activate your venv and run:\npip install git+https://github.com/XmYxdeforum-studio.git\nIf you are using ComfyUI portable, you have to locate your python executable and add that's path before the pip install command.")
-    #     pass
     try:
         install_stable_fast()
         print("Installed Stable Fast 1.0.4")
     except:
         print("[warning] Stable Fast Install Failed")
-# try:
-#     print("")
-#     #install()
-#
-# except Exception as e:
-#     print("[ERROR] deforum-comfy-nodes: Recommended Node package(s) installation failed.")
-#     traceback.print_exc()
+
+    try:
+        install_reqs()
+        print("Installation complete.")
+    except Exception as e:
+        print("[warning] deforum backend package install failed, if you encounter any issues, please activate your venv and run:\npip install git+https://github.com/XmYxdeforum-studio.git\nIf you are using ComfyUI portable, you have to locate your python executable and add that's path before the pip install command.")
+        pass
