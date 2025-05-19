@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import sys
 """
 DEFORUM STORAGE IMPORT
 """
@@ -43,10 +44,10 @@ NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
 
 # Iterate through all classes defined in your code
-# Import the deforum_nodes.deforum_node module
-deforum_node_module = importlib.import_module('deforum-comfy-nodes.deforum_nodes.mapping')
+# Get a reference to the current module to inspect its imported node classes
+deforum_node_module = sys.modules[__name__]
 
-# Iterate through all classes defined in deforum_nodes.deforum_node
+# Iterate through all classes defined in the current module
 for name, obj in inspect.getmembers(deforum_node_module):
     # Check if the member is a class
     if inspect.isclass(obj) and hasattr(obj, "INPUT_TYPES"):
