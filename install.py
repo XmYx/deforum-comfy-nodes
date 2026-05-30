@@ -175,7 +175,7 @@ def install_packages():
     # subprocess.run(["pip", "install", "-r", "requirements.txt"], check=True)
 
     # Force reinstall the deforum-studio package from Git
-    subprocess.run(["pip", "install", "--force-reinstall", "git+https://github.com/XmYx/deforum-studio.git"],
+    subprocess.run(["pip", "install", "--force-reinstall", "git+https://github.com/XmYx/deforum-studio.git#egg=deforum[comfy]"],
                    check=True)
 
 
