@@ -367,54 +367,103 @@ app.registerExtension({
 		};
 	},
 	beforeRegisterNodeDef(nodeType, nodeData) {
-		if (nodeType.comfyClass === "DeforumIteratorNode") {
-            const onIteratorExecuted = nodeType.prototype.onExecuted
-            nodeType.prototype.onExecuted = function (message) {
-                const r = onIteratorExecuted ? onIteratorExecuted.apply(this, message) : undefined
-                for (const w of this.widgets || []) {
-                    if (w.name === "reset_counter") {
-                        const counterWidget = w;
-                        counterWidget.value = false;
-                    } else if (w.name === "reset_latent") {
-                        const resetWidget = w;
-                        resetWidget.value = false;
-                    }
-                }
-                const v = app.nodeOutputs?.[this.id + ""];
-                if (!this.flags.collapsed && v) {
-
-                    const counter = v["counter"];
-                    const max_frames = v["max_frames"];
-                    const enableAutorun = v["enable_autoqueue"][0];
-
-                    if (counter[0] >= max_frames[0]) {
-                        setComfyAutoQueue(false);
-                    } else {
-                        setComfyAutoQueue(enableAutorun);
-                    }
-                }
-
-            return r
+        if (nodeType.comfyClass === "DeforumIteratorNode") {
+            function getWidget(node, name) {
+                return node.widgets?.find((w) => w.name === name);
             }
 
+            function getWidgetBool(node, name) {
+                return getWidget(node, name)?.value === true;
+            }
+
+            const onIteratorNodeCreated = nodeType.prototype.onNodeCreated;
+            nodeType.prototype.onNodeCreated = function () {
+                const r = onIteratorNodeCreated?.apply?.(this, arguments);
+
+                this.deforumLastEnableAutoQueueValue = getWidgetBool(this, "enable_autoqueue");
+                this.deforumRestartRequested = false;
+
+                if (this.deforumLastEnableAutoQueueValue === true) {
+                    setComfyAutoQueue(true);
+                }
+
+                return r;
+            };
+
+            const onIteratorExecuted = nodeType.prototype.onExecuted;
+            nodeType.prototype.onExecuted = function (message) {
+                const r = onIteratorExecuted ? onIteratorExecuted.apply(this, message) : undefined;
+
+                const resetRequested =
+                    getWidgetBool(this, "reset_counter") ||
+                    getWidgetBool(this, "reset_latent") ||
+                    this.deforumRestartRequested === true;
+
+                for (const w of this.widgets || []) {
+                    if (w.name === "reset_counter") {
+                        w.value = false;
+                    } else if (w.name === "reset_latent") {
+                        w.value = false;
+                    }
+                }
+
+                const enableAutoQueueFromWidget = getWidgetBool(this, "enable_autoqueue");
+                const v = app.nodeOutputs?.[this.id + ""];
+
+                if (v) {
+                    const counter = v["counter"];
+                    const max_frames = v["max_frames"];
+                    const enableAutorunFromOutput = v["enable_autoqueue"]?.[0] === true;
+
+                    if (resetRequested) {
+                        this.deforumRestartRequested = false;
+                        setComfyAutoQueue(enableAutoQueueFromWidget || enableAutorunFromOutput);
+                    } else if (counter?.[0] >= max_frames?.[0]) {
+                        setComfyAutoQueue(false);
+                    } else {
+                        setComfyAutoQueue(enableAutoQueueFromWidget || enableAutorunFromOutput);
+                    }
+                } else {
+                    setComfyAutoQueue(enableAutoQueueFromWidget);
+                }
+
+                return r;
+            };
+
             const onDrawForeground = nodeType.prototype.onDrawForeground;
-			nodeType.prototype.onDrawForeground = function (ctx) {
-				const r = onDrawForeground?.apply?.(this, arguments);
-				const v = app.nodeOutputs?.[this.id + ""];
-				if (!this.flags.collapsed && v) {
+            nodeType.prototype.onDrawForeground = function (ctx) {
+                const r = onDrawForeground?.apply?.(this, arguments);
 
-					const text = v["counter"] + "";
-					ctx.save();
-					ctx.font = "bold 48px sans-serif";
-					ctx.fillStyle = "dodgerblue";
-					const sz = ctx.measureText(text);
-					ctx.fillText(text, (this.size[0]) / 2 - sz.width - 5, LiteGraph.NODE_SLOT_HEIGHT * 3);
-					ctx.restore();
-				}
+                const enableAutoQueueFromWidget = getWidgetBool(this, "enable_autoqueue");
 
-				return r;
-			};
-		}  else if (nodeType.comfyClass === "DeforumBigBoneResetNode") {
+                if (this.deforumLastEnableAutoQueueValue !== enableAutoQueueFromWidget) {
+                    this.deforumLastEnableAutoQueueValue = enableAutoQueueFromWidget;
+                    this.deforumRestartRequested = false;
+                    setComfyAutoQueue(enableAutoQueueFromWidget);
+                }
+
+                const resetCounterRequested = getWidgetBool(this, "reset_counter");
+                const resetLatentRequested = getWidgetBool(this, "reset_latent");
+
+                if ((resetCounterRequested || resetLatentRequested) && enableAutoQueueFromWidget === true) {
+                    this.deforumRestartRequested = true;
+                    setComfyAutoQueue(true);
+                }
+
+                const v = app.nodeOutputs?.[this.id + ""];
+                if (!this.flags.collapsed && v) {
+                    const text = v["counter"] + "";
+                    ctx.save();
+                    ctx.font = "bold 48px sans-serif";
+                    ctx.fillStyle = "dodgerblue";
+                    const sz = ctx.measureText(text);
+                    ctx.fillText(text, (this.size[0]) / 2 - sz.width - 5, LiteGraph.NODE_SLOT_HEIGHT * 3);
+                    ctx.restore();
+                }
+
+                return r;
+            };
+        }else if (nodeType.comfyClass === "DeforumBigBoneResetNode") {
 
 
             const onResetExecuted = nodeType.prototype.onExecuted
