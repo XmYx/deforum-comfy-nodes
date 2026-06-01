@@ -380,10 +380,12 @@ app.registerExtension({
                         }
                     }
 
-
-
+                    if (enableAutorun === false) {
+                        if (autoQueueCheckbox?.checked === true) {
+                            autoQueueCheckbox.click();
+                        }
+                    }
                 }
-
 
             return r
             }
