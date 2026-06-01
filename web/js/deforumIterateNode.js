@@ -334,6 +334,28 @@ function extendNodePrototypeWithFrameCaching(nodeType) {
 }
 
 
+function setComfyAutoQueue(enabled) {
+    const autoQueueCheckbox = document.getElementById('autoQueueCheckbox');
+    const extraOptions = document.getElementById('extraOptions');
+
+    if (!autoQueueCheckbox) {
+        return;
+    }
+
+    if (enabled === true && autoQueueCheckbox.checked === false) {
+        autoQueueCheckbox.click();
+
+        if (extraOptions) {
+            extraOptions.style.display = 'block';
+        }
+    }
+
+    if (enabled === false && autoQueueCheckbox.checked === true) {
+        autoQueueCheckbox.click();
+    }
+}
+
+
 app.registerExtension({
 	name: "deforum.deforumIterator",
 	init() {
@@ -361,29 +383,14 @@ app.registerExtension({
                 const v = app.nodeOutputs?.[this.id + ""];
                 if (!this.flags.collapsed && v) {
 
-                    const counter = v["counter"]
-                    const max_frames = v["max_frames"]
-                    const enableAutorun = v["enable_autoqueue"][0]
-
-
+                    const counter = v["counter"];
+                    const max_frames = v["max_frames"];
+                    const enableAutorun = v["enable_autoqueue"][0];
 
                     if (counter[0] >= max_frames[0]) {
-                        if (document.getElementById('autoQueueCheckbox').checked === true) {
-                            document.getElementById('autoQueueCheckbox').click();
-                        }
-                    }
-
-                    if (enableAutorun === true) {
-                        if (document.getElementById('autoQueueCheckbox').checked === false) {
-                            document.getElementById('autoQueueCheckbox').click();
-                            document.getElementById('extraOptions').style.display = 'block';
-                        }
-                    }
-
-                    if (enableAutorun === false) {
-                        if (autoQueueCheckbox?.checked === true) {
-                            autoQueueCheckbox.click();
-                        }
+                        setComfyAutoQueue(false);
+                    } else {
+                        setComfyAutoQueue(enableAutorun);
                     }
                 }
 
