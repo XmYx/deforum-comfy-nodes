@@ -34,27 +34,33 @@ class DeforumColorMatchNode:
     def fn(self, image, deforum_frame_data, force_use_sample, force_sample_image=None):
         if image is not None:
             anim_args = deforum_frame_data.get("anim_args")
-            image = np.array(tensor2pil(image))
-            # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            rgb = np.array(tensor2pil(image))
             frame_idx = deforum_frame_data.get("frame_idx", 0)
             if frame_idx == 0 and not force_use_sample:
                 self.color_match_sample = None
-                return (pil2tensor(image),)
-            if force_use_sample:
-                if force_sample_image is not None:
-                    self.color_match_sample = np.array(tensor2pil(force_sample_image)).copy()
+                return (pil2tensor(rgb),)
+            if force_use_sample and force_sample_image is not None:
+                self.color_match_sample = np.array(tensor2pil(force_sample_image)).copy()
+
             if anim_args.color_coherence != 'None' and self.color_match_sample is not None:
-                image = maintain_colors(image, self.color_match_sample, anim_args.color_coherence)
-            print(f"[deforum] ColorMatch: {anim_args.color_coherence}")
+                # deforum's maintain_colors() takes the frame as BGR and returns
+                # BGR, while the reference sample stays RGB. Both conversions used
+                # to be commented out here, which swapped the red and blue
+                # channels twice and turned every clip teal and magenta.
+                bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+                matched = maintain_colors(bgr, self.color_match_sample, anim_args.color_coherence)
+                rgb = cv2.cvtColor(matched, cv2.COLOR_BGR2RGB)
+                print(f"[deforum] ColorMatch: {anim_args.color_coherence}")
+
+            # Keep the reference in RGB; maintain_colors() expects it that way.
             if self.color_match_sample is None:
-                self.color_match_sample = image.copy()
+                self.color_match_sample = rgb.copy()
+
             if anim_args.color_force_grayscale:
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+                rgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
 
-            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-            image = pil2tensor(image)
+            image = pil2tensor(rgb)
 
         return (image,)
 

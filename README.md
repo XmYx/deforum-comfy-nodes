@@ -48,10 +48,12 @@ checkpoint name you will need to point at your own model.
 | `deforum_base.json` | SDXL | 3D camera move with depth warping. The best starting point. |
 | `deforum_cadence.json` | SDXL | Adds cadence frames between diffused frames for smoother motion. |
 | `deforum_krea2_turbo.json` | Krea-2 Turbo | 8-step turbo model, `cfg 1`. |
-| `deforum_flux3_klein.json` | FLUX.3 Image Klein | 15 steps, `cfg 1`, `er_sde` / `simple`. |
+| `deforum_flux3_klein.json` | FLUX.3 Image Klein (base) | 50 steps, `cfg 4.0`, `euler` / `simple`, with `ModelSamplingFlux` shift = ln(16). |
 | `deforum_integrated.json` | SDXL | Whole animation inside one `Deforum Single Sample` node. |
 
 ![Deforum on Krea-2 Turbo](examples/deforum_krea2_turbo_preview.jpg)
+
+![Deforum on FLUX.3 Image Klein](examples/deforum_flux3_klein_preview.jpg)
 
 Older workflows live in `examples/legacy/`; see the README there for what still works.
 
@@ -87,8 +89,17 @@ architectures work without waiting for this pack to be updated.
 Leave `model` unconnected only if you want to pick the shape by hand from the
 dropdown.
 
-**Distilled models** (FLUX, Krea Turbo, SDXL Turbo, …) want `cfg_scale_schedule`
-set to `0: (1)` in **Diffusion Parameters**. At a higher cfg they burn out.
+**Distilled models** (Krea-2 Turbo, SDXL Turbo, FLUX schnell, the
+`flux3-image-klein-*` distilled checkpoints, …) want `cfg_scale_schedule` set to
+`0: (1)` in **Diffusion Parameters**. At a higher cfg they burn out.
+
+**FLUX.3 Klein base** is the opposite: `flux3-image-klein-base-*` is the CFG
+variant and wants real guidance. Follow Black Forest Labs' own settings —
+`cfg_scale_schedule` `0: (4.0)`, `steps_schedule` `0: (50)`, `euler` / `simple`,
+and a `ModelSamplingFlux` between the UNET and the samplers with both shifts set
+to ln(alpha) = ln(16) = 2.77259. `deforum_flux3_klein.json` is wired that way.
+Note that ComfyUI's own bundled FLUX.3 template uses cfg 1 for the *base* file;
+that is the distilled model's recipe and gives mush on the base weights.
 
 **Checkpoints without a text encoder.** SD 3.5, FLUX and Qwen-Image are usually
 shipped as a bare diffusion model. `Load Checkpoint` then returns no CLIP and you
@@ -148,6 +159,11 @@ crashing, so this should no longer reach you.
 **Frying / harsh edges after a few frames.** Lower `amount_schedule` and
 `noise_schedule`, raise `strength_schedule`, and set `color_coherence` to `LAB`.
 Running a model below its native resolution (SDXL under 1024) does this too.
+
+**Colours drift over the clip.** `color_coherence` on **ColorMatch Parameters**
+only does something if a **Color Match** node is actually in the graph, between
+**Frame Warp** and **Add Noise**. `deforum_krea2_turbo.json` and
+`deforum_flux3_klein.json` show the placement.
 
 **The animation never advances past frame 0.** `reset_counter` / `reset_latent`
 are ticked on the Iterator.

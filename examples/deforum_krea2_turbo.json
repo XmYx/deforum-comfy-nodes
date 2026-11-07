@@ -1,8 +1,8 @@
 {
   "id": "00000000-0000-0000-0000-000000000000",
   "revision": 0,
-  "last_node_id": 24,
-  "last_link_id": 32,
+  "last_node_id": 25,
+  "last_link_id": 34,
   "nodes": [
     {
       "id": 1,
@@ -97,7 +97,7 @@
           "type": "VAE",
           "links": [
             21,
-            26
+            28
           ],
           "slot_index": 0
         }
@@ -192,7 +192,7 @@
       "widgets_values": [
         "3D",
         120,
-        "wrap"
+        "replicate"
       ]
     },
     {
@@ -655,7 +655,8 @@
             19,
             23,
             25,
-            31
+            27,
+            33
           ],
           "slot_index": 0
         },
@@ -664,7 +665,7 @@
           "type": "LATENT",
           "links": [
             16,
-            28
+            30
           ],
           "slot_index": 1
         },
@@ -843,8 +844,8 @@
           "type": "IMAGE",
           "links": [
             22,
-            30,
-            32
+            32,
+            34
           ],
           "slot_index": 0
         }
@@ -921,7 +922,7 @@
     },
     {
       "id": 20,
-      "type": "DeforumAddNoiseNode",
+      "type": "DeforumColorMatchNode",
       "pos": [
         460,
         40
@@ -943,6 +944,12 @@
           "name": "deforum_frame_data",
           "type": "DEFORUM_FRAME_DATA",
           "link": 25
+        },
+        {
+          "name": "force_sample_image",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
         }
       ],
       "outputs": [
@@ -950,7 +957,52 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            27
+            26
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DeforumColorMatchNode",
+        "cnr_id": "",
+        "ver": ""
+      },
+      "widgets_values": [
+        false
+      ]
+    },
+    {
+      "id": 21,
+      "type": "DeforumAddNoiseNode",
+      "pos": [
+        460,
+        190
+      ],
+      "size": [
+        300,
+        120
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 26
+        },
+        {
+          "name": "deforum_frame_data",
+          "type": "DEFORUM_FRAME_DATA",
+          "link": 27
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            29
           ],
           "slot_index": 0
         }
@@ -963,35 +1015,35 @@
       "widgets_values": []
     },
     {
-      "id": 21,
+      "id": 22,
       "type": "DeforumVAEEncode",
       "pos": [
         460,
-        200
+        330
       ],
       "size": [
         300,
         120
       ],
       "flags": {},
-      "order": 20,
+      "order": 21,
       "mode": 0,
       "inputs": [
         {
           "name": "vae",
           "type": "VAE",
-          "link": 26
+          "link": 28
         },
         {
           "name": "pixels",
           "type": "IMAGE",
-          "link": 27,
+          "link": 29,
           "shape": 7
         },
         {
           "name": "latent",
           "type": "LATENT",
-          "link": 28,
+          "link": 30,
           "shape": 7
         }
       ],
@@ -1000,7 +1052,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            29
+            31
           ],
           "slot_index": 0
         }
@@ -1013,24 +1065,24 @@
       "widgets_values": []
     },
     {
-      "id": 22,
+      "id": 23,
       "type": "DeforumCacheLatentNode",
       "pos": [
         460,
-        340
+        460
       ],
       "size": [
         300,
         120
       ],
       "flags": {},
-      "order": 21,
+      "order": 22,
       "mode": 0,
       "inputs": [
         {
           "name": "latent",
           "type": "LATENT",
-          "link": 29
+          "link": 31
         }
       ],
       "outputs": [
@@ -1051,7 +1103,7 @@
       ]
     },
     {
-      "id": 23,
+      "id": 24,
       "type": "DeforumVideoSaveNode",
       "pos": [
         760,
@@ -1062,18 +1114,18 @@
         420
       ],
       "flags": {},
-      "order": 22,
+      "order": 23,
       "mode": 0,
       "inputs": [
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 30
+          "link": 32
         },
         {
           "name": "deforum_frame_data",
           "type": "DEFORUM_FRAME_DATA",
-          "link": 31,
+          "link": 33,
           "shape": 7
         },
         {
@@ -1126,7 +1178,7 @@
       ]
     },
     {
-      "id": 24,
+      "id": 25,
       "type": "PreviewImage",
       "pos": [
         760,
@@ -1137,13 +1189,13 @@
         260
       ],
       "flags": {},
-      "order": 23,
+      "order": 24,
       "mode": 0,
       "inputs": [
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 32
+          "link": 34
         }
       ],
       "outputs": [
@@ -1365,57 +1417,73 @@
     ],
     [
       26,
-      3,
-      0,
-      21,
-      0,
-      "VAE"
-    ],
-    [
-      27,
       20,
       0,
       21,
-      1,
+      0,
       "IMAGE"
     ],
     [
-      28,
+      27,
       15,
-      1,
+      0,
       21,
-      2,
-      "LATENT"
+      1,
+      "DEFORUM_FRAME_DATA"
+    ],
+    [
+      28,
+      3,
+      0,
+      22,
+      0,
+      "VAE"
     ],
     [
       29,
       21,
       0,
       22,
-      0,
-      "LATENT"
-    ],
-    [
-      30,
-      18,
-      0,
-      23,
-      0,
+      1,
       "IMAGE"
     ],
     [
-      31,
+      30,
       15,
+      1,
+      22,
+      2,
+      "LATENT"
+    ],
+    [
+      31,
+      22,
       0,
       23,
-      1,
-      "DEFORUM_FRAME_DATA"
+      0,
+      "LATENT"
     ],
     [
       32,
       18,
       0,
       24,
+      0,
+      "IMAGE"
+    ],
+    [
+      33,
+      15,
+      0,
+      24,
+      1,
+      "DEFORUM_FRAME_DATA"
+    ],
+    [
+      34,
+      18,
+      0,
+      25,
       0,
       "IMAGE"
     ]
