@@ -178,8 +178,17 @@ class DeforumIteratorNode:
             args.prompt = prompt_series[self.frame_index]
 
         seed = schedule_value(keys.seed_schedule_series, self.frame_index, -1)
+        try:
+            seed = int(seed)
+        except (TypeError, ValueError):
+            seed = -1
 
-        if args.seed_behavior == 'random':
+        # -1 is deforum's "pick one for me". It used to be honoured only when
+        # seed_behavior was 'random', so the default `0: (-1)` schedule with any
+        # other behaviour carried a negative seed into the noise generator,
+        # which fills a uint64 array with it: "Python integer -1 out of bounds
+        # for uint64".
+        if args.seed_behavior == 'random' or seed < 0:
             seed = secrets.randbelow(2 ** 32 - 1)
 
         self.seed = seed
@@ -251,6 +260,8 @@ class DeforumIteratorNode:
         gen_args["frame_index"] = self.frame_index
         gen_args["max_frames"] = anim_args.max_frames
 
+        if subseed is None or subseed < 0:
+            subseed = seed
         seeds = generate_seed_list(anim_args.max_frames + 1, args.seed_behavior, seed, args.seed_iter_N)
         subseeds = generate_seed_list(anim_args.max_frames + 1, args.seed_behavior, subseed, args.seed_iter_N)
         if reset_counter:

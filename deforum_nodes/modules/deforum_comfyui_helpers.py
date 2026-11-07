@@ -152,6 +152,7 @@ def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
     - list: A list of seed integers.
     """
     start_seed = 0 if start_seed is None else int(start_seed)
+    start_seed = start_seed % (2 ** 32) if start_seed < 0 else start_seed
     step = 1 if not step else int(step)
     max_frames = max(1, int(max_frames))
     if mode == 'fixed':

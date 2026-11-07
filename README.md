@@ -49,6 +49,7 @@ checkpoint name you will need to point at your own model.
 | `deforum_cadence.json` | SDXL | Adds cadence frames between diffused frames for smoother motion. |
 | `deforum_krea2_turbo.json` | Krea-2 Turbo | 8-step turbo model, `cfg 1`. |
 | `deforum_flux3_klein.json` | FLUX.3 Image Klein (base) | 50 steps, `cfg 4.0`, `euler` / `simple`, with `ModelSamplingFlux` shift = ln(16). |
+| `deforum_guided.json` | SDXL | Scheduled guide images — pin an image to a keyframe and keep pulling towards it. |
 | `deforum_integrated.json` | SDXL | Whole animation inside one `Deforum Single Sample` node. |
 
 ![Deforum on Krea-2 Turbo](examples/deforum_krea2_turbo_preview.jpg)
@@ -106,6 +107,72 @@ shipped as a bare diffusion model. `Load Checkpoint` then returns no CLIP and yo
 get `'NoneType' object has no attribute 'tokenize'`. Load the text encoders
 separately with `CLIPLoader` / `DualCLIPLoader` and feed that CLIP into
 **Blend Conditionings**, as `deforum_flux3_klein.json` does.
+
+## Guide images
+
+Two different things, depending on what you want.
+
+**Seed the animation from an image.** Encode it and feed the Iterator's
+`init_latent` input:
+
+```
+LoadImage ─► VAEEncode ─► (deforum) Iterator [init_latent]
+```
+
+That replaces the starting noise on frame 0 only. How closely frame 0 follows it
+is `strength_schedule[0]` in **Diffusion Parameters**.
+
+**Keep guiding later frames.** Use **Guide Image Schedule**, between
+**Frame Warp** and the rest of the loop:
+
+```
+Frame Warp ─► Guide Image Schedule ─► Color Match ─► Add Noise ─► VAEEncode
+                      ▲
+   LoadImage ─► ImageBatch
+```
+
+It takes a batch of guide images and two schedules.
+
+`image_schedule` picks which guide to use, by index into the batch.
+`0:(0), 60:(1)` moves from the first guide to the second over 60 frames, and
+with `crossfade_guides` on, fractional values blend between neighbouring guides
+so the handover is smooth rather than a jump cut.
+
+`strength_schedule` says how hard each frame is pulled towards it. `0` passes
+the frame through untouched, `1` replaces it outright.
+
+**Pulse it, don't hold it.** This node sits inside the feedback loop, so a
+strength held across many frames compounds and the animation converges onto the
+guide — at a steady `0.12` the guide has effectively taken over within a dozen
+frames. What you usually want is a pulse at each keyframe, leaving the animation
+free in between:
+
+```
+0:(1.0), 2:(0.0), 58:(0.0), 60:(0.6), 62:(0.0)
+```
+
+That pins the first guide at frame 0, lets the animation run, then pulls hard
+towards the second guide at frame 60 and releases again. A sustained pull is
+still useful for locking composition, but keep it around `0.02`–`0.05`.
+
+How far the animation drifts back afterwards depends on `strength_schedule` in
+**Diffusion Parameters** — that is the denoise. At the low denoise deforum
+usually runs (0.2–0.5) the model has little room to redraw, so after a strong
+pulse the animation carries on *from* the guide rather than returning to what it
+was doing. That is what pinning a guide to a keyframe means; if you want the
+guide to read as a suggestion instead, use a smaller pulse or raise the denoise.
+
+Guides are resized to the frame automatically, and an optional `mask` input
+restricts the guide to part of the frame. The node also outputs the resolved
+guide for the current frame, which is worth hanging a Preview on while you dial
+the schedules in.
+
+`deforum_guided.json` is a working example; swap its two `LoadImage` nodes for
+your own images.
+
+For conditioning-level guidance instead (ControlNet, IPAdapter), use
+**Schedule Value**: it reads any deforum schedule as a FLOAT for the current
+frame, so you can drive a ControlNet strength from the deforum timeline.
 
 ## Schedules
 
@@ -166,7 +233,13 @@ only does something if a **Color Match** node is actually in the graph, between
 `deforum_flux3_klein.json` show the placement.
 
 **The animation never advances past frame 0.** `reset_counter` / `reset_latent`
-are ticked on the Iterator.
+are ticked on the Iterator. If you are using cadence, check that
+`diffusion_cadence` is smaller than `max_frames` — stepping by more than the
+whole animation resets the counter on every queue.
+
+**`Python integer -1 out of bounds for uint64`.** A `-1` in `seed_schedule`
+(deforum's "pick one for me") reached the noise generator. `-1` is now resolved
+to a random seed whatever `seed_behavior` is set to, so update this pack.
 
 ## Optional companion nodes
 

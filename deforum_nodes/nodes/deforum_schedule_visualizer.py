@@ -5,7 +5,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from PIL import Image
 import io
 
-from deforum.pipelines.deforum_animation.animation_helpers import FrameInterpolator
+from ..modules.deforum_compat import schedule_series
 from ..modules.deforum_comfyui_helpers import tensor2pil, tensor2np, pil2tensor
 
 
@@ -337,8 +337,9 @@ class DeforumScheduleVisualizer:
     def show(self, schedule, max_frames, grid):
         if max_frames == 0:
             max_frames = len(schedule.split(','))
-        fi = FrameInterpolator(max_frames, -1)
-        series = fi.get_inbetweens(fi.parse_key_frames(schedule))
+        # FrameInterpolator wants a settings object, not a bare int; passing the
+        # number raised TypeError and made this node unusable.
+        series = schedule_series(schedule, max_frames)
 
         # Create a figure for plotting
         fig = Figure()

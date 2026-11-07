@@ -103,6 +103,23 @@ def latent_geometry(latent_type="auto", model=None):
 # Schedules
 # --------------------------------------------------------------------------
 
+def schedule_series(schedule, max_frames, seed=-1, fps=24):
+    """Parse any deforum schedule string into a per-frame pandas Series.
+
+    ``"0:(0), 30:(1)"`` over 60 frames gives a ramp from 0 to 1 and then holds.
+    This is the same parser the built-in schedules use, so expressions such as
+    ``0:(0.5+0.5*sin(3.14*t/30))`` work here too.
+    """
+    from types import SimpleNamespace
+
+    from deforum.pipelines.deforum_animation.animation_helpers import FrameInterpolator
+
+    max_frames = max(1, int(max_frames))
+    settings = SimpleNamespace(max_frames=max_frames, fps=fps)
+    interpolator = FrameInterpolator(settings, seed)
+    return interpolator.get_inbetweens(interpolator.parse_key_frames(str(schedule)))
+
+
 def schedule_value(series, index, default=None):
     """Read ``series[index]``, clamped to the series it actually has.
 

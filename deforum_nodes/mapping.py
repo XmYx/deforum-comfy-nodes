@@ -17,6 +17,7 @@ from .nodes.deforum_cnet_nodes import *
 from .nodes.deforum_cond_nodes import *
 from .nodes.deforum_data_nodes import *
 from .nodes.deforum_framewarp_node import *
+from .nodes.deforum_guide_nodes import *
 from .nodes.deforum_hybrid_nodes import *
 from .nodes.deforum_interpolation_nodes import *
 from .nodes.deforum_image_nodes import *
