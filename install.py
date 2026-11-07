@@ -1,264 +1,59 @@
+"""Optional post-install step for the deforum ComfyUI nodes.
+
+Everything this pack actually needs lives in ``requirements.txt``, which
+ComfyUI-Manager and ``comfy node install`` install for you. This script exists
+only to install the deforum backend into the *same* interpreter that runs
+ComfyUI, for people who cloned the repo by hand.
+
+Deliberately NOT done here any more:
+
+* cloning a dozen unrelated node packs into ``custom_nodes`` - that is the
+  user's choice, and it used to silently rewrite their install;
+* installing ``stable-fast`` wheels - the prebuilt wheels are CUDA-only and
+  pulled a mismatched torch onto AMD and Apple machines (issue #55);
+* pinning ``numpy<2`` / ``moviepy<2`` - that downgraded working ComfyUI
+  installs (issues #51, #62, #70).
+"""
+
 import os
-import shutil
-import sys
-import subprocess
-import threading
-import locale
-import traceback
-import re
-import os
 import subprocess
 import sys
-import platform
 
-if sys.argv[0] == 'install.py':
-    sys.path.append('.')   # for portable version
+HERE = os.path.dirname(os.path.abspath(__file__))
+REQUIREMENTS = os.path.join(HERE, "requirements.txt")
 
-
-comfy_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+DEFORUM_BACKEND = "git+https://github.com/XmYx/deforum-studio.git"
 
 
-sys.path.append(comfy_path)
+def pip(*args):
+    cmd = [sys.executable, "-m", "pip", *args]
+    print(f"[deforum] {' '.join(cmd)}")
+    return subprocess.call(cmd)
 
 
-# ---
-def handle_stream(stream, is_stdout):
-    stream.reconfigure(encoding=locale.getpreferredencoding(), errors='replace')
+def main():
+    print(f"[deforum] installing into {sys.executable}")
 
-    for msg in stream:
-        if is_stdout:
-            print(msg, end="", file=sys.stdout)
-        else: 
-            print(msg, end="", file=sys.stderr)
-            
+    if os.path.exists(REQUIREMENTS):
+        if pip("install", "-r", REQUIREMENTS) == 0:
+            print("[deforum] requirements installed")
+            return 0
+        print("[deforum] installing requirements.txt failed, trying the backend on its own")
 
-def process_wrap(cmd_str, cwd=None, handler=None):
-    print(f"[Deforum] EXECUTE: {cmd_str} in '{cwd}'")
-    process = subprocess.Popen(cmd_str, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+    if pip("install", "--upgrade", DEFORUM_BACKEND) != 0:
+        print(
+            "[deforum] Could not install the deforum backend automatically.\n"
+            "[deforum] Activate the environment that runs ComfyUI and run:\n"
+            f"[deforum]     pip install -r {REQUIREMENTS}\n"
+            "[deforum] On ComfyUI portable, use the bundled interpreter, e.g.\n"
+            "[deforum]     python_embeded\\python.exe -m pip install -r "
+            "ComfyUI\\custom_nodes\\deforum-comfy-nodes\\requirements.txt"
+        )
+        return 1
 
-    if handler is None:
-        handler = handle_stream
-
-    stdout_thread = threading.Thread(target=handler, args=(process.stdout, True))
-    stderr_thread = threading.Thread(target=handler, args=(process.stderr, False))
-
-    stdout_thread.start()
-    stderr_thread.start()
-
-    stdout_thread.join()
-    stderr_thread.join()
-
-    return process.wait()
-# ---
-
-
-pip_list = None
-
-
-def get_installed_packages():
-    global pip_list
-
-    if pip_list is None:
-        try:
-            result = subprocess.check_output([sys.executable, '-m', 'pip', 'list'], universal_newlines=True)
-            pip_list = set([line.split()[0].lower() for line in result.split('\n') if line.strip()])
-        except subprocess.CalledProcessError as e:
-            print(f"[ComfyUI-Manager] Failed to retrieve the information of installed pip packages.")
-            return set()
-    
-    return pip_list
-    
-
-def is_installed(name):
-    name = name.strip()
-    pattern = r'([^<>!=]+)([<>!=]=?)'
-    match = re.search(pattern, name)
-    
-    if match:
-        name = match.group(1)
-        
-    result = name.lower() in get_installed_packages()
-    return result
-    
-
-def is_requirements_installed(file_path):
-    print(f"req_path: {file_path}")
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as file:
-            lines = file.readlines()
-            for line in lines:
-                if not is_installed(line):
-                    return False
-                    
-    return True
-def find_path(name: str, path: str = None) -> str:
-    """
-    Recursively looks at parent folders starting from the given path until it finds the given name.
-    Returns the path as a Path object if found, or None otherwise.
-    """
-    # If no path is given, use the current working directory
-    if path is None:
-        path = os.getcwd()
-
-    # Check if the current directory contains the name
-    if name in os.listdir(path):
-        path_name = os.path.join(path, name)
-        print(f"{name} found: {path_name}")
-        return path_name
-
-    # Get the parent directory
-    parent_directory = os.path.dirname(path)
-
-    # If the parent directory is the same as the current directory, we've reached the root and stop the search
-    if parent_directory == path:
-        return None
-
-    # Recursively call the function with the parent directory
-    return find_path(name, parent_directory)
-
-
-def run_git_command(command: str, working_dir: str) -> None:
-    """
-    Runs a git command in the specified working directory and handles basic errors.
-    """
-    try:
-        subprocess.run(command, shell=True, check=True, cwd=working_dir)
-        print(f"Successfully executed: {command} in {working_dir}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error executing {command} in {working_dir}: {e}")
-
-
-def clone_or_pull_repo(repo_url: str, repo_dir: str) -> None:
-    """
-    Clones a new repository or updates it if it already exists.
-    """
-    if not os.path.exists(repo_dir):
-        os.makedirs(repo_dir, exist_ok=True)
-        run_git_command(f"git clone {repo_url} .", repo_dir)
-    else:
-        run_git_command("git pull", repo_dir)
-
-def install():
-    repositories = [
-        "https://github.com/ceruleandeep/ComfyUI-LLaVA-Captioner.git",
-        "https://github.com/rgthree/rgthree-comfy.git",
-        "https://github.com/a1lazydog/ComfyUI-AudioScheduler.git",
-        "https://github.com/cubiq/ComfyUI_IPAdapter_plus.git",
-        "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git",
-        "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git",
-        "https://github.com/WASasquatch/was-node-suite-comfyui.git",
-        "https://github.com/11cafe/comfyui-workspace-manager.git",
-        "https://github.com/cubiq/ComfyUI_essentials.git",
-        "https://github.com/FizzleDorf/ComfyUI_FizzNodes.git",
-        "https://github.com/ltdrdata/ComfyUI-Impact-Pack.git",
-        "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git",
-        "https://github.com/Fannovel16/ComfyUI-Video-Matting.git",
-        "https://github.com/crystian/ComfyUI-Crystools.git"
-        # Add more repositories as needed
-    ]
-    comfyui_path = find_path("ComfyUI")
-    custom_nodes_path = os.path.join(comfyui_path, 'custom_nodes')
-
-
-
-    for repo_url in repositories:
-        repo_name = repo_url.split('/')[-1].replace('.git', '')
-        repo_dir = os.path.join(custom_nodes_path, repo_name)
-        clone_or_pull_repo(repo_url, repo_dir)
-
-
-import subprocess
-
-
-def install_packages():
-    # Install packages from requirements.txt
-    # subprocess.run(["pip", "install", "-r", "requirements.txt"], check=True)
-
-    # Force reinstall the deforum-studio package from Git
-    subprocess.run(["pip", "install", "--force-reinstall", "git+https://github.com/XmYx/deforum-studio.git#egg=deforum[comfy]"],
-                   check=True)
-
-
-def get_cuda_version():
-    try:
-        cuda_version = subprocess.check_output(["nvcc", "--version"]).decode("utf-8")
-        for line in cuda_version.split('\n'):
-            if "release" in line:
-                return line.split('release')[1].split(',')[0].strip().replace('.', '')
-    except Exception as e:
-        print(f"Error getting CUDA version: {e}")
-        return None
-
-def get_torch_version():
-    try:
-        import torch
-        return torch.__version__.split('+')[0]  # Removes the +cuXXX if exists
-    except ImportError:
-        print("PyTorch is not installed. Please install PyTorch before proceeding.")
-        sys.exit(1)
-
-def construct_wheel_name(cuda_version, py_version, os_name):
-    # cuda_version: e.g., "110", "102"
-    # py_version: e.g., "38", "37"
-    # os_name: either "linux" or "win"
-    os_map = {"Linux": "manylinux2014_x86_64", "Windows": "win_amd64"}
-    torch_version = get_torch_version().replace('.', '')
-    cuda_str = f"cu{cuda_version}" if cuda_version else "cpu"
-    filename = f"stable_fast-1.0.4+torch{torch_version}{cuda_str}-cp{py_version}-cp{py_version}-{os_map[os_name]}.whl"
-    return filename
-
-def install_stable_fast():
-    cuda_version = get_cuda_version()
-    python_version = f"{sys.version_info.major}{sys.version_info.minor}"
-    os_name = platform.system()
-    wheel_name = construct_wheel_name(cuda_version, python_version, os_name)
-    url = f"https://github.com/chengzeyi/stable-fast/releases/download/v1.0.4/{wheel_name}"
-    print(f"Attempting to install: {wheel_name}")
-    subprocess.run([sys.executable, "-m", "pip", "install", url])
-
-def install_reqs():
-    # Install 'comfy' dependencies
-    subprocess.check_call([
-        'pip', 'install',
-        'einops>=0.6.0',
-        'numexpr>=2.8.4',
-        'matplotlib>=3.7.1',
-        'pandas>=1.5.3',
-        'av>=10.0.0',
-        'pims>=0.6.1',
-        'imageio-ffmpeg>=0.4.8',
-        'rich>=13.3.2',
-        'gdown>=4.7.1',
-        'py3d>=0.0.87',
-        'librosa>=0.10.0.post2',
-        'numpy<2.0.0',
-        'pydub>=0.16.5',
-        'opencv-contrib-python>=4.7.0.68',
-        'loguru>=0.4.0',
-        'python-decouple>=3.8',
-        'timm>=0.6.13',
-        'scikit-image>=0.21.0',
-        'moviepy<2.0.0.dev1'
-    ])
-
-    # Install deforum-studio with 'comfy' extras and no dependencies
-    subprocess.check_call([
-        'pip', 'install', '--no-deps',
-        'git+https://github.com/XmYx/deforum-studio.git#egg=deforum[comfy]'
-    ])
+    print("[deforum] backend installed")
+    return 0
 
 
 if __name__ == "__main__":
-    print("Installing packages...")
-    try:
-        install_stable_fast()
-        print("Installed Stable Fast 1.0.4")
-    except:
-        print("[warning] Stable Fast Install Failed")
-
-    try:
-        install_reqs()
-        print("Installation complete.")
-    except Exception as e:
-        print("[warning] deforum backend package install failed, if you encounter any issues, please activate your venv and run:\npip install git+https://github.com/XmYxdeforum-studio.git\nIf you are using ComfyUI portable, you have to locate your python executable and add that's path before the pip install command.")
-        pass
+    sys.exit(main())

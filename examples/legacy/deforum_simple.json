@@ -98,7 +98,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "protovisionXLHighFidelity3D_beta0520Bakedvae.safetensors"
+        "sd_xl_base_1.0.safetensors"
       ]
     },
     {

@@ -47,7 +47,8 @@ class DeforumFILMInterpolationNode:
 
         if self.model is None:
             self.model = FilmModel()
-            self.model.model.cuda()
+            # Hard-coding .cuda() took down every non-CUDA machine.
+            self.model.model.to(model_management.get_torch_device())
 
         return_frames = []
         pil_image = tensor2pil(image.clone().detach())

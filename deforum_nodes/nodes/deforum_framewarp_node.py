@@ -5,7 +5,8 @@ import torch
 from PIL import Image
 from einops import rearrange, repeat
 
-import comfy
+import comfy.model_management
+import comfy.utils
 from ..modules.deforum_comfyui_helpers import tensor2np, pil2tensor
 
 
@@ -102,7 +103,7 @@ class DeforumFrameWarpNode:
                     depth_image = depth_image[0].mean(dim=-1)  # Take the mean across the color channels
 
             warped_np_img, depth, mask = anim_frame_warp(np_image, args, anim_args, keys, frame_idx,
-                                                              depth_model=self.depth_model, depth=depth_image, device='cuda',
+                                                              depth_model=self.depth_model, depth=depth_image, device=comfy.model_management.get_torch_device(),
                                                               half_precision=True)
             image = Image.fromarray(cv2.cvtColor(warped_np_img, cv2.COLOR_BGR2RGB))
             tensor = pil2tensor(image)
@@ -119,7 +120,7 @@ class DeforumFrameWarpNode:
                 if warp_depth_image:
                     warped_depth, _, _ = anim_frame_warp(np.array(depth_image_pil), args, anim_args, keys, frame_idx,
                                                                       depth_model=self.depth_model, depth=depth_image,
-                                                                      device='cuda',
+                                                                      device=comfy.model_management.get_torch_device(),
                                                                       half_precision=True)
                     warped_depth_image = Image.fromarray(warped_depth)
                     warped_ret = pil2tensor(warped_depth_image).detach().cpu()

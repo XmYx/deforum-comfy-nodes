@@ -1,6 +1,6 @@
 {
   "last_node_id": 198,
-  "last_link_id": 598,
+  "last_link_id": 599,
   "nodes": [
     {
       "id": 141,
@@ -637,7 +637,7 @@
         "Node name for S&R": "DeforumPromptNode"
       },
       "widgets_values": [
-        "0:'unreal 3d render of a cyberpunk city, the text saying \"ComfyUI\"'"
+        "0: unreal 3d render of a cyberpunk city, the text saying \"ComfyUI\""
       ]
     },
     {
@@ -1023,6 +1023,12 @@
           "name": "init_latent",
           "type": "LATENT",
           "link": null
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 599,
+          "shape": 7
         }
       ],
       "outputs": [
@@ -1061,14 +1067,17 @@
         "Node name for S&R": "DeforumIteratorNode"
       },
       "widgets_values": [
-        "stable_cascade",
+        "auto",
         847600922662897,
         "randomize",
         0,
         0.8,
         0.1,
+        "linear",
+        0,
         false,
-        false
+        false,
+        true
       ]
     },
     {
@@ -1788,6 +1797,14 @@
       131,
       1,
       "VAE"
+    ],
+    [
+      599,
+      196,
+      0,
+      194,
+      3,
+      "MODEL"
     ]
   ],
   "groups": [],

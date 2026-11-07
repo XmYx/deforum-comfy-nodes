@@ -2,7 +2,7 @@
   "id": "62bed18d-a906-420d-bef0-bfb4a21182a7",
   "revision": 0,
   "last_node_id": 187,
-  "last_link_id": 583,
+  "last_link_id": 584,
   "nodes": [
     {
       "id": 130,
@@ -387,7 +387,7 @@
         "Node name for S&R": "DeforumCadenceParamsNode"
       },
       "widgets_values": [
-        0,
+        1,
         "None",
         "0: (1)",
         "None",
@@ -484,7 +484,7 @@
         "Node name for S&R": "DeforumPromptNode"
       },
       "widgets_values": [
-        "0:\" tiny cute swamp bunny, highly detailed, intricate, ultra hd, sharp photo, crepuscular rays, in focus, 4k, landscape --neg nsfw, nude\",\n30:\" anthropomorphic clean cat, surrounded by mandelbulb fractals, epic angle and pose, symmetrical, 3d, depth of field --neg nsfw, nude\",\n60:\" a beautiful coconut --neg photo, realistic  nsfw, nude\",\n90:\" a beautiful durian, amazing award winning photography --neg nsfw, nude\""
+        "0: tiny cute swamp bunny, highly detailed, intricate, ultra hd, sharp photo, crepuscular rays, in focus, 4k, landscape --neg nsfw, nude,\n30: anthropomorphic clean cat, surrounded by mandelbulb fractals, epic angle and pose, symmetrical, 3d, depth of field --neg nsfw, nude,\n60: a beautiful coconut --neg photo, realistic  nsfw, nude,\n90: a beautiful durian, amazing award winning photography --neg nsfw, nude"
       ]
     },
     {
@@ -788,18 +788,18 @@
       "widgets_values": [
         "Deforum",
         24,
-        "libx265",
+        "libx264",
         "yuv420p",
         "mp4",
         10,
         "max_frames",
         0,
         false,
-        true,
+        false,
         true,
         true,
         false,
-        false,
+        true,
         {
           "hidden": false,
           "paused": false,
@@ -1165,6 +1165,12 @@
           "shape": 7,
           "type": "LATENT",
           "link": null
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 584,
+          "shape": 7
         }
       ],
       "outputs": [
@@ -1201,15 +1207,17 @@
         "Node name for S&R": "DeforumIteratorNode"
       },
       "widgets_values": [
-        "stable_diffusion",
+        "auto",
         279971823843340,
         "randomize",
         0,
         0.1,
         0.1,
+        "linear",
+        0,
         false,
         false,
-        false
+        true
       ]
     },
     {
@@ -1543,6 +1551,14 @@
       137,
       1,
       "VAE"
+    ],
+    [
+      584,
+      187,
+      0,
+      186,
+      3,
+      "MODEL"
     ]
   ],
   "groups": [],

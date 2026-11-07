@@ -3,10 +3,9 @@
 class DeforumCacheLatentNode:
 
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -25,23 +24,19 @@ class DeforumCacheLatentNode:
 
     def cache_it(self, latent=None, cache_index=0):
         from ..mapping import gs
-        from ..mapping import gs
         if "latent" not in gs.deforum_cache:
-
             gs.deforum_cache["latent"] = {}
-
-        gs.deforum_cache["latent"][cache_index] = latent
-
+        if latent is not None:
+            gs.deforum_cache["latent"][cache_index] = latent
         return (latent,)
 
 
 class DeforumGetCachedLatentNode:
 
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -62,17 +57,15 @@ class DeforumGetCachedLatentNode:
         if gs.reset:
             return (None,)
         latent_dict = gs.deforum_cache.get("latent", {})
-        latent = latent_dict.get(cache_index)
-        return (latent,)
+        return (latent_dict.get(cache_index),)
 
 
 
 class DeforumCacheImageNode:
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -103,10 +96,9 @@ class DeforumCacheImageNode:
 class DeforumGetCachedImageNode:
 
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -130,21 +122,20 @@ class DeforumGetCachedImageNode:
             return (None, None)
         img_dict = gs.deforum_cache.get("image", {})
         image = img_dict.get(cache_index)
-        mask = None
-        if image is not None:
-            mask = image[:, :, :, 0]
-            image = image.detach().clone()
-        return (image ,mask,)
+        if image is None:
+            return (None, None)
+        mask = image[:, :, :, 0]
+        image = image.detach().clone()
+        return (image, mask,)
 
 
 
 
 class DeforumCacheStringNode:
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -175,10 +166,9 @@ class DeforumCacheStringNode:
 class DeforumGetCachedStringNode:
 
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
     @classmethod
     def INPUT_TYPES(cls):

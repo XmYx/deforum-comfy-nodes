@@ -1,6 +1,6 @@
 {
   "last_node_id": 176,
-  "last_link_id": 558,
+  "last_link_id": 559,
   "nodes": [
     {
       "id": 141,
@@ -163,7 +163,7 @@
         "Node name for S&R": "DeforumPromptNode"
       },
       "widgets_values": [
-        "0:'the deathstar colliding with a planet in space, explosion'\n100:'dart vader in the desert, DUNE GIANT WORM, by moebius'"
+        "0: the deathstar colliding with a planet in space, explosion,\n100: dart vader in the desert, DUNE GIANT WORM, by moebius"
       ]
     },
     {
@@ -838,7 +838,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "protovisionXLHighFidelity3D_beta0520Bakedvae.safetensors"
+        "sd_xl_base_1.0.safetensors"
       ]
     },
     {
@@ -1126,6 +1126,12 @@
           "name": "latent",
           "type": "LATENT",
           "link": 551
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 559,
+          "shape": 7
         }
       ],
       "outputs": [
@@ -1164,14 +1170,17 @@
         "Node name for S&R": "DeforumIteratorNode"
       },
       "widgets_values": [
-        "stable_diffusion",
+        "auto",
         791126192911641,
         "randomize",
         0,
         0.8,
         0.1,
+        "linear",
+        0,
         false,
-        false
+        false,
+        true
       ]
     },
     {
@@ -1646,6 +1655,14 @@
       173,
       2,
       "IMAGE"
+    ],
+    [
+      559,
+      173,
+      0,
+      175,
+      2,
+      "MODEL"
     ]
   ],
   "groups": [],

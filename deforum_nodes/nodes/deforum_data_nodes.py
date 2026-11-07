@@ -4,6 +4,7 @@ from ..modules.deforum_ui_data import (deforum_base_params, deforum_anim_params,
                                        deforum_hybrid_video_params, deforum_hybrid_video_schedules)
 from ..modules.deforum_node_base import DeforumDataBase
 from ..modules.deforum_comfyui_helpers import get_node_params
+from ..modules.deforum_compat import schedule_value
 
 class DeforumBaseParamsNode(DeforumDataBase):
     params = get_node_params(deforum_base_params)
@@ -144,6 +145,6 @@ class DeforumFrameDataExtract:
         denoise = deforum_frame_data.get("denoise", 1.0)
         keys = deforum_frame_data.get("keys")
         frame_idx = deforum_frame_data.get("frame_idx")
-        subseed_str = keys.subseed_strength_schedule_series[frame_idx]
+        subseed_str = schedule_value(keys.subseed_strength_schedule_series, frame_idx, 0.0)
         first_run = deforum_frame_data.get("second_run", False)
         return (frame_idx, seed, steps, cfg, sampler_name, scheduler, denoise, subseed_str, first_run, )

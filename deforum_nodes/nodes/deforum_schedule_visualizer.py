@@ -294,10 +294,9 @@ class DeforumScheduleTemplateRandomizer:
                }
 
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "show"

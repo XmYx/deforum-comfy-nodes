@@ -151,6 +151,9 @@ def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
     Returns:
     - list: A list of seed integers.
     """
+    start_seed = 0 if start_seed is None else int(start_seed)
+    step = 1 if not step else int(step)
+    max_frames = max(1, int(max_frames))
     if mode == 'fixed':
         return [start_seed for _ in range(max_frames)]
     elif mode == 'random':
@@ -158,12 +161,13 @@ def generate_seed_list(max_frames, mode='fixed', start_seed=0, step=1):
     elif mode == 'ladder':
         # Generate a ladder sequence where the sequence is repeated after reaching the max_frames
         return [(start_seed + i // 2 * step if i % 2 == 0 else start_seed + (i // 2 + 1) * step) % (2**32) for i in range(max_frames)]
-    elif mode == 'incrementing' or 'iter':
+    elif mode in ('incrementing', 'iter'):
         return [(start_seed + i * step) % (2**32) for i in range(max_frames)]
     elif mode == 'decrementing':
         return [(start_seed - i * step) % (2**32) for i in range(max_frames)]
     else:
-        raise ValueError("Invalid mode specified. Choose among 'fixed', 'random', 'ladder', 'incrementing', 'decrementing'.")
+        print(f"[deforum] unknown seed_behavior '{mode}', using a fixed seed")
+        return [start_seed for _ in range(max_frames)]
 
 def find_next_index(output_dir, filename_prefix, format):
     """
@@ -181,6 +185,7 @@ def find_next_index(output_dir, filename_prefix, format):
     pattern = re.compile(rf"^{re.escape(filename_prefix)}_(\d+)\.{format.lower()}$")
 
     max_index = -1
+    os.makedirs(output_dir, exist_ok=True)
     for filename in os.listdir(output_dir):
         match = pattern.match(filename)
         if match:
@@ -223,27 +228,40 @@ def sigmoidal_blend(tensor1, tensor2, blend_value):
     weight = 1 / (1 + torch.exp(-10 * (blend_tensor - 0.5)))  # Sigmoid function centered at 0.5
     return (1 - weight) * tensor1 + weight * tensor2
 def blend_tensors(obj1, obj2, blend_value, blend_method="linear"):
+    """Blend two conditioning entries.
+
+    ``obj1`` / ``obj2`` are single ``[tensor, dict]`` conditioning entries. Any
+    extra key the text encoder produced (``guidance`` for FLUX, the second
+    pooled output on SD3.x, attention masks, ...) is carried over rather than
+    dropped, which is what used to break every post-SDXL model.
     """
-    Blends tensors in two given objects based on a blend value using various blending strategies.
-    """
+    blenders = {
+        "linear": lambda a, b, v: (1 - v) * a + v * b,
+        "sigmoidal": sigmoidal_blend,
+        "gaussian": gaussian_blend,
+        "pyramid": pyramid_blend,
+    }
+    if blend_method == "none" or blend_value == 0.0:
+        return [[obj1[0], dict(obj1[1])]]
+    blender = blenders.get(blend_method)
+    if blender is None:
+        print(f"[deforum] unknown blend method '{blend_method}', using linear")
+        blender = blenders["linear"]
 
-    if blend_method == "linear":
-        weight = blend_value
-        obj1[0], obj2[0] = pad_to_match(obj1[0], obj2[0])
-        obj1[1]['pooled_output'], obj2[1]['pooled_output'] = pad_to_match(obj1[1]['pooled_output'], obj2[1]['pooled_output'])
-        blended_cond = (1 - weight) * obj1[0] + weight * obj2[0]
-        blended_pooled = (1 - weight) * obj1[1]['pooled_output'] + weight * obj2[1]['pooled_output']
+    def mix(a, b):
+        if not torch.is_tensor(a) or not torch.is_tensor(b):
+            return a
+        if a.dtype.is_floating_point and b.dtype.is_floating_point:
+            a, b = pad_to_match(a, b)
+            return blender(a, b, blend_value)
+        return a
 
-    elif blend_method == "sigmoidal":
-        blended_cond = sigmoidal_blend(obj1[0], obj2[0], blend_value)
-        blended_pooled = sigmoidal_blend(obj1[1]['pooled_output'], obj2[1]['pooled_output'], blend_value)
+    blended_cond = mix(obj1[0], obj2[0])
 
-    elif blend_method == "gaussian":
-        blended_cond = gaussian_blend(obj1[0], obj2[0], blend_value)
-        blended_pooled = gaussian_blend(obj1[1]['pooled_output'], obj2[1]['pooled_output'], blend_value)
+    meta1, meta2 = obj1[1], obj2[1]
+    blended_meta = dict(meta1)
+    for key, value in meta1.items():
+        if key in meta2:
+            blended_meta[key] = mix(value, meta2[key])
 
-    elif blend_method == "pyramid":
-        blended_cond = pyramid_blend(obj1[0], obj2[0], blend_value)
-        blended_pooled = pyramid_blend(obj1[1]['pooled_output'], obj2[1]['pooled_output'], blend_value)
-
-    return [[blended_cond, {"pooled_output": blended_pooled}]]
+    return [[blended_cond, blended_meta]]

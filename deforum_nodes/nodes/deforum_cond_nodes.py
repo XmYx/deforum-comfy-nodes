@@ -3,6 +3,7 @@ import random
 import torch
 
 from ..modules.deforum_comfyui_helpers import blend_tensors, blend_methods
+from ..modules.deforum_compat import encode_prompt
 
 class DeforumConditioningBlendNode:
     def __init__(self):
@@ -15,7 +16,7 @@ class DeforumConditioningBlendNode:
         return {"required":
                     {"clip": ("CLIP",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
-                     "blend_method": ([blend_methods]),
+                     "blend_method": (blend_methods, {"default": "linear"}),
                      }
                 }
 
@@ -59,11 +60,7 @@ class DeforumConditioningBlendNode:
         return (cond, n_cond,)
 
     def get_conditioning(self, prompt="", clip=None, progress_callback=None):
-
-
-        tokens = clip.tokenize(prompt)
-        cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
-        return [[cond, {"pooled_output": pooled}]]
+        return encode_prompt(clip, prompt)
 
 
 class DeforumInpaintModelConditioning:
@@ -89,7 +86,8 @@ class DeforumInpaintModelConditioning:
 
     display_name = "InpaintModelConditioning [safe]"
     CATEGORY = "deforum/conditioning"
-    def encode(self, positive, negative, vae, pixels, mask, latent, deforum_frame_data={}):
+    def encode(self, positive, negative, vae, pixels=None, mask=None, latent=None, deforum_frame_data=None):
+        deforum_frame_data = deforum_frame_data or {}
         reset = deforum_frame_data.get("reset", False)
         if (pixels is not None and mask is not None) and not reset:
             x = (pixels.shape[1] // 8) * 8

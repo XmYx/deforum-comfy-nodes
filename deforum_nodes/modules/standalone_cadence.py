@@ -13,6 +13,8 @@ import cv2
 import numpy as np
 import PIL.Image
 
+from .deforum_compat import schedule_value
+
 class CadenceInterpolator:
     def __init__(self):
         self.turbo_prev_image, self.turbo_prev_frame_idx = None, 0
@@ -29,9 +31,11 @@ class CadenceInterpolator:
         self.prev_img = self.turbo_prev_image
         goal_img = self.turbo_next_image
         turbo_steps = int(anim_args.diffusion_cadence)
-        cadence_flow_factor = keys.cadence_flow_factor_schedule_series[frame_idx]
-        hybrid_flow_factor = keys.hybrid_flow_factor_schedule_series[frame_idx]
-        hybrid_comp_schedules = keys.hybrid_comp_alpha_schedule_series[frame_idx]
+        # Cadence walks tween frames that can sit past the last scheduled
+        # frame, so every schedule read here is clamped (see schedule_value).
+        cadence_flow_factor = schedule_value(keys.cadence_flow_factor_schedule_series, frame_idx, 1.0)
+        hybrid_flow_factor = schedule_value(keys.hybrid_flow_factor_schedule_series, frame_idx, 1.0)
+        hybrid_comp_schedules = schedule_value(keys.hybrid_comp_alpha_schedule_series, frame_idx, 0.0)
         imgs = []
         x = 0
         # emit in-between frames
@@ -50,7 +54,7 @@ class CadenceInterpolator:
     
                 # optical flow cadence setup before animation warping
                 if anim_args.animation_mode in ['2D', '3D'] and anim_args.optical_flow_cadence != 'None':
-                    if keys.strength_schedule_series[tween_frame_start_idx] > 0:
+                    if schedule_value(keys.strength_schedule_series, tween_frame_start_idx, 0.0) > 0:
                         if cadence_flow is None and self.turbo_prev_image is not None and self.turbo_next_image is not None:
 
                             cadence_flow = get_flow_from_images(self.turbo_prev_image, self.turbo_next_image,

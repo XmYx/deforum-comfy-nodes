@@ -1,4 +1,4 @@
-import comfy
+import comfy.samplers
 deforum_base_params = {
     "width": {
         "type": "spinbox",

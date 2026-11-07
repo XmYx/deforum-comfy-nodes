@@ -1,0 +1,41 @@
+[project]
+name = "deforum-comfy-nodes"
+description = "Deforum animation nodes for ComfyUI: 2D/3D camera motion, cadence, hybrid video, schedules and prompt interpolation."
+version = "0.3.0"
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "deforum @ git+https://github.com/XmYx/deforum-studio.git",
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "scipy>=1.11",
+    "numexpr>=2.8.4",
+    "matplotlib>=3.7.1",
+    "einops>=0.6.0",
+    "opencv-contrib-python>=4.7.0.68",
+    "scikit-image>=0.21.0",
+    "timm>=1.0",
+    "Pillow>=10.0",
+    "imageio>=2.31",
+    "imageio-ffmpeg>=0.4.8",
+    "moviepy>=1.0.3",
+    "av>=10.0.0",
+    "librosa>=0.10.0",
+    "pydub>=0.25.1",
+    "audioop-lts>=0.2.1; python_version >= '3.13'",
+    "mutagen>=1.47",
+    "rich>=13.3.2",
+    "loguru>=0.7.0",
+    "gdown>=4.7.1",
+    "python-decouple>=3.8",
+]
+
+[project.urls]
+Repository = "https://github.com/XmYx/deforum-comfy-nodes"
+BugTracker = "https://github.com/XmYx/deforum-comfy-nodes/issues"
+
+[tool.comfy]
+PublisherId = "xmyx"
+DisplayName = "Deforum Nodes"
+Icon = ""

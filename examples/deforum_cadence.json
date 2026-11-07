@@ -1,6 +1,6 @@
 {
   "last_node_id": 191,
-  "last_link_id": 595,
+  "last_link_id": 596,
   "nodes": [
     {
       "id": 141,
@@ -419,7 +419,7 @@
       "widgets_values": [
         "Deforum",
         24,
-        "libx265",
+        "libx264",
         "yuv420p",
         "mp4",
         10,
@@ -430,7 +430,7 @@
         true,
         true,
         false,
-        false,
+        true,
         {
           "hidden": false,
           "paused": false,
@@ -475,7 +475,7 @@
         "Node name for S&R": "DeforumPromptNode"
       },
       "widgets_values": [
-        "0:\" tiny cute swamp bunny, highly detailed, intricate, ultra hd, sharp photo, crepuscular rays, in focus, 4k, landscape --neg nsfw, nude\",\n30:\" anthropomorphic clean cat, surrounded by mandelbulb fractals, epic angle and pose, symmetrical, 3d, depth of field --neg nsfw, nude\",\n60:\" a beautiful coconut --neg photo, realistic  nsfw, nude\",\n90:\" a beautiful durian, amazing award winning photography --neg nsfw, nude\""
+        "0: tiny cute swamp bunny, highly detailed, intricate, ultra hd, sharp photo, crepuscular rays, in focus, 4k, landscape --neg nsfw, nude,\n30: anthropomorphic clean cat, surrounded by mandelbulb fractals, epic angle and pose, symmetrical, 3d, depth of field --neg nsfw, nude,\n60: a beautiful coconut --neg photo, realistic  nsfw, nude,\n90: a beautiful durian, amazing award winning photography --neg nsfw, nude"
       ]
     },
     {
@@ -846,7 +846,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "realismEngineSDXL_v30VAE.safetensors"
+        "sd_xl_base_1.0.safetensors"
       ]
     },
     {
@@ -1373,6 +1373,12 @@
           "type": "LATENT",
           "link": null,
           "shape": 7
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 596,
+          "shape": 7
         }
       ],
       "outputs": [
@@ -1410,14 +1416,16 @@
         "Node name for S&R": "DeforumIteratorNode"
       },
       "widgets_values": [
-        "stable_diffusion",
+        "auto",
         478403467058392,
         "randomize",
         0,
         0.8,
         0.1,
-        true,
-        true,
+        "linear",
+        0,
+        false,
+        false,
         true
       ]
     }
@@ -1726,6 +1734,14 @@
       191,
       0,
       "LATENT"
+    ],
+    [
+      596,
+      127,
+      0,
+      190,
+      3,
+      "MODEL"
     ]
   ],
   "groups": [],

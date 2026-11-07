@@ -8,9 +8,11 @@ from deforum.pipeline_utils import next_seed
 from deforum.pipelines.deforum_animation.animation_params import RootArgs, DeforumArgs, DeforumAnimArgs, \
     DeforumOutputArgs, LoopArgs
 from deforum.utils.string_utils import split_weighted_subprompts
-import comfy
+import comfy.model_management
+import comfy.utils
 
 from ..modules.deforum_comfyui_helpers import get_current_keys, generate_seed_list
+from ..modules.deforum_compat import LATENT_TYPES, latent_geometry, schedule_value, synchronize
 
 class DeforumIteratorNode:
     def __init__(self):
@@ -32,15 +34,33 @@ class DeforumIteratorNode:
         return {
             "required": {
                 "deforum_data": ("deforum_data",),
-                "latent_type": (["stable_diffusion", "stable_cascade", "sd3"],)
+                "latent_type": (LATENT_TYPES, {
+                    "default": "auto",
+                    "tooltip": "Shape of the starting latent. 'auto' reads it from the "
+                               "model input, which is what makes SD3.x, FLUX, "
+                               "Qwen-Image and anything newer work unchanged.",
+                }),
             },
             "optional": {
+                "model": ("MODEL", {
+                    "tooltip": "Optional. Connect your model so the starting latent "
+                               "matches it automatically.",
+                }),
                 "latent": ("LATENT",),
                 "init_latent": ("LATENT",),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "subseed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "subseed_strength": ("FLOAT", {"default": 0.8, "min": 0, "max": 1.0}),
                 "slerp_strength": ("FLOAT", {"default": 0.1, "min": 0, "max": 1.0}),
+                "prompt_blend_curve": (["none", "linear", "exponential"], {
+                    "default": "linear",
+                    "tooltip": "Shape of the crossfade between scheduled prompts.",
+                }),
+                "prompt_blend_frames": ("INT", {
+                    "default": 0, "min": 0, "max": 4096,
+                    "tooltip": "How many frames before the next prompt keyframe the "
+                               "crossfade starts. 0 keeps prompt timing exact.",
+                }),
                 "reset_counter":("BOOLEAN", {"default": False},),
                 "reset_latent":("BOOLEAN", {"default": False},),
                 "enable_autoqueue":("BOOLEAN", {"default": False},),
@@ -56,7 +76,10 @@ class DeforumIteratorNode:
 
 
     @torch.inference_mode()
-    def get(self, deforum_data, latent_type, latent=None, init_latent=None, seed=None, subseed=None, subseed_strength=None, slerp_strength=None, reset_counter=False, reset_latent=False, enable_autoqueue=False, *args, **kwargs):
+    def get(self, deforum_data, latent_type="auto", model=None, latent=None, init_latent=None, seed=None,
+            subseed=None, subseed_strength=None, slerp_strength=None, prompt_blend_curve="linear",
+            prompt_blend_frames=0, reset_counter=False, reset_latent=False, enable_autoqueue=False,
+            *args, **kwargs):
 
         from ..mapping import gs
         if gs.reset:
@@ -121,6 +144,13 @@ class DeforumIteratorNode:
         root.animation_prompts = deforum_data.get("prompts")
         anim_args.fps = 24
 
+        if anim_args.diffusion_cadence and anim_args.diffusion_cadence >= anim_args.max_frames:
+            # Stepping by more than the whole animation means the counter is
+            # reset on every queue and the run never leaves frame 0.
+            print(f"[deforum] diffusion_cadence ({anim_args.diffusion_cadence}) is >= max_frames "
+                  f"({anim_args.max_frames}); the animation cannot advance. Raise max_frames or "
+                  f"lower the cadence.")
+
         keys, prompt_series, areas = get_current_keys(anim_args, args.seed, root, area_prompts=deforum_data.get("area_prompts"))
         if self.frame_index >= anim_args.max_frames or reset_counter:
             # if self.logger:
@@ -143,11 +173,11 @@ class DeforumIteratorNode:
         self.logger.update_absolute(self.frame_index)
 
         # else:
-        args.scale = keys.cfg_scale_schedule_series[self.frame_index]
+        args.scale = schedule_value(keys.cfg_scale_schedule_series, self.frame_index, 7.0)
         if prompt_series is not None:
             args.prompt = prompt_series[self.frame_index]
 
-        seed = keys.seed_schedule_series[self.frame_index]
+        seed = schedule_value(keys.seed_schedule_series, self.frame_index, -1)
 
         if args.seed_behavior == 'random':
             seed = secrets.randbelow(2 ** 32 - 1)
@@ -174,22 +204,24 @@ class DeforumIteratorNode:
         next_frame = self.frame_index + anim_args.diffusion_cadence
         next_prompt = None
 
-        def generate_blend_values(distance_to_next_prompt, blend_type="linear"):
-            if blend_type == "linear":
-                return [i / distance_to_next_prompt for i in range(distance_to_next_prompt + 1)]
-            elif blend_type == "exponential":
-                base = 2
-                return [1 / (1 + math.exp(-8 * (i / distance_to_next_prompt - 0.5))) for i in
-                        range(distance_to_next_prompt + 1)]
-            else:
-                raise ValueError(f"Unknown blend type: {blend_type}")
+        def blend_weight(frames_until_next_change, window, blend_type="linear"):
+            """How far to crossfade into the upcoming prompt.
 
-        def find_last_prompt_change(current_index, prompt_series):
-            # Step backward from the current position
-            for i in range(current_index - 1, -1, -1):
-                if prompt_series[i] != prompt_series[current_index]:
-                    return i
-            return 0  # default to the start if no change found
+            The crossfade is anchored to the *next* keyframe and only spans
+            ``window`` frames, so a prompt scheduled at frame N is rendered
+            exactly as written from frame N onwards. With window 0 there is no
+            crossfade at all and prompt timing is exact (issue #57).
+            """
+            if window <= 0 or blend_type == "none":
+                return 0.0
+            if frames_until_next_change >= window:
+                return 0.0
+            # 0.0 at the start of the window, 1.0 at the next keyframe
+            t = 1.0 - (frames_until_next_change / float(window))
+            t = min(max(t, 0.0), 1.0)
+            if blend_type == "exponential":
+                return 1 / (1 + math.exp(-8 * (t - 0.5)))
+            return t
 
         def find_next_prompt_change(current_index, prompt_series):
             # Step forward from the current position
@@ -201,20 +233,12 @@ class DeforumIteratorNode:
             return len(prompt_series) - 1  # default to the end if no change found
 
         if prompt_series is not None:
-            last_prompt_change = find_last_prompt_change(self.frame_index, prompt_series)
-
             next_prompt_change = find_next_prompt_change(self.frame_index, prompt_series)
+            frames_until_change = next_prompt_change - self.frame_index
 
-            distance_between_changes = next_prompt_change - last_prompt_change
-            current_distance_from_last = self.frame_index - last_prompt_change
+            blend_value = blend_weight(frames_until_change, prompt_blend_frames, prompt_blend_curve)
 
-            # Generate blend values for the distance between prompt changes
-            blend_values = generate_blend_values(distance_between_changes, blend_type="exponential")
-
-            # Fetch the blend value based on the current frame's distance from the last prompt change
-            blend_value = blend_values[current_distance_from_last]
-
-            if len(prompt_series) - 1 > next_prompt_change:
+            if len(prompt_series) - 1 > next_prompt_change and blend_value > 0.0:
                 next_prompt = prompt_series[next_prompt_change]
 
         gen_args = self.get_current_frame(args, anim_args, root, keys, self.frame_index, areas)
@@ -239,30 +263,33 @@ class DeforumIteratorNode:
             if "latent" in gs.deforum_cache:
                 gs.deforum_cache["latent"].clear()
             gs.reset = True
-            if latent_type == "stable_diffusion":
-                channels = 4
-                compression = 8
-            else:
-                channels = 16
-                compression = 42
+            channels, compression = latent_geometry(latent_type, model)
             if init_latent is not None:
-                args.height, args.width = init_latent["samples"].shape[2] * 8, init_latent["samples"].shape[3] * 8
-
+                args.height, args.width = (init_latent["samples"].shape[2] * compression,
+                                           init_latent["samples"].shape[3] * compression)
 
             self.rng = ImageRNGNoise((channels, args.height // compression, args.width // compression),
                                      [seeds[self.frame_index]], [subseeds[self.frame_index]],
                                      0.6, 1024, 1024)
-            if latent_type == "stable_diffusion":
-                l = self.rng.first().half().to(comfy.model_management.intermediate_device())
-            elif latent_type == "stable_cascade":
-                l = torch.zeros([1, 16, args.height // 42, args.width // 42]).to(comfy.model_management.intermediate_device())
-            elif latent_type == "sd3":
-                l = torch.ones([1, 16, args.height // 8, args.width // 8], device=comfy.model_management.intermediate_device()) * 0.0609
+            self.latent_compression = compression
+            device = comfy.model_management.intermediate_device()
+            if channels == 4:
+                # SD1.x / SD2.x / SDXL: seed the first frame with real noise so
+                # frame 0 is not a grey plate.
+                l = self.rng.first().half().to(device)
+            else:
+                # Everything newer (SD3.x, FLUX, Qwen-Image, Cascade, ...) is
+                # happier starting from the empty latent ComfyUI would build, and
+                # common_ksampler fills in the right channel count for us.
+                l = torch.zeros([1, channels, args.height // compression, args.width // compression],
+                                device=device)
             latent = {"samples": l}
             gen_args["denoise"] = 1.0
         else:
-            if latent_type == "stable_diffusion" and slerp_strength > 0:
-                args.height, args.width = latent["samples"].shape[2] * 8, latent["samples"].shape[3] * 8
+            compression = getattr(self, "latent_compression", latent_geometry(latent_type, model)[1])
+            if latent is not None and slerp_strength and slerp_strength > 0 and latent["samples"].shape[1] == 4:
+                args.height, args.width = (latent["samples"].shape[2] * compression,
+                                           latent["samples"].shape[3] * compression)
                 l = self.rng.next().clone().to(comfy.model_management.intermediate_device())
                 s = latent["samples"].clone().to(comfy.model_management.intermediate_device())
                 latent = {"samples":slerp(slerp_strength, s, l)}
@@ -272,7 +299,7 @@ class DeforumIteratorNode:
 
         if self.frame_index == 0 and init_latent is not None:
             latent = init_latent
-            gen_args["denoise"] = keys.strength_schedule_series[0]
+            gen_args["denoise"] = schedule_value(keys.strength_schedule_series, 0, 1.0)
 
         #if anim_args.diffusion_cadence > 1:
         # global turbo_prev_img, turbo_prev_frame_idx, turbo_next_image, turbo_next_frame_idx, opencv_image
@@ -296,19 +323,27 @@ class DeforumIteratorNode:
 
         if self.frame_index > anim_args.max_frames:
             self.frame_index = anim_args.max_frames
-        if latent is not None:
-            latent["samples"] = latent["samples"].float()
+        if latent is None:
+            # The cache can come up empty mid-run (a cleared cache, a reset
+            # elsewhere in the graph). Rebuild rather than pass None on.
+            print("[deforum] no latent for this frame, rebuilding the starting latent")
+            channels, compression = latent_geometry(latent_type, model)
+            latent = {"samples": torch.zeros(
+                [1, channels, max(1, args.height // compression), max(1, args.width // compression)],
+                device=comfy.model_management.intermediate_device())}
+            gen_args["denoise"] = 1.0
+        latent["samples"] = latent["samples"].float()
         from ..mapping import gs
         gs.reset = False if not self.first_run else True
         enable_autoqueue = enable_autoqueue if self.frame_index == 0 else False
-        gen_args["sampler_name"] = deforum_data.get("sampler_name", "euler_a")
-        gen_args["scheduler"] = deforum_data.get("scheduler", "normal")
+        gen_args["sampler_name"] = deforum_data.get("sampler_name") or "euler_ancestral"
+        gen_args["scheduler"] = deforum_data.get("scheduler") or "normal"
         gen_args["reset"] = reset_latent or reset_counter
         gen_args["frame_idx"] = self.frame_index
         gen_args["first_run"] = self.first_run
         gen_args["second_run"] = self.second_run
         gen_args["logger"] = self.logger
-        torch.cuda.synchronize()
+        synchronize()
 
         return {"ui": {"counter":(self.frame_index,), "max_frames":(anim_args.max_frames,), "enable_autoqueue":(enable_autoqueue,)}, "result": (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],),}
         # return (gen_args, latent, gen_args["prompt"], gen_args["negative_prompt"],)
@@ -319,13 +354,13 @@ class DeforumIteratorNode:
         else:
             prompt = ""
             negative_prompt = ""
-        strength = keys.strength_schedule_series[frame_idx]
+        strength = schedule_value(keys.strength_schedule_series, frame_idx, 1.0)
 
         return {"prompt": prompt,
                 "negative_prompt": negative_prompt,
                 "denoise": strength,
                 "cfg": args.scale,
-                "steps": int(keys.steps_schedule_series[self.frame_index]),
+                "steps": int(schedule_value(keys.steps_schedule_series, self.frame_index, 20)),
                 "root": root,
                 "keys": keys,
                 "frame_idx": frame_idx,
@@ -358,10 +393,10 @@ class DeforumSeedNode:
 
 class DeforumBigBoneResetNode:
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        # if autorefresh == "Yes":
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
         return float("NaN")
+
     @classmethod
     def INPUT_TYPES(cls):
         return {

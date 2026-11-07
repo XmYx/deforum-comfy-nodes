@@ -38,7 +38,7 @@
         "Node name for S&R": "DeforumPromptNode"
       },
       "widgets_values": [
-        "0:'Cat Sushi'"
+        "0: Cat Sushi"
       ]
     },
     {
@@ -139,7 +139,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors"
+        "sd_xl_base_1.0.safetensors"
       ]
     },
     {

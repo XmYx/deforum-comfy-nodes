@@ -8,6 +8,7 @@ from deforum.models import RAFT
 from deforum.utils.image_utils import image_transform_optical_flow
 
 from ..modules.deforum_comfyui_helpers import tensor2np, tensor2pil, pil2tensor
+from ..modules.deforum_compat import schedule_value
 # from ..modules.deforum_constants import deforum_models, deforum_depth_algo
 
 from ..mapping import gs
@@ -21,7 +22,7 @@ class DeforumApplyFlowNode:
             "required": {
                 "image": ("IMAGE",),
                 "flow_image": ("IMAGE",),
-                "flow_method": ([cls.methods]),
+                "flow_method": (cls.methods,),
                 "flow_factor": ("FLOAT", {"default": 0.8, "min": 0, "max": 1.0}),
             },
             "optional":{
@@ -76,7 +77,7 @@ class DeforumHybridMotionNode:
                     {"image": ("IMAGE",),
                      "hybrid_image": ("IMAGE",),
                      "deforum_frame_data": ("DEFORUM_FRAME_DATA",),
-                     "hybrid_method": ([s.methods]),
+                     "hybrid_method": (s.methods,),
                      }
                 }
 
@@ -89,7 +90,8 @@ class DeforumHybridMotionNode:
         if self.raft_model is None:
             self.raft_model = RAFT()
 
-        flow_factor = deforum_frame_data["keys"].hybrid_flow_factor_schedule_series[deforum_frame_data["frame_index"]]
+        flow_factor = schedule_value(deforum_frame_data["keys"].hybrid_flow_factor_schedule_series,
+                                     deforum_frame_data.get("frame_index", 0), 1.0)
         p_img = tensor2pil(image)
         size = p_img.size
 

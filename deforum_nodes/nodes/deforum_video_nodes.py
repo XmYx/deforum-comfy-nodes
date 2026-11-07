@@ -19,9 +19,10 @@ from ..modules.deforum_comfyui_helpers import tensor2pil, pil2tensor, find_next_
 
 video_extensions = ['webm', 'mp4', 'mkv', 'gif']
 
-import moviepy.editor as mp
 from scipy.io.wavfile import write
 import tempfile
+
+from ..modules.deforum_compat import clip_subclip, clip_with_audio, get_moviepy
 
 
 def save_to_file(data, filepath: str):
@@ -144,10 +145,9 @@ class DeforumLoadVideo:
         return (frame, self.current_frame, max_frames)
 
     @classmethod
-    def IS_CHANGED(cls, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
+    def IS_CHANGED(cls, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
     @classmethod
     def VALIDATE_INPUTS(cls, video):
@@ -161,7 +161,6 @@ hex_dig = hash_object.hexdigest()
 endpoint = f"/tmp/{hex_dig}/{{filename}}"
 
 
-@server.PromptServer.instance.routes.get(endpoint)
 async def serve_temp_file(request):
     filename = request.match_info['filename']
 
@@ -175,10 +174,19 @@ async def serve_temp_file(request):
     else:
         return web.Response(status=404, text="File not found.")
 
-# Dynamically add the route to the server's router
-# server.PromptServer.instance.routes.get(endpoint)(serve_temp_file)
 
-print(f"Endpoint {endpoint} registered for serving files from {temp_dir}")
+# Registering the preview route is best-effort: importing this module must never
+# depend on a PromptServer already existing (it does not, for example, when
+# ComfyUI only inspects the node list).
+_prompt_server = getattr(server.PromptServer, "instance", None)
+if _prompt_server is not None:
+    try:
+        _prompt_server.routes.get(endpoint)(serve_temp_file)
+        print(f"[deforum] Endpoint {endpoint} registered for serving files from {temp_dir}")
+    except Exception as exc:
+        print(f"[deforum] could not register the video preview endpoint: {exc}")
+else:
+    print("[deforum] no PromptServer yet, video preview endpoint not registered")
 
 class DeforumVideoSaveNode:
     def __init__(self):
@@ -367,6 +375,12 @@ class DeforumVideoSaveNode:
 
     def encode_audio_base64(self, audio_data, frame_count, fps, start_frame):
         sample_rate = 44100  # Assuming a default sample rate
+        try:
+            fps = float(fps)
+        except (TypeError, ValueError):
+            fps = 0.0
+        if not fps or fps <= 0:
+            fps = 24.0
         if audio_data is None:
             # Generate silent audio data for the specified duration
             duration_in_seconds = frame_count / float(fps)
@@ -415,38 +429,76 @@ class DeforumVideoSaveNode:
         # for frame in tqdm(self.images, desc=f"Saving {format} (imageio)"):
         #     writer.append_data(np.clip(255. * frame.detach().cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
         # writer.close()
-        frames = [Image.open(frame_path) for frame_path in self.images]
-        video_clip = mp.ImageSequenceClip([np.array(frame) for frame in frames], fps=fps)
+        mp = get_moviepy()
 
+        # fps reaches us from a widget, but a schedule or a restored workflow can
+        # still hand over something unusable; moviepy would then fail deep inside
+        # ffmpeg with "must be real number, not NoneType" (issue #54).
+        try:
+            fps = float(fps)
+        except (TypeError, ValueError):
+            fps = 0.0
+        if not fps or fps <= 0 or fps != fps:  # also catches NaN
+            print(f"[deforum] invalid fps for video export, falling back to 24")
+            fps = 24.0
+
+        frames = []
+        size = None
+        for frame_path in self.images:
+            with Image.open(frame_path) as frame:
+                frame = frame.convert("RGB")
+                if size is None:
+                    size = frame.size
+                elif frame.size != size:
+                    # ffmpeg refuses a stream whose frame size changes mid-way.
+                    frame = frame.resize(size, Image.LANCZOS)
+                frames.append(np.array(frame))
+
+        if not frames:
+            print("[deforum] nothing to save, no frames were cached")
+            return self.filepath
+
+        video_clip = mp.ImageSequenceClip(frames, fps=fps)
+
+        audio_clip = None
         if audio is not None:
-            # Generate a temporary file for the audio
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_audio_file:
-                save_to_file(audio, tmp_audio_file.name)
-                # Load the audio clip
-                audio_clip = mp.AudioFileClip(tmp_audio_file.name)
-                # Calculate video duration
-                video_duration = len(self.images) / fps
-                # Trim or loop the audio clip to match the video length
-                if audio_clip.duration > video_duration:
-                    audio_clip = audio_clip.subclip(0,
-                                                    video_duration)  # Trim the audio to match video length
-                elif audio_clip.duration < video_duration:
-                    # If you want to loop the audio, uncomment the following line
-                    # audio_clip = audio_clip.loop(duration=video_duration)
-                    pass  # If you prefer silence after the audio ends, do nothing
-                # Set the audio on the video clip
-                video_clip = video_clip.set_audio(audio_clip)
-            del tmp_audio_file
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_audio_file:
+                    temp_audio_name = tmp_audio_file.name
+                save_to_file(audio, temp_audio_name)
+                audio_clip = mp.AudioFileClip(temp_audio_name)
+                video_duration = len(frames) / fps
+                if audio_clip.duration and audio_clip.duration > video_duration:
+                    audio_clip = clip_subclip(audio_clip, 0, video_duration)
+                video_clip = clip_with_audio(video_clip, audio_clip)
+            except Exception as exc:
+                print(f"[deforum] could not attach audio, saving video only: {exc}")
+                audio_clip = None
 
-        video_clip.write_videofile(output_path, codec=codec, audio_codec='aac')
+        write_kwargs = {"codec": codec, "fps": fps}
+        if audio_clip is not None:
+            write_kwargs["audio_codec"] = "aac"
+
+        try:
+            video_clip.write_videofile(output_path, **write_kwargs)
+        except Exception as exc:
+            print(f"[deforum] {codec} export failed ({exc}), retrying with libx264")
+            write_kwargs["codec"] = "libx264"
+            video_clip.write_videofile(output_path, **write_kwargs)
+        finally:
+            try:
+                video_clip.close()
+                if audio_clip is not None:
+                    audio_clip.close()
+            except Exception:
+                pass
+
         return output_path
 
     @classmethod
-    def IS_CHANGED(s, text, autorefresh):
-        # Force re-evaluation of the node
-        if autorefresh == "Yes":
-            return float("NaN")
-
+    def IS_CHANGED(s, *args, **kwargs):
+        # Deforum nodes re-run every frame, so always report a new hash.
+        return float("NaN")
 
 def encode_audio_base64(audio_data, frame_count, fps):
     # Calculate the target duration of the audio in seconds based on the video duration

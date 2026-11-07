@@ -4,6 +4,7 @@ import numpy as np
 from deforum.generators.deforum_noise_generator import add_noise
 from deforum.utils.image_utils import maintain_colors, unsharp_mask, compose_mask_with_check
 from ..modules.deforum_comfyui_helpers import tensor2pil, tensor2np, pil2tensor
+from ..modules.deforum_compat import schedule_value
 
 class DeforumColorMatchNode:
 
@@ -80,14 +81,15 @@ class DeforumAddNoiseNode:
             anim_args = deforum_frame_data.get("anim_args")
             root = deforum_frame_data.get("root")
             frame_idx = deforum_frame_data.get("frame_idx")
-            noise = keys.noise_schedule_series[frame_idx]
-            kernel = int(keys.kernel_schedule_series[frame_idx])
-            sigma = keys.sigma_schedule_series[frame_idx]
-            amount = keys.amount_schedule_series[frame_idx]
-            threshold = keys.threshold_schedule_series[frame_idx]
-            contrast = keys.contrast_schedule_series[frame_idx]
-            if anim_args.use_noise_mask and keys.noise_mask_schedule_series[frame_idx] is not None:
-                noise_mask_seq = keys.noise_mask_schedule_series[frame_idx]
+            noise = schedule_value(keys.noise_schedule_series, frame_idx, 0.0)
+            kernel = int(schedule_value(keys.kernel_schedule_series, frame_idx, 5))
+            sigma = schedule_value(keys.sigma_schedule_series, frame_idx, 1.0)
+            amount = schedule_value(keys.amount_schedule_series, frame_idx, 0.0)
+            threshold = schedule_value(keys.threshold_schedule_series, frame_idx, 0.0)
+            contrast = schedule_value(keys.contrast_schedule_series, frame_idx, 1.0)
+            noise_mask_value = schedule_value(keys.noise_mask_schedule_series, frame_idx)
+            if anim_args.use_noise_mask and noise_mask_value is not None:
+                noise_mask_seq = noise_mask_value
             else:
                 noise_mask_seq = None
             mask_vals = {}

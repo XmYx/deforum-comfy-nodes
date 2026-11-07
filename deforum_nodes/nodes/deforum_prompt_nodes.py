@@ -3,6 +3,42 @@ import torch
 from nodes import MAX_RESOLUTION
 from ..modules.deforum_node_base import DeforumDataBase
 
+
+def parse_prompt_schedule(prompts):
+    """Parse ``<frame>: <prompt>`` lines into ``{frame: prompt}``.
+
+    Blank lines and comments are skipped, and surrounding quotes are stripped -
+    the old parser left them in, so the default ``0:'Cat Sushi'`` was encoded
+    by CLIP complete with apostrophes.
+    """
+    prompts_dict = {}
+    for lineno, row in enumerate(str(prompts).splitlines(), start=1):
+        row = row.strip().rstrip(',')
+        if not row or row.startswith('#'):
+            continue
+        if ':' not in row:
+            raise ValueError(
+                f"Prompt line {lineno} is missing a frame number: {row!r}. "
+                f"Use the form `0: a prompt`."
+            )
+        key, value = row.split(':', 1)
+        key = key.strip().strip('"\'')
+        try:
+            frame = int(key)
+        except ValueError:
+            raise ValueError(
+                f"Prompt line {lineno} does not start with a frame number: {row!r}. "
+                f"Use the form `0: a prompt`."
+            ) from None
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in '"\'':
+            value = value[1:-1]
+        prompts_dict[frame] = value.strip()
+    if not prompts_dict:
+        raise ValueError("No prompts were given. Add at least one `0: a prompt` line.")
+    return prompts_dict
+
+
 class DeforumPromptNode(DeforumDataBase):
     def __init__(self):
         super().__init__()
@@ -31,18 +67,7 @@ class DeforumPromptNode(DeforumDataBase):
             formatted_prompts = deforum_data["prompts"]
             prompts = "\n".join([f"{key}:'{value}'" for key, value in formatted_prompts.items()])
         else:
-            # Splitting the data into rows
-            rows = prompts.split('\n')
-
-            # Creating an empty dictionary
-            prompts_dict = {}
-
-            # Parsing each row
-            for row in rows:
-                key, value = row.split(':', 1)
-                key = int(key)
-                value = value.strip('"')
-                prompts_dict[key] = value
+            prompts_dict = parse_prompt_schedule(prompts)
 
             if deforum_data:
                 deforum_data["prompts"] = prompts_dict
