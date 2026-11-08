@@ -28,11 +28,38 @@ Then install the dependencies **into the same Python that runs ComfyUI**:
 python -m pip install -r ComfyUI/custom_nodes/deforum-comfy-nodes/requirements.txt
 ```
 
-On ComfyUI portable that is the bundled interpreter:
+"The same Python" differs per install, and this is the single most common
+reason the nodes fail to load. Use the full path — then it does not matter which
+folder you run the command from:
 
-```bash
-python_embeded\python.exe -m pip install -r ComfyUI\custom_nodes\deforum-comfy-nodes\requirements.txt
+| Install | Interpreter |
+| --- | --- |
+| ComfyUI Desktop | `<install>\ComfyUI\.venv\Scripts\python.exe` |
+| ComfyUI portable | `<install>\python_embeded\python.exe` |
+| Manual / venv | the `python` of the venv you launch ComfyUI with |
+
+For example, on ComfyUI Desktop:
+
+```bat
+"D:\Comfy-Desktop\ComfyUI-Installs\Comfyui\ComfyUI\.venv\Scripts\python.exe" -m pip install -r "D:\Comfy-Desktop\ComfyUI-Installs\Comfyui\ComfyUI\custom_nodes\deforum-comfy-nodes\requirements.txt"
 ```
+
+**This step needs Git.** `requirements.txt` pulls the deforum backend straight
+from GitHub (`deforum @ git+https://...`), and pip shells out to `git` to do it.
+Without Git installed and on PATH, pip fails. Either install
+[Git for Windows](https://git-scm.com/download/win), or install the backend from
+a zip instead, which needs no Git:
+
+```bat
+<python> -m pip install https://github.com/XmYx/deforum-studio/archive/refs/heads/main.zip
+```
+
+> **Do not run `pip install deforum`.** An unrelated project of that name exists
+> on PyPI; it installs cleanly and then fails at import. The backend this pack
+> needs is [deforum-studio](https://github.com/XmYx/deforum-studio).
+
+The **Save Video** node also needs `ffmpeg` on PATH. Without it the frames render
+and the final `.mp4` write fails.
 
 Python 3.11 – 3.14 are supported. Nothing here pins or reinstalls torch, numpy or
 moviepy, so it will not disturb an existing CUDA, ROCm, DirectML or Apple Silicon

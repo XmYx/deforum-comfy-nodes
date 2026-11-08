@@ -83,7 +83,11 @@ def get_current_keys(anim_args, seed, root, parseq_args=None, video_args=None, a
         prompt_series = None
         if hasattr(root, 'animation_prompts'):
             if root.animation_prompts is not None:
-                prompt_series = pd.Series([np.nan for a in range(anim_args.max_frames + 1)])
+                # dtype=object matters: prompts are strings, and a float64
+                # Series (what [np.nan, ...] gives you) refuses them on
+                # pandas >= 2.2 with "Invalid value ... for dtype 'float64'".
+                prompt_series = pd.Series(
+                    [np.nan for a in range(anim_args.max_frames + 1)], dtype=object)
                 for i, prompt in root.animation_prompts.items():
                     if str(i).isdigit():
                         prompt_series[int(i)] = prompt
