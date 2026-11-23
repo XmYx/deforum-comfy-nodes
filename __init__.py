@@ -2,6 +2,11 @@
 
 try:
     from .deforum_nodes.mapping import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+    if not NODE_CLASS_MAPPINGS:
+        # Individual node modules report themselves; reaching here means none
+        # of them loaded at all, which is a core dependency, not an optional one.
+        raise ImportError(
+            "no deforum nodes could be loaded - see the [deforum] lines above")
 except ImportError as exc:
     # A bare traceback here is what most of the "IMPORT FAILED" reports on the
     # tracker look like. Say which dependency is missing and how to install it

@@ -8,6 +8,8 @@ requires-python = ">=3.11"
 dependencies = [
     "deforum @ git+https://github.com/XmYx/deforum-studio.git",
     "numpy>=1.26",
+    "opensimplex>=0.4",
+    "PyWavelets>=1.4",
     "pandas>=2.0",
     "scipy>=1.11",
     "numexpr>=2.8.4",
