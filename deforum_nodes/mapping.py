@@ -27,6 +27,7 @@ NODE_MODULES = (
     "deforum_audiosync_nodes",
     "deforum_cache_nodes",
     "deforum_cnet_nodes",
+    "deforum_color_nodes",
     "deforum_cond_nodes",
     "deforum_data_nodes",
     "deforum_framewarp_node",
