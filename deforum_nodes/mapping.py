@@ -38,6 +38,7 @@ NODE_MODULES = (
     "deforum_iteration_nodes",
     "deforum_legacy_nodes",
     "deforum_logic_nodes",
+    "deforum_motion_nodes",
     "deforum_noise_nodes",
     "deforum_advnoise_node",
     "deforum_prompt_nodes",

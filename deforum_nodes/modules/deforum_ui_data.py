@@ -330,6 +330,8 @@ deforum_depth_params = {
         "type": "dropdown",
         "choices": [
             "Midas-3-Hybrid",
+            "Depth-Anything-V2-Small",
+            "Depth-Anything-V2-Base",
             "Midas+AdaBins (old)",
             "Midas-3.1-BeitLarge",
             "AdaBins",
