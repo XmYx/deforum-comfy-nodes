@@ -9,6 +9,8 @@ from pydub import AudioSegment
 from scipy.signal import butter, filtfilt, find_peaks
 import librosa
 
+from ..modules.deforum_compat import schedule_value
+
 schedule_types = [
     "angle", "transform_center_x", "transform_center_y", "zoom", "translation_x", "translation_y", "translation_z",
     "rotation_3d_x", "rotation_3d_y", "rotation_3d_z", "perspective_flip_theta", "perspective_flip_phi",
@@ -268,6 +270,16 @@ import numpy as np
 import pandas as pd
 import math
 
+# The Iterator copies a few schedule values into the frame data as it runs, so
+# overriding the series on ``keys`` alone would not reach the sampler for the
+# frame already in flight. These have to be refreshed as well.
+snapshotted_in_frame_data = {
+    "strength_schedule": ("denoise", float),
+    "cfg_scale_schedule": ("cfg", float),
+    "steps_schedule": ("steps", int),
+}
+
+
 class DeforumAmplitudeToKeyframeSeriesNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -315,7 +327,8 @@ class DeforumAmplitudeToKeyframeSeriesNode:
         except Exception as e:
             raise ValueError(f"Error evaluating expression: {repr(e)}")
 
-    def convert(self, type_name, amplitude, max_frames=500, math="x/100", filter_window=0, deforum_frame_data={}, y=None, z=None):
+    def convert(self, type_name, amplitude, max_frames=500, math="x/100", filter_window=0, deforum_frame_data=None, y=None, z=None):
+        deforum_frame_data = deforum_frame_data if deforum_frame_data is not None else {}
         max_f = int(max_frames)
 
         # Apply smoothing filter to the amplitude data if needed
@@ -336,8 +349,24 @@ class DeforumAmplitudeToKeyframeSeriesNode:
         formatted_strings = [f"{idx}:({val})" for idx, val in modified_amplitude_series.items()]
         formatted_string = ", ".join(formatted_strings[:-1]) + " and " + formatted_strings[-1] if len(formatted_strings) > 1 else formatted_strings[0]
 
-        if "keys" in deforum_frame_data:
-            deforum_frame_data["keys"][f"{type_name}_series"] = modified_amplitude_series.to_dict()
+        keys = deforum_frame_data.get("keys")
+        if keys is not None:
+            # DeforumAnimKeys keeps its schedules as attributes and defines no
+            # __setitem__, so the old subscript assignment raised TypeError.
+            attribute = f"{type_name}_series"
+            if hasattr(keys, attribute):
+                setattr(keys, attribute, modified_amplitude_series)
+            else:
+                print(f"[deforum] Amplitude to Schedule: {type(keys).__name__} has no "
+                      f"{attribute}, leaving '{type_name}' alone.")
+
+            snapshot = snapshotted_in_frame_data.get(type_name)
+            if snapshot is not None:
+                name, cast = snapshot
+                value = schedule_value(modified_amplitude_series,
+                                       deforum_frame_data.get("frame_idx", 0))
+                if value is not None:
+                    deforum_frame_data[name] = cast(value)
 
         return (deforum_frame_data, modified_amplitude_series.to_numpy(), formatted_string,)
 
